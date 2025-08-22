@@ -1,0 +1,10 @@
+export const USER_ROLE = {
+  ADMIN: 'admin',
+  USER: 'user',
+  PHOTOGRAPHER: 'photographer',
+  VIDEOGRAPHER: 'videographer',
+  BOTH: "both"
+} as const;
+
+export const gender = ['Male', 'Female', 'Others'] as const;
+export const Role = Object.values(USER_ROLE);
