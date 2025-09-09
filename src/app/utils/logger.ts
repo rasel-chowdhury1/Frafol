@@ -1,3 +1,7 @@
+
+
+
+
 import { createLogger, format, transports } from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
@@ -12,6 +16,18 @@ import {
   yellow,
   yellowBright,
 } from "colorette";
+
+
+// Define log file paths
+const LOGS_DIR = path.join(process.cwd(), 'logs');
+const ERROR_LOG_PATH = path.join(LOGS_DIR, 'app.log');  // For error logs in JSONL format
+const RESPONSE_LOG_PATH = path.join(LOGS_DIR, 'ResponseTime.log');  // For response time logs in JSONL format
+
+// Ensure the log directory exists
+import fs from 'fs';
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
 
 export const logger = createLogger({
   level: "info",
@@ -36,6 +52,42 @@ export const logger = createLogger({
     }),
   ],
 });
+
+// JSONL format for error and response logs
+const jsonlFormat = format.printf((info) => JSON.stringify(info));
+
+// Error line logger - for logging errors in JSONL format in `app.log`
+export const errorLineLogger = createLogger({
+  level: "error",
+  format: format.combine(
+    format.timestamp({ format: () => new Date().toISOString() }),
+    jsonlFormat
+  ),
+  transports: [
+    new transports.File({
+      filename: ERROR_LOG_PATH,
+      level: "error",
+      format: format.combine(format.timestamp({ format: () => new Date().toISOString() }), jsonlFormat),
+    }),
+  ],
+});
+
+// Response time logger - for logging response time in JSONL format in `ResponseTime.log`
+export const responseLineLogger = createLogger({
+  level: "info",
+  format: format.combine(
+    format.timestamp({ format: () => new Date().toISOString() }),
+    jsonlFormat
+  ),
+  transports: [
+    new transports.File({
+      filename: RESPONSE_LOG_PATH,
+      level: "info",
+      format: format.combine(format.timestamp({ format: () => new Date().toISOString() }), jsonlFormat),
+    }),
+  ],
+});
+
 
 // Middleware to log requests and responses with emojis and extra information
 export const logHttpRequests = (
@@ -89,4 +141,24 @@ export const logHttpRequests = (
   });
 
   next();
+};
+
+
+
+// Error handler middleware to log errors in JSONL format in app.log
+export const logErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+
+  errorLineLogger.error({
+    timestamp: new Date().toISOString(),
+    level: 'error',
+    message: err.message,
+    stack: err.stack,
+    method: req.method,
+    url: req.originalUrl,
+    status: res.statusCode,
+    ip: req.ip,
+    userAgent: req.get('User-Agent') || '',
+  });
+
+  next(err);
 };
