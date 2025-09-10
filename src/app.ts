@@ -12,7 +12,6 @@ import notFound from './app/middleware/notfound';
 import globalErrorHandler from './app/middleware/globalErrorhandler';
 import serverHomePage from './app/helpers/serverHomePage';
 import { logErrorHandler, logHttpRequests } from './app/utils/logger';
-import { errorLineLogger } from './app/utils/logger';
 
 const app: Application = express();
 

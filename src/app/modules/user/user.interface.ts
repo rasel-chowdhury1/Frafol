@@ -19,7 +19,10 @@ export interface TUserCreate {
   dic?: string;
   ic_dph?: string;
   rating?: number;
-  specializations: string[];
+  totalReview: number;
+  averageRating: number;
+  photographerSpecializations: string[];
+  videographerSpecializations: string[];
   newsLetterSub: boolean;
   isBlocked: boolean;
   isDeleted: boolean;
@@ -55,3 +58,9 @@ export type IPaginationOption = {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 };
+
+
+export interface PaginateQuery {
+  page?: number;
+  limit?: number;
+}

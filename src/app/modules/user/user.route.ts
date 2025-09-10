@@ -25,7 +25,6 @@ userRoutes
   )
 
 
-
   .get(
     '/my-profile',
     auth(
@@ -46,7 +45,12 @@ userRoutes
   .get("/all-users-overview", auth("admin"), userController.getAllUsersOverview)
 
 
-
+// featured profestions routes
+  .get(
+    "/professionals",
+    // auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getProfessionalPhotographerAndVideographer
+  )
   
   .get(
     '/:id',

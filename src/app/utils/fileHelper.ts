@@ -1,14 +1,19 @@
+import path from 'path';
 import fs from 'fs';
-import util from 'util';
-const unlinkSync = util.promisify(fs.unlink);
-export const deleteFile = async (path: string) => {
+
+
+export const deleteFile = async (filePath: string) => {
+
   try {
-    if (fs.existsSync(`../public/${path}`)) {
-      await unlinkSync(`../public/${path}`);
+    // normalize path to avoid double slashes
+    const fullPath = path.join(__dirname, "../public", filePath.replace(/^\/+/, ''));
+
+    if (fs.existsSync(fullPath)) {
+      await fs.promises.unlink(fullPath);
+      console.log("deleted:", fullPath);
     } else {
-      console.log('not found');
+      console.log("not found:", fullPath);
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     throw new Error(`Error deleting file: ${err.message}`);
   }

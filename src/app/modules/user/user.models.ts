@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { Error, model, Schema } from 'mongoose';
 import config from '../../config';
 import { TUser, UserModel } from './user.interface';
+import { USER_ROLE } from './user.constants';
 
 const userSchema = new Schema<TUser>(
   {
@@ -38,10 +39,12 @@ const userSchema = new Schema<TUser>(
     },
     role: {
       type: String,
+      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY, USER_ROLE.ADMIN],
       default: 'user',
     },
     switchRole: {
       type: String,
+      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH,USER_ROLE.COMPANY, USER_ROLE.ADMIN],
       default: 'user',
     },
     address: {
@@ -76,7 +79,20 @@ const userSchema = new Schema<TUser>(
       type: Number,
       default: 0
     },
-    specializations: {
+    totalReview: {
+      type: Number,
+      default: 0
+    },
+    averageRating: {
+      type: Number,
+      default: 0
+    },
+    
+    photographerSpecializations: {
+      type: [String],
+      default: []
+    },
+    videographerSpecializations: {
       type: [String],
       default: []
     },
@@ -104,10 +120,17 @@ const userSchema = new Schema<TUser>(
 userSchema.pre('save', async function (next) {
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   const user = this;
-  user.password = await bcrypt.hash(
-    user.password,
-    Number(config.bcrypt_salt_rounds),
-  );
+  // user.password = await bcrypt.hash(
+  //   user.password,
+  //   Number(config.bcrypt_salt_rounds),
+  // );
+
+  if (user.isModified('password') && user.password) {
+    user.password = await bcrypt.hash(
+      user.password,
+      Number(config.bcrypt_salt_rounds),
+    );
+  }
   next();
 });
 

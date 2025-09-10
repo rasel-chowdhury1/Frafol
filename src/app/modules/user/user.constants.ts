@@ -1,6 +1,7 @@
 export const USER_ROLE = {
   ADMIN: 'admin',
   USER: 'user',
+  COMPANY: 'company',
   PHOTOGRAPHER: 'photographer',
   VIDEOGRAPHER: 'videographer',
   BOTH: "both"

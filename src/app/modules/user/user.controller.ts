@@ -105,10 +105,27 @@ const getAllUsersOverview = catchAsync(async (req, res) => {
   });
 });
 
+const getProfessionalPhotographerAndVideographer = catchAsync(async (req: Request, res: Response) => {
+  const { page, limit } = req.query;
 
+  const query = {
+    page: Number(page) || 1,
+    limit: Number(limit) || 10,
+  };
+
+  const result = await userService.getProfessionalPhotographerAndVideographer(query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Professional photographers and videographers retrieved successfully",
+    data: result,
+  });
+});
 
 
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
+  
   if (req?.file) {
     req.body.profileImage = storeFile('profile', req?.file?.filename);
   }
@@ -153,5 +170,6 @@ export const userController = {
   blockedUser,
   deleteMyAccount,
   getAllUsers,
-  getAllUsersOverview
+  getAllUsersOverview,
+  getProfessionalPhotographerAndVideographer
 };

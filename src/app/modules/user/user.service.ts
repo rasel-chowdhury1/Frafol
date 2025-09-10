@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
 import AppError from '../../error/AppError';
-import { DeleteAccountPayload, TUser, TUserCreate } from './user.interface';
+import { DeleteAccountPayload, PaginateQuery, TUser, TUserCreate } from './user.interface';
 import { User } from './user.models';
 import config from '../../config';
 import QueryBuilder from '../../builder/QueryBuilder';
@@ -17,6 +17,7 @@ import Notification from '../notifications/notifications.model';
 import mongoose from 'mongoose';
 import { getAdminId } from '../../DB/adminStrore';
 import { emitNotification } from '../../../socketIo';
+import { USER_ROLE } from './user.constants';
 
 export type IFilter = {
   searchTerm?: string;
@@ -31,7 +32,7 @@ export interface OTPVerifyAndCreateUserProps {
 
 const createUserToken = async (payload: TUserCreate) => {
   
-  const { name,sureName,companyName, email, password, role,specializations, about, hourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub} =
+  const { name,sureName,companyName, email, password, role,photographerSpecializations,videographerSpecializations, about, hourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub} =
     payload;
 
   // user exist check
@@ -74,7 +75,8 @@ const createUserToken = async (payload: TUserCreate) => {
     email, 
     password, 
     role,
-    specializations, 
+    photographerSpecializations, 
+    videographerSpecializations,
     about, 
     hourlyRate,
     address,
@@ -135,7 +137,8 @@ const otpVerifyAndCreateUser = async ({
               email,
               password,
               role,
-              specializations, 
+              photographerSpecializations,
+              videographerSpecializations,
               about, 
               hourlyRate,
               address,
@@ -186,7 +189,8 @@ const otpVerifyAndCreateUser = async ({
                     address,
                     town,
                     country,
-                    specializations,
+                    photographerSpecializations,
+                    videographerSpecializations,
                     hourlyRate,
                     acceptTerms,
                     newsLetterSub,
@@ -265,6 +269,39 @@ const updateUser = async (id: string, payload: Partial<TUser>) => {
 };
 
 // ............................rest
+
+    const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
+      const roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+      const page = Number(query.page) || 1;
+      const limit = Number(query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      // Fetch total count
+      const total = await User.countDocuments({
+        role: { $in: roles },
+        isDeleted: false,
+        isBlocked: false,
+      });
+
+      // Fetch paginated results sorted by averageRating descending
+      const result = await User.find({
+        role: { $in: roles },
+        isDeleted: false,
+        isBlocked: false,
+      })
+        .sort({ averageRating: -1 }) // highest rating first
+        .skip(skip)
+        .limit(limit)
+        .select("name sureName profileImage town address country hourlyRate averageRating totalReview ");
+
+      const totalPage = Math.ceil(total / limit);
+
+      return {
+        meta: { page, limit, total, totalPage },
+        result,
+      };
+    };
 
 const getAllUserQuery = async (userId: string, query: Record<string, unknown>) => {
   const userQuery = new QueryBuilder(User.find({ _id: { $ne: userId } }), query)
@@ -450,5 +487,6 @@ export const userService = {
   blockedUser,
   getAllUserQuery,
   getAllUserCount,
-  getUsersOverview
+  getUsersOverview,
+  getProfessionalPhotographerAndVideographer
 };
