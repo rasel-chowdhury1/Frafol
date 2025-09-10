@@ -7,6 +7,7 @@ import { notificationRoutes } from "../modules/notifications/notifications.route
 import { CategoryRoutes } from "../modules/category/category.route";
 import { ReviewRoutes } from "../modules/review/review.route";
 import { FeedbackRoutes } from "../modules/feedback/feedback.route";
+import { GearMarketplaceRoutes } from "../modules/gearMarketplace/gearMarketplace.route";
 
 const router = Router();
 
@@ -42,6 +43,10 @@ const moduleRoutes = [
   {
      path: "/feedback",
      route: FeedbackRoutes
+  },
+  {
+     path: "/marketPlace",
+     route: GearMarketplaceRoutes
   },
 ];
 
