@@ -34,6 +34,10 @@ const createUserToken = async (payload: TUserCreate) => {
   
   const { name,sureName,companyName, email, password, role,photographerSpecializations,videographerSpecializations, about, hourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub} =
     payload;
+  let adminVerified = "pending"
+  if (role === "user" || role === "company"){
+     adminVerified = "verified"
+  }
 
   // user exist check
   const userExist = await userService.getUserByEmail(email);
@@ -84,7 +88,8 @@ const createUserToken = async (payload: TUserCreate) => {
     country,
     acceptTerms,
     ramcuvaAgree,
-    newsLetterSub
+    newsLetterSub,
+    adminVerified
   };
 
 
@@ -147,6 +152,7 @@ const otpVerifyAndCreateUser = async ({
               acceptTerms,
               ramcuvaAgree,
               newsLetterSub,
+              adminVerified
             } = decodeData;
 
             // Check OTP
@@ -194,6 +200,7 @@ const otpVerifyAndCreateUser = async ({
                     hourlyRate,
                     acceptTerms,
                     newsLetterSub,
+                    adminVerified
                   },
                 ],
                 { session }
@@ -293,7 +300,7 @@ const updateUser = async (id: string, payload: Partial<TUser>) => {
         .sort({ averageRating: -1 }) // highest rating first
         .skip(skip)
         .limit(limit)
-        .select("name sureName profileImage town address country hourlyRate averageRating totalReview ");
+        .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
 
       const totalPage = Math.ceil(total / limit);
 

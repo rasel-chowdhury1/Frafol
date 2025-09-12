@@ -21,6 +21,15 @@ const login = catchAsync(async (req: Request, res: Response) => {
     cookieOptions.sameSite = 'none';
   }
 
+  console.log({result})
+  if(result.user.adminVerified === "pending"){
+    sendResponse(res, {
+    statusCode: httpStatus.UNAUTHORIZED,
+    success: false,
+    message: 'Your account is not yet verified. Please allow a moment for the verification process to complete',
+    data: null,
+  });
+  }
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

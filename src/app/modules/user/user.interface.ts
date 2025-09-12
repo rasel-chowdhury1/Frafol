@@ -24,6 +24,7 @@ export interface TUserCreate {
   photographerSpecializations: string[];
   videographerSpecializations: string[];
   newsLetterSub: boolean;
+  adminVerified: string;
   isBlocked: boolean;
   isDeleted: boolean;
     acceptTerms: boolean;

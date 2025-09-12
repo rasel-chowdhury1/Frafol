@@ -100,6 +100,11 @@ const userSchema = new Schema<TUser>(
       type: Boolean, // Added date of birth
       required: false, // Optional field
     },
+    adminVerified: {
+      type: String,
+      enum: ["pending", "verified"],
+      default: "pending"
+    },
     isBlocked: {
       type: Boolean,
       default: false,
