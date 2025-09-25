@@ -316,6 +316,40 @@ class QueryBuilder<T> {
 
     excludeFields.forEach((el) => delete queryObj[el]);
 
+    console.log('Filter Query Object:', queryObj);
+
+  // Handle price range filter
+  if (this.query.minPrice && this.query.maxPrice) {
+    const minPrice = parseFloat(this.query.minPrice as string);
+    const maxPrice = parseFloat(this.query.maxPrice as string);
+
+    if (!isNaN(minPrice) && !isNaN(maxPrice)) {
+      queryObj['price'] = {
+        $gte: minPrice,
+        $lte: maxPrice,
+      };
+    }
+
+    // Remove minPrice and maxPrice from the final query object
+      delete queryObj.minPrice;
+      delete queryObj.maxPrice;
+  }
+
+      console.log('Filter Query Object:', queryObj);
+
+
+    // Handle category name filter
+    if (this.query.categoryName) {
+      this.modelQuery = this.modelQuery.find({
+        'categoryId.title': { $regex: this.query.categoryName, $options: 'i' },
+      });
+    }
+
+    // Handle condition filter
+    if (this.query.condition) {
+      queryObj['condition'] = this.query.condition;
+    }
+
     this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
 
     return this;

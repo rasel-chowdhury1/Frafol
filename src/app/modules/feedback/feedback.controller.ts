@@ -16,7 +16,7 @@ const createFeedback = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllFeedbacks = catchAsync(async (req: Request, res: Response) => {
-  const result = await FeedbackService.getAllFeedbacks();
+  const result = await FeedbackService.getAllFeedbacks(req.query);
 
   sendResponse(res, {
     statusCode: 200,

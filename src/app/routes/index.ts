@@ -8,6 +8,11 @@ import { CategoryRoutes } from "../modules/category/category.route";
 import { ReviewRoutes } from "../modules/review/review.route";
 import { FeedbackRoutes } from "../modules/feedback/feedback.route";
 import { GearMarketplaceRoutes } from "../modules/gearMarketplace/gearMarketplace.route";
+import { CommissionSetupRoutes } from "../commissionSetup/commissionSetup.route";
+import { ReportRoutes } from "../modules/report/report.route";
+import { WorkshopRoutes } from "../modules/workshop/workshop.routes";
+import path from "path";
+import { PackageRoutes } from "../modules/package/package.route";
 
 const router = Router();
 
@@ -47,6 +52,22 @@ const moduleRoutes = [
   {
      path: "/marketPlace",
      route: GearMarketplaceRoutes
+  },
+  {
+     path: "/workshop",
+     route: WorkshopRoutes
+  },
+  {
+   path : "/package",
+   route : PackageRoutes
+  },
+  {
+     path: "/commissionSetup",
+     route: CommissionSetupRoutes
+  },
+  {
+     path: "/report",
+     route: ReportRoutes
   },
 ];
 

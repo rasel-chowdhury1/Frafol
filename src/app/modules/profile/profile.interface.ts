@@ -6,4 +6,9 @@ export interface IProfile {
     specializations?: [string],
     acceptTerms?: boolean,
     ramcuvaAgree?: boolean
+    bankName?: string,
+    accountNumber?: string,
+    routingNumber?: string
+    createdAt?: Date;
+    updatedAt?: Date;
   }

@@ -40,9 +40,24 @@ userRoutes
     ),
     userController.getAdminProfile,
   )
+
   .get('/all-users', auth("admin"), userController.getAllUsers)
+
+  .get(
+    '/stats',
+    auth(USER_ROLE.ADMIN),  
+    userController.getUserRoleStats
+  )
+
+  .get(
+    '/pending-professionals',
+    auth(USER_ROLE.ADMIN),  
+    userController.getPendingPhotographersVideographersBoth
+  )
+
+
+
   
-  .get("/all-users-overview", auth("admin"), userController.getAllUsersOverview)
 
 
 // featured profestions routes
@@ -68,6 +83,43 @@ userRoutes
     userController.updateMyProfile,
   )
 
+  .patch(
+    '/upload-new-photo',
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    upload.fields([
+      { name: 'gallery', maxCount: 10 }
+    ]),
+    parseData(),
+    userController.updateUserGallery,
+  )
+
+
+
+  .patch(
+  "/setUnAvailability",
+  auth(
+    USER_ROLE.USER,
+    USER_ROLE.PHOTOGRAPHER,
+    USER_ROLE.VIDEOGRAPHER,
+    USER_ROLE.BOTH,
+    USER_ROLE.COMPANY,
+    USER_ROLE.ADMIN
+  ),
+  userController.setUnAvailability
+)
+
+  .patch(
+    '/verified/:userId',
+    auth('admin'),
+    userController.verifyProfessionalUserController,
+  )
+
+  .patch(
+    '/declined/:userId',
+    auth('admin'),
+    userController.declineProfessionalUserController,
+  )
+  
   .patch(
     '/block/:id',
     auth('admin'),

@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
 import AppError from '../../error/AppError';
-import { DeleteAccountPayload, PaginateQuery, TUser, TUserCreate } from './user.interface';
+import { DeleteAccountPayload, PaginateQuery, TUser, TUserCreate, VerifiedProfessionalPayload } from './user.interface';
 import { User } from './user.models';
 import config from '../../config';
 import QueryBuilder from '../../builder/QueryBuilder';
@@ -14,11 +14,12 @@ import { createToken, verifyToken } from '../../utils/tokenManage';
 import { IProfile } from '../profile/profile.interface';
 import Profile from '../profile/profile.model';
 import Notification from '../notifications/notifications.model';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { getAdminId } from '../../DB/adminStrore';
 import { emitNotification } from '../../../socketIo';
 import { USER_ROLE } from './user.constants';
-
+import fs from 'fs';
+import path from 'path';
 export type IFilter = {
   searchTerm?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +33,7 @@ export interface OTPVerifyAndCreateUserProps {
 
 const createUserToken = async (payload: TUserCreate) => {
   
-  const { name,sureName,companyName, email, password, role,photographerSpecializations,videographerSpecializations, about, hourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub} =
+  const { name,sureName,companyName, email, password, role,photographerSpecializations,videographerSpecializations, about, hourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub,ico,dic,ic_dph} =
     payload;
   let adminVerified = "pending"
   if (role === "user" || role === "company"){
@@ -89,7 +90,10 @@ const createUserToken = async (payload: TUserCreate) => {
     acceptTerms,
     ramcuvaAgree,
     newsLetterSub,
-    adminVerified
+    adminVerified,
+    ico,
+    dic,
+    ic_dph
   };
 
 
@@ -152,7 +156,10 @@ const otpVerifyAndCreateUser = async ({
               acceptTerms,
               ramcuvaAgree,
               newsLetterSub,
-              adminVerified
+              adminVerified,
+              ico,
+              dic,
+              ic_dph
             } = decodeData;
 
             // Check OTP
@@ -200,7 +207,10 @@ const otpVerifyAndCreateUser = async ({
                     hourlyRate,
                     acceptTerms,
                     newsLetterSub,
-                    adminVerified
+                    adminVerified,
+                    ico,
+                    dic,
+                    ic_dph
                   },
                 ],
                 { session }
@@ -262,53 +272,273 @@ const otpVerifyAndCreateUser = async ({
 };
 
 
-const updateUser = async (id: string, payload: Partial<TUser>) => {
-  const { role, email, isBlocked, isDeleted,password, ...rest } = payload;
+const updateUser = async (userId: string, payload: Partial<TUser>) => {
+  const {
+    role,
+    email,
+    isBlocked,
+    isDeleted,
+    password,
+    about,
+    bankName,
+    accountNumber,
+    routingNumber,
+    ...rest
+  } = payload;
+
+  // 1️⃣ Find existing user
+  const user = await User.findById(userId);
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, "User not found");
+
+  // 2️⃣ Handle profile fields
+  if (about || bankName || accountNumber || routingNumber) {
+    let profile;
+    if (user.profileId) {
+      profile = await Profile.findByIdAndUpdate(
+        user.profileId,
+        { about, bankName, accountNumber, routingNumber },
+        { new: true }
+      );
+    } else {
+      profile = await Profile.create({ about, bankName, accountNumber, routingNumber });
+      (user.profileId as any)= profile._id; // Keep as ObjectId
+      await user.save();
+    }
+  }
+
+  // Delete previous profile image if a new one is uploaded
+  if (payload.profileImage && user.profileImage) {
+    const oldFilePath = path.join(process.cwd(), "public", user.profileImage); // include public folder
+    if (fs.existsSync(oldFilePath)) {
+      fs.unlinkSync(oldFilePath);
+      console.log(`Deleted previous profile image: ${oldFilePath}`);
+    }
+  }
+
+  // Merge rest fields with profileImage if present
+  const updateData = {
+    ...rest,
+    ...(payload.profileImage ? { profileImage: payload.profileImage } : {}),
+  };
+
+  // Update user in DB
+  const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+  if (!updatedUser) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User updating failed");
+  }
+
+  return updatedUser;
+};
+
+const updateGallery = async (
+  userId: string,
+  updateData: { gallery?: string[]; deleteGallery?: string[] }
+) => {
+  console.log("updateData ->>> ", { ...updateData });
+
+  // Fetch the current business first
+  const existingUser = await User.findById(userId);
+  if (!existingUser) {
+    throw new Error("User not found");
+  }
+
+  let newGallery = (existingUser as any).gallery || [];
+
+  // Remove images if deleteGallery is provided
+  if (updateData.deleteGallery && updateData.deleteGallery.length > 0) {
+    updateData.deleteGallery.forEach((imgPath) => {
+      // Convert relative path to absolute server path
+      const fullPath = path.join(process.cwd(), 'public', imgPath); // process.cwd() gives root of project
+      if (fs.existsSync(fullPath)) {
+
+        fs.unlinkSync(fullPath);
+      } else {
+        console.log(`File not found: ${fullPath}`);
+      }
+    });
+
+    // Remove deleted images from gallery array
+    newGallery = newGallery.filter(img => !updateData.deleteGallery?.includes(img));
+  }
+  // Append new images if provided
+  if (updateData.gallery && updateData.gallery.length > 0) {
+    newGallery = [...newGallery, ...updateData.gallery];
+  }
+
+  // Update the gallery in updateData
+  updateData.gallery = newGallery;
+
+    // Remove deleteGallery from updateData to avoid saving it in DB
+  delete updateData.deleteGallery;
+
+  const updatedBusiness = await User.findByIdAndUpdate(
+    userId,
+    { ...updateData },
+    { new: true }
+  );
+
+  return updatedBusiness;
+};
+
+const verifyProfessionalUserById = async (userId: string, status?: string) => {
 
 
-  const user = await User.findByIdAndUpdate(id, rest, { new: true });
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { adminVerified: status ? status : "verified" },
+    { new: true, runValidators: true } // ensure validation runs
+  ).select('-password'); // exclude password
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User updating failed');
+    throw new AppError(httpStatus.BAD_REQUEST, 'User verification update failed');
   }
+
+  return user;
+};
+
+const declineProfessionalUserById = async (userId: string, reason?: string) => {
+  // Soft delete + mark as declined
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { 
+      isDeleted: true, 
+      adminVerified: 'declined' // optional, could use 'declined' if you add this enum
+    },
+    { new: true, runValidators: true }
+  ).select('-password'); // exclude password
+
+  if (!user) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the professional user');
+  }
+
+  return user;
+};
+
+const updateUnAvailability = async (userId: string, dates: (Date | string)[]) => {
+  // Find the user
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  // Normalize existing dates and new dates to ISO strings
+  const existingDates = (user.unAvailability || []).map(d => new Date(d).toISOString());
+  const newDates = dates.map(d => new Date(d).toISOString());
+
+  // Merge and remove duplicates
+  const uniqueDates = Array.from(new Set([...existingDates, ...newDates]));
+
+  // Convert back to Date objects
+  user.unAvailability = uniqueDates.map(d => new Date(d));
+
+  // Save the updated user
+  await user.save();
 
   return user;
 };
 
 // ............................rest
 
-    const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
-      const roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+  const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
+    const roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
 
-      const page = Number(query.page) || 1;
-      const limit = Number(query.limit) || 10;
-      const skip = (page - 1) * limit;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-      // Fetch total count
-      const total = await User.countDocuments({
-        role: { $in: roles },
-        isDeleted: false,
-        isBlocked: false,
-      });
+    // Fetch total count
+    const total = await User.countDocuments({
+      role: { $in: roles },
+      isDeleted: false,
+      isBlocked: false,
+    });
 
-      // Fetch paginated results sorted by averageRating descending
-      const result = await User.find({
-        role: { $in: roles },
-        isDeleted: false,
-        isBlocked: false,
-      })
-        .sort({ averageRating: -1 }) // highest rating first
-        .skip(skip)
-        .limit(limit)
-        .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
+    // Fetch paginated results sorted by averageRating descending
+    const result = await User.find({
+      role: { $in: roles },
+      isDeleted: false,
+      isBlocked: false,
+    })
+      .sort({ averageRating: -1 }) // highest rating first
+      .skip(skip)
+      .limit(limit)
+      .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
 
-      const totalPage = Math.ceil(total / limit);
+    const totalPage = Math.ceil(total / limit);
 
-      return {
-        meta: { page, limit, total, totalPage },
-        result,
-      };
+    return {
+      meta: { page, limit, total, totalPage },
+      result,
     };
+  };
+
+
+
+  const getProfessionalVideographers= async (query: PaginateQuery) => {
+    const roles = [USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Fetch total count
+    const total = await User.countDocuments({
+      role: { $in: roles },
+      isDeleted: false,
+      isBlocked: false,
+    });
+
+    // Fetch paginated results sorted by averageRating descending
+    const result = await User.find({
+      role: { $in: roles },
+      isDeleted: false,
+      isBlocked: false,
+    })
+      .sort({ averageRating: -1 }) // highest rating first
+      .skip(skip)
+      .limit(limit)
+      .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
+
+    const totalPage = Math.ceil(total / limit);
+
+    return {
+      meta: { page, limit, total, totalPage },
+      result,
+    };
+  };
+
+
+  const getProfessionalPhotographers= async (query: PaginateQuery) => {
+    const roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.BOTH];
+
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Fetch total count
+    const total = await User.countDocuments({
+      role: { $in: roles },
+      isDeleted: false,
+      isBlocked: false,
+    });
+
+    // Fetch paginated results sorted by averageRating descending
+    const result = await User.find({
+      role: { $in: roles },
+      isDeleted: false,
+      isBlocked: false,
+    })
+      .sort({ averageRating: -1 }) // highest rating first
+      .skip(skip)
+      .limit(limit)
+      .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
+
+    const totalPage = Math.ceil(total / limit);
+
+    return {
+      meta: { page, limit, total, totalPage },
+      result,
+    };
+  };
 
 const getAllUserQuery = async (userId: string, query: Record<string, unknown>) => {
   const userQuery = new QueryBuilder(User.find({ _id: { $ne: userId } }), query)
@@ -323,69 +553,92 @@ const getAllUserQuery = async (userId: string, query: Record<string, unknown>) =
   return { meta, result };
 };
 
+const getAllPhotographersVideographersBoth = async (
+  query: Record<string, any> = {}
+) => {
+  // Filter users by role
+  const roleFilter = {
+    role: { $in: [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH] },
+    adminVerified: "verified",
+    isDeleted: false,
+    isBlocked: false,
+  };
+
+  const userQuery = new QueryBuilder(User.find(roleFilter), query)
+    .search(['name', 'sureName', 'email']) // corrected search fields
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await userQuery.modelQuery;
+  const meta = await userQuery.countTotal();
+
+  return { meta, result };
+};
+
+const getPendingPhotographersVideographersBoth = async (
+  query: Record<string, any> = {}
+) => {
+  // Filter users by role
+  const roleFilter = {
+    role: { $in: [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH] },
+    adminVerified: "pending",
+    isDeleted: false,
+    isBlocked: false,
+  };
+
+  const userQuery = new QueryBuilder(User.find(roleFilter), query)
+    .search(['name', 'sureName', 'email']) // corrected search fields
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await userQuery.modelQuery;
+  const meta = await userQuery.countTotal();
+
+  return { meta, result };
+};
+
 const getAllUserCount = async () => {
   const allUserCount = await User.countDocuments();
   return allUserCount;
 };
 
-const getUsersOverview = async (userId:string, year:any) => {
-  try {
-    // Fetch total user count
-    const totalUsers = await User.countDocuments();
 
-    // Fetch user growth over time for the specified year (monthly count with month name)
-    const userOverview = await User.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: new Date(`${year}-01-01`), $lt: new Date(`${year + 1}-01-01`) }, // Filter by year
+const getUserRoleStats = async () => {
+  const result = await User.aggregate([
+    {
+      $match: { adminVerified: "verified", isDeleted: false }
+    },
+    {
+      $group: {
+        _id: null,
+        totalPhotographer: {
+          $sum: { $cond: [{ $eq: ['$role', USER_ROLE.PHOTOGRAPHER] }, 1, 0] }
         },
-      },
-      {
-        $group: {
-          _id: { $month: '$createdAt' }, // Group by month of the 'createdAt' date
-          count: { $sum: 1 },
+        totalVideographer: {
+          $sum: { $cond: [{ $eq: ['$role', USER_ROLE.VIDEOGRAPHER] }, 1, 0] }
         },
-      },
-      {
-        $project: {
-          _id: 1,
-          count: 1,
-          monthName: {
-            $switch: {
-              branches: [
-                { case: { $eq: ["$_id", 1] }, then: "January" },
-                { case: { $eq: ["$_id", 2] }, then: "February" },
-                { case: { $eq: ["$_id", 3] }, then: "March" },
-                { case: { $eq: ["$_id", 4] }, then: "April" },
-                { case: { $eq: ["$_id", 5] }, then: "May" },
-                { case: { $eq: ["$_id", 6] }, then: "June" },
-                { case: { $eq: ["$_id", 7] }, then: "July" },
-                { case: { $eq: ["$_id", 8] }, then: "August" },
-                { case: { $eq: ["$_id", 9] }, then: "September" },
-                { case: { $eq: ["$_id", 10] }, then: "October" },
-                { case: { $eq: ["$_id", 11] }, then: "November" },
-                { case: { $eq: ["$_id", 12] }, then: "December" },
-              ],
-              default: "Unknown", // Default value in case month is not valid
-            },
-          },
+        totalBoth: {
+          $sum: { $cond: [{ $eq: ['$role', USER_ROLE.BOTH] }, 1, 0] }
         },
-      },
-      { $sort: { _id: 1 } }, // Sort by month (ascending)
-    ]);
+        totalUserCompany: {
+          $sum: {
+            $cond: [{ $in: ['$role', [USER_ROLE.USER, USER_ROLE.COMPANY]] }, 1, 0]
+          }
+        }
+      }
+    }
+  ]);
 
-    // Fetch recent users
-    const recentUsers = await User.find({ _id: { $ne: userId } }).sort({ createdAt: -1 }).limit(6);
-
-    return {
-      totalUsers,
-      userOverview, // Includes month names with user counts
-      recentUsers,
-    };
-  } catch (error) {
-    console.error('Error fetching dashboard overview:', error);
-    throw new Error('Error fetching dashboard data.');
-  }
+  return result[0] || {
+    totalPhotographer: 0,
+    totalVideographer: 0,
+    totalBoth: 0,
+    totalUserCompany: 0,
+  };
 };
 
 
@@ -425,6 +678,8 @@ const getUserByEmail = async (email: string) => {
 
   return result;
 };
+
+
 
 const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
   const user: TUser | null = await User.IsUserExistById(id);
@@ -490,10 +745,16 @@ export const userService = {
   getUserById,
   getUserByEmail,
   updateUser,
+  updateGallery,
+  updateUnAvailability,
+  verifyProfessionalUserById,
+  declineProfessionalUserById,
   deleteMyAccount,
   blockedUser,
   getAllUserQuery,
   getAllUserCount,
-  getUsersOverview,
+  getUserRoleStats,
+  getAllPhotographersVideographersBoth,
+  getPendingPhotographersVideographersBoth,
   getProfessionalPhotographerAndVideographer
 };

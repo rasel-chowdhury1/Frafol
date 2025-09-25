@@ -6,8 +6,8 @@ const categorySchema = new Schema<ICategory>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     subTitle: { type: String,default: "" },
-    image: { type: String,required: true },
-    type: { type: String, enum: ["photoGraphy", "videoGraphy", "Gear"], required: true },
+    image: { type: String,default: "" },
+    type: { type: String, enum: ["photoGraphy", "videoGraphy", "gear"], required: true },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }

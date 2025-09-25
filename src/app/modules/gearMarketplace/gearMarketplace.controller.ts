@@ -4,6 +4,7 @@ import sendResponse from "../../utils/sendResponse";
 import { GearMarketplaceService } from "./gearMarketplace.service";
 import { storeFiles } from "../../utils/fileHelper";
 import { ApprovalStatus } from "./gearMarketplace.interface";
+import httpStatus from 'http-status';
 
 const createGearMarketplace = catchAsync(async (req: Request, res: Response) => {
   req.body.authorId = req.user.userId; // logged in user
@@ -78,6 +79,21 @@ const getGearMarketplaceById = catchAsync(async (req: Request, res: Response) =>
     data: result,
   });
 });
+
+
+const getPendingGearMarketplace = catchAsync(async (req, res) => {
+  const result = await GearMarketplaceService.getPendingGearMarketplace(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'All pending gear marketplace items fetched successfully',
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
+
 
 const updateGearMarketplace = catchAsync(async (req: Request, res: Response) => {
 
@@ -165,5 +181,6 @@ export const GearMarketplaceController = {
   updateGearMarketplace,
   deleteGearMarketplace,
   getMyGearMarketplaces,
-  updateApprovalStatusByAdmin 
+  updateApprovalStatusByAdmin,
+  getPendingGearMarketplace
 };

@@ -4,7 +4,9 @@ import sendResponse from '../../utils/sendResponse';
 import { userService } from './user.service';
 
 import httpStatus from 'http-status';
-import { storeFile } from '../../utils/fileHelper';
+import { storeFile, storeFiles } from '../../utils/fileHelper';
+
+
 const createUser = catchAsync(async (req: Request, res: Response) => {
 
   const createUserToken = await userService.createUserToken(req.body);
@@ -31,7 +33,38 @@ const userCreateVarification = catchAsync(async (req, res) => {
   });
 });
 
+const verifyProfessionalUserController = catchAsync(
+  async (req: Request, res: Response) => {
+    // Extract userId from params and status from request body
+    const { userId } = req.params;
+    const { status } = req.body;
 
+    const updatedUser = userService.verifyProfessionalUserById(userId);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: `User has been ${status === 'verified' ? 'verified' : 'set to pending'} successfully`,
+      data: updatedUser,
+    });
+  }
+);
+
+const declineProfessionalUserController = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { reason } = req.body; // Optional reason for declining
+
+    const declinedUser = userService.declineProfessionalUserById(userId, reason);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Professional user has been declined successfully',
+      data: declinedUser,
+    });
+  }
+);
 
 // rest >...............
 
@@ -46,6 +79,41 @@ const getAllUsers = catchAsync(async (req, res) => {
     meta: result.meta,
     data: result.result,
     message: 'Users All are requered successful!!',
+  });
+});
+
+const getUserRoleStats = catchAsync(async (req, res) => {
+  const result = await userService.getUserRoleStats();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'User role statistics retrieved successfully.',
+    data: result,
+  });
+});
+
+const getAllPhotographersVideographersBoth = catchAsync(async (req, res) => {
+  const result = await userService.getAllPhotographersVideographersBoth(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Photographers, Videographers, and Both retrieved successfully',
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
+const getPendingPhotographersVideographersBoth = catchAsync(async (req, res) => {
+  const result = await userService.getPendingPhotographersVideographersBoth(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'All pending Photographers, Videographers, and Both retrieved successfully',
+    meta: result.meta,
+    data: result.result,
   });
 });
 
@@ -81,29 +149,6 @@ const getAdminProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-const getAllUsersOverview = catchAsync(async (req, res) => {
-  const {userId} = req.user;
-  // Default to the current year if the 'year' query parameter is not provided
-  const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-  
-  // Ensure the year is valid
-  if (isNaN(year)) {
-    sendResponse(res, {
-      statusCode: httpStatus.BAD_REQUEST,
-      success: false,
-      message: 'Invalid year parameter.',
-      data: null,
-    });
-  }
-
-  const result = await userService.getUsersOverview(userId, year)
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'get all User overview fetched successfully',
-    data: result,
-  });
-});
 
 const getProfessionalPhotographerAndVideographer = catchAsync(async (req: Request, res: Response) => {
   const { page, limit } = req.query;
@@ -140,6 +185,50 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.userId; // Logged-in user
+  
+  const updateData: { gallery?: string[]; deleteGallery?: string[] } = { ...req.body };
+
+  // Handle file uploads if any
+  if (req.files && Object.keys(req.files).length > 0) {
+    const files = req.files as { [fieldName: string]: Express.Multer.File[] };
+    const uploadedFiles = storeFiles('profile', files);
+
+    if (uploadedFiles.gallery) {
+      updateData.gallery = updateData.gallery
+        ? [...updateData.gallery, ...uploadedFiles.gallery]
+        : uploadedFiles.gallery;
+    }
+  }
+
+  console.log("Update Data:", updateData);
+
+  const updatedUser = await userService.updateGallery(userId, updateData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User gallery updated successfully",
+    data: updatedUser,
+  });
+});
+
+const setUnAvailability = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.userId;
+  const dates: Date[] = req.body.unAvailability;
+
+  const updatedUser =  await userService.updateUnAvailability(userId, dates);
+
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Availability updated successfully",
+    data: updatedUser,
+  });
+});
+
 const blockedUser = catchAsync(async (req: Request, res: Response) => {
   const result = await userService.blockedUser(req.params.id);
   sendResponse(res, {
@@ -167,9 +256,14 @@ export const userController = {
   getMyProfile,
   getAdminProfile,
   updateMyProfile,
+  updateUserGallery,
+  setUnAvailability,
   blockedUser,
   deleteMyAccount,
   getAllUsers,
-  getAllUsersOverview,
-  getProfessionalPhotographerAndVideographer
+  getUserRoleStats,
+  getProfessionalPhotographerAndVideographer,
+  getPendingPhotographersVideographersBoth,
+  verifyProfessionalUserController,
+  declineProfessionalUserController
 };

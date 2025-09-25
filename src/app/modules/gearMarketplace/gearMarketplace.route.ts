@@ -31,6 +31,12 @@ router
         GearMarketplaceController.getMyGearMarketplaces
     )
 
+    .get(
+        "/pending",
+        auth(USER_ROLE.ADMIN),
+        GearMarketplaceController.getPendingGearMarketplace
+    )
+
 
     .get(
     "/:id",
@@ -46,11 +52,15 @@ router
     parseData(),
     GearMarketplaceController.updateGearMarketplace
     )
+
+
     .patch(
     "/updateApprovalStatus/:id",
     auth(USER_ROLE.ADMIN),
     GearMarketplaceController.updateApprovalStatusByAdmin
     )
+
+
 
     .delete(
     "/:id",

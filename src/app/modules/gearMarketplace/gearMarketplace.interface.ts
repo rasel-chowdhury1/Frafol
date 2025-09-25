@@ -13,10 +13,11 @@ export interface IGearMarketplace {
   categoryId: Types.ObjectId;
   name: string;
   price: number;
+  vatAmount?: number;
   description: string;
   condition: ConditionType;
   gallery: string[];
-  shippingCompany: IShippingCompany[];
+  shippingCompany: IShippingCompany;
   extraInformation?: string;
   approvalStatus?: ApprovalStatus;
   isDeleted?: boolean;
@@ -27,6 +28,7 @@ export interface IGearMarketplace {
 export interface IUpdateGearMarketplace {
   name?: string;
   price?: number;
+  vatAmount?: number;
   description?: string;
   condition?: ConditionType;
   gallery?: string[];

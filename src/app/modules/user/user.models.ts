@@ -47,6 +47,9 @@ const userSchema = new Schema<TUser>(
       enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH,USER_ROLE.COMPANY, USER_ROLE.ADMIN],
       default: 'user',
     },
+    gallery: {
+      type: [String],
+      default: [],  },
     address: {
       type: String,
       default: ''
@@ -102,8 +105,12 @@ const userSchema = new Schema<TUser>(
     },
     adminVerified: {
       type: String,
-      enum: ["pending", "verified"],
+      enum: ["pending", "verified", 'declined'],
       default: "pending"
+    },
+    unAvailability: {
+      type: [Date],
+      default: [],
     },
     isBlocked: {
       type: Boolean,

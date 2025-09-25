@@ -57,10 +57,15 @@ const updateGearMarketplace = async (
   userId: string,
   payload: IUpdateGearMarketplace & { deleteGallery?: string[] }
 ) => {
+
+  console.log('Update Payload:', payload); // Debug log
+
   const { gallery, deleteGallery, ...rest } = payload;
 
   // Build update object
   const updateData: any = { ...rest };
+
+  console.log('Update Data before gallery processing:', updateData); // Debug log
 
   if (gallery && gallery.length > 0) {
     // Push new images into gallery
@@ -72,13 +77,43 @@ const updateGearMarketplace = async (
     updateData.$pull = { gallery: { $in: deleteGallery } };
   }
 
-    // Update DB first
-  const updatedDoc = await GearMarketplace.findOneAndUpdate(
-    { _id: id, authorId: userId, isDeleted: false },
-    updateData,
-    { new: true }
-  );
+  console.log('Final Update Data:', updateData); // Debug log
+  let updatedDoc = null;
+try {
+      // Update DB first
+  //  updatedDoc = await GearMarketplace.findOneAndUpdate(
+  //   { _id: id, authorId: userId, isDeleted: false },
+  //   updateData,
+  //   { new: true }
+  // );
 
+  await GearMarketplace.findOneAndUpdate(
+  { _id: id, authorId: userId, isDeleted: false },
+  [
+    {
+      $set: {
+        ...rest,
+        gallery: {
+          $concatArrays: [
+            {
+              $filter: {
+                input: "$gallery",
+                cond: { $not: { $in: ["$$this", deleteGallery] } }
+              }
+            },
+            gallery || []
+          ]
+        }
+      }
+    }
+  ],
+  { new: true }
+);
+
+} catch (error) {
+  console.error('Error updating GearMarketplace:', error);
+  throw error; // rethrow after logging
+}
   // If DB update success and deleteGallery exists → remove physical files
   if (updatedDoc && deleteGallery && deleteGallery.length > 0) {
     for (const filePath of deleteGallery) {
@@ -101,6 +136,28 @@ const updateApprovalStatusByAdmin = async (id: string, status: string) => {
   );
 };
 
+const getPendingGearMarketplace = async (
+  query: Record<string, any> = {}
+) => {
+  // Filter users by role
+  const roleFilter = {
+    approvalStatus: "pending",
+    isDeleted: false
+  };
+
+  const userQuery = new QueryBuilder(GearMarketplace.find(roleFilter), query)
+    .search(['name', 'description', 'condition']) // corrected search fields
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await userQuery.modelQuery;
+  const meta = await userQuery.countTotal();
+
+  return { meta, result };
+};
+
 const deleteGearMarketplace = async (id: string, userId: string) => {
   return await GearMarketplace.findOneAndUpdate(
     { _id: id, authorId: userId, isDeleted: false }, // only author can delete
@@ -116,5 +173,6 @@ export const GearMarketplaceService = {
   updateGearMarketplace,
   deleteGearMarketplace,
   getMyGearMarketplaces,
-  updateApprovalStatusByAdmin
+  updateApprovalStatusByAdmin,
+  getPendingGearMarketplace,
 };

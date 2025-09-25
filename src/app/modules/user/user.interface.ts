@@ -2,7 +2,7 @@ import { Model, ObjectId, Schema } from 'mongoose';
 
 
 export interface TUserCreate {
-  profileId: ObjectId,
+  profileId: ObjectId | null;
   name?: string;
   sureName?: string;
   companyName?: string;
@@ -11,6 +11,7 @@ export interface TUserCreate {
   profileImage: string;
   role: string;
   switchRole: string;
+  gallery: string[];
   address?: string;
   town?: string;
   country?: string;
@@ -24,11 +25,17 @@ export interface TUserCreate {
   photographerSpecializations: string[];
   videographerSpecializations: string[];
   newsLetterSub: boolean;
+  
   adminVerified: string;
+  unAvailability: Date[];
+  about: string;
+  bankName: string;
+  accountNumber: string;
+  routingNumber: string;
   isBlocked: boolean;
   isDeleted: boolean;
     acceptTerms: boolean;
-    about: string;
+    
     ramcuvaAgree: boolean
 }
 
@@ -64,4 +71,9 @@ export type IPaginationOption = {
 export interface PaginateQuery {
   page?: number;
   limit?: number;
+}
+
+export interface VerifiedProfessionalPayload {
+  userId: string;
+  status: 'pending' | 'verified';
 }
