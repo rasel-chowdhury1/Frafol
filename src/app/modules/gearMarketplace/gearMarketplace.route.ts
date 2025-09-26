@@ -37,6 +37,12 @@ router
         GearMarketplaceController.getPendingGearMarketplace
     )
 
+    .get(
+        "/decline/:id",
+        auth(USER_ROLE.ADMIN),
+        GearMarketplaceController.declineGearById
+    )
+
 
     .get(
     "/:id",

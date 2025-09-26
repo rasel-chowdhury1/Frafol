@@ -46,7 +46,20 @@ const createGearMarketplace = catchAsync(async (req: Request, res: Response) => 
 });
 
 const getAllGearMarketplaces = catchAsync(async (req: Request, res: Response) => {
-  const result = await GearMarketplaceService.getAllGearMarketplaces(req.query);
+
+    // Clean query
+  const cleanedQuery: Record<string, any> = {};
+  Object.entries(req.query).forEach(([key, value]) => {
+    if (
+      value !== "" &&
+      value !== "null" &&
+      value !== null &&
+      value !== undefined
+    ) {
+      cleanedQuery[key] = value;
+    }
+  });
+  const result = await GearMarketplaceService.getAllGearMarketplaces(cleanedQuery);
 
   sendResponse(res, {
     statusCode: 200,
@@ -163,8 +176,35 @@ const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Respons
   });
 });
 
+const declineGearById = catchAsync(async (req: Request, res: Response) => {
+
+  const {reason} = req.body as { reason: string };
+  
+    if (!reason) {  
+      sendResponse(res, {
+        statusCode: httpStatus.BAD_REQUEST,
+        success: false,   
+        message: "reason is required",
+        data: null,
+      });
+    } 
+  const result = await GearMarketplaceService.declineGearById(
+    req.params.id,
+    reason
+  );
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Gear item declined successfully",
+    data: result,
+  });
+});
+
 const deleteGearMarketplace = catchAsync(async (req: Request, res: Response) => {
-  await GearMarketplaceService.deleteGearMarketplace(req.params.id, req.user.userId);
+
+  
+
+  await GearMarketplaceService.deleteGearMarketplace(req.params.id, req.user.userId, req.user.role);
 
   sendResponse(res, {
     statusCode: 200,
@@ -182,5 +222,6 @@ export const GearMarketplaceController = {
   deleteGearMarketplace,
   getMyGearMarketplaces,
   updateApprovalStatusByAdmin,
-  getPendingGearMarketplace
+  getPendingGearMarketplace,
+  declineGearById
 };

@@ -2,6 +2,7 @@ import { Workshop } from "./workshop.model";
 import { IWorkshop, IUpdateWorkshop } from "./workshop.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
+import AppError from "../../error/AppError";
 
 const createWorkshop = async (payload: IWorkshop) => {
   return await Workshop.create(payload);
@@ -113,6 +114,23 @@ const updateApprovalStatusByAdmin = async (id: string, status: string) => {
     { new: true }
   );
 };
+
+const declineWorkshopById = async (id: string, reason: string) => {
+
+  const workshop = await Workshop.findOneAndUpdate(
+    id,
+    { 
+      isDeleted: true, 
+      approvalStatus: 'cancelled', // optional, could use 'declined' if you add this enum
+    },
+    { new: true, runValidators: true }  
+  )
+
+  if (!workshop) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the workshop or workshop not found');
+  }
+  return workshop;
+}
 
 const deleteWorkshop = async (id: string, userId: string) => {
   return await Workshop.findOneAndUpdate(

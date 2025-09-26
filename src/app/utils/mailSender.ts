@@ -14,6 +14,18 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
     },
   });
 
+// const transporter = nodemailer.createTransport({
+//   host: "mail.websupport.sk", // sending SMTP server
+//   port: 465,              // SSL port
+//   secure: true,           // true for port 465
+//   auth: {
+//     user: "cvak@frafol.sk",        // your email
+//     pass: "GgsNPK@$Ooj6c9uB"    // SMTP/webmail password
+//   },
+//   tls: {
+//     rejectUnauthorized: false  // ⚠️ disables certificate validation
+//   }
+// });
 
   
 
@@ -26,6 +38,8 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       text: '', // plain text body
       html, // html body
     });
+
+    console.log('mail sended successfully');
     
   } catch (error) {
     console.log('send mail error:', error);

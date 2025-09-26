@@ -2,6 +2,7 @@ import { Package } from "./package.model";
 import { IPackage, IUpdatePackage } from "./package.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
+import AppError from "../../error/AppError";
 
 const createPackage = async (payload: IPackage) => {
   return await Package.create(payload);
@@ -103,6 +104,24 @@ const updateApprovalStatusByAdmin = async (id: string, status: string) => {
   );
 };
 
+const declinePackageById = async (id: string, reason: string) => {
+
+  // Soft delete + mark as declined
+  const pkg = await Package.findByIdAndUpdate(
+    id,
+    { 
+      isDeleted: true, 
+      approvalStatus: 'rejected' // optional, could use 'declined' if you add this enum
+    },
+    { new: true, runValidators: true }
+  )
+  if (!pkg) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the package or package not found');
+  }
+
+  return pkg;
+}
+
 const deletePackage = async (id: string, userId: string) => {
   return await Package.findOneAndUpdate(
     { _id: id, authorId: userId, isDeleted: false },
@@ -119,5 +138,6 @@ export const PackageService = {
   getPendingPackages,
   updatePackage,
   updateApprovalStatusByAdmin,
+  declinePackageById,
   deletePackage,
 };

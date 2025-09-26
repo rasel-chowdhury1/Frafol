@@ -283,7 +283,7 @@
 
 // export default QueryBuilder;
 
-import { FilterQuery, Query } from 'mongoose';
+import mongoose, { FilterQuery, Query } from 'mongoose';
 
 class QueryBuilder<T> {
   public modelQuery: Query<T[], T>;
@@ -310,7 +310,7 @@ class QueryBuilder<T> {
   }
 
   filter() {
-    const queryObj = { ...this.query }; //copy
+    const queryObj = { ...this.query } as Record<string, any>; //copy
     // filtering
     const excludeFields = ['searchTerm', 'sort', 'limit', 'page', 'fields'];
 
@@ -318,31 +318,38 @@ class QueryBuilder<T> {
 
     console.log('Filter Query Object:', queryObj);
 
-  // Handle price range filter
-  if (this.query.minPrice && this.query.maxPrice) {
-    const minPrice = parseFloat(this.query.minPrice as string);
-    const maxPrice = parseFloat(this.query.maxPrice as string);
+  // Handle price filter independently
+    const minPrice = this.query.minPrice ? parseFloat(this.query.minPrice as string) : undefined;
+    const maxPrice = this.query.maxPrice ? parseFloat(this.query.maxPrice as string) : undefined;
 
-    if (!isNaN(minPrice) && !isNaN(maxPrice)) {
-      queryObj['price'] = {
-        $gte: minPrice,
-        $lte: maxPrice,
-      };
+    if (!isNaN(minPrice!) || !isNaN(maxPrice!)) {
+      queryObj['price'] = {};
+      if (!isNaN(minPrice!)) queryObj['price']['$gte'] = minPrice;
+      if (!isNaN(maxPrice!)) queryObj['price']['$lte'] = maxPrice;
     }
 
-    // Remove minPrice and maxPrice from the final query object
-      delete queryObj.minPrice;
-      delete queryObj.maxPrice;
-  }
-
-      console.log('Filter Query Object:', queryObj);
+    delete queryObj.minPrice;
+    delete queryObj.maxPrice;
 
 
     // Handle category name filter
     if (this.query.categoryName) {
+
+      console.log('Applying categoryName filter:', this.query.categoryName);
       this.modelQuery = this.modelQuery.find({
         'categoryId.title': { $regex: this.query.categoryName, $options: 'i' },
       });
+
+      console.log('Category Name Filter Applied', this.modelQuery);
+      delete queryObj.categoryName;
+    }
+
+    if (this.query.categoryId) {
+      try {
+        queryObj['categoryId'] = new mongoose.Types.ObjectId(this.query.categoryId as string);
+      } catch {
+        console.warn("Invalid categoryId format, skipping filter");
+      }
     }
 
     // Handle condition filter

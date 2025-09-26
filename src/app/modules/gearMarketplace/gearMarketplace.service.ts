@@ -2,15 +2,22 @@ import { GearMarketplace } from "./gearMarketplace.model";
 import { IGearMarketplace, IUpdateGearMarketplace } from "./gearMarketplace.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
+import AppError from "../../error/AppError";
+import mongoose from "mongoose";
 
 const createGearMarketplace = async (payload: IGearMarketplace) => {
   return await GearMarketplace.create(payload);
 };
 
 const getAllGearMarketplaces = async (query: Record<string, unknown>) => {
+
+  if (query.categoryId) {
+      query.categoryId = new mongoose.Types.ObjectId(query.categoryId as string);
+    }
+
   const gearQuery = new QueryBuilder(
-    GearMarketplace.find({ isDeleted: false })
-      .populate({path: "authorId", select: "name sureName" })
+    GearMarketplace.find({ approvalStatus: "approved", isDeleted: false })
+      .populate({path: "authorId", select: "name sureName role email" })
       .populate({path: "categoryId", select: "title" }),
     query
   )
@@ -29,7 +36,7 @@ const getAllGearMarketplaces = async (query: Record<string, unknown>) => {
 const getMyGearMarketplaces = async (userId: string, query: Record<string, unknown>) => {
   const gearQuery = new QueryBuilder(
     GearMarketplace.find({ authorId:userId,isDeleted: false })
-      .populate({path: "authorId", select: "name sureName" })
+      .populate({path: "authorId", select: "name sureName role email" })
       .populate({path: "categoryId", select: "title" }),
     query
   )
@@ -48,7 +55,7 @@ const getMyGearMarketplaces = async (userId: string, query: Record<string, unkno
 
 const getGearMarketplaceById = async (id: string) => {
   return await GearMarketplace.findOne({ _id: id, isDeleted: false })
-    .populate({path: "authorId", select: "name sureName" })
+    .populate({path: "authorId", select: "name sureName role email" })
     .populate({path: "categoryId", select: "title" });
 };
 
@@ -57,75 +64,61 @@ const updateGearMarketplace = async (
   userId: string,
   payload: IUpdateGearMarketplace & { deleteGallery?: string[] }
 ) => {
-
-  console.log('Update Payload:', payload); // Debug log
-
   const { gallery, deleteGallery, ...rest } = payload;
 
-  // Build update object
-  const updateData: any = { ...rest };
+  if (rest.categoryId) {
+  rest.categoryId = new mongoose.Types.ObjectId(rest.categoryId);
+}
 
-  console.log('Update Data before gallery processing:', updateData); // Debug log
+  try {
+    // Build the update object
+    const updatePipeline: any[] = [
+      {
+        $set: {
+          ...rest,
+          gallery: {
+            $concatArrays: [
+              {
+                $filter: {
+                  input: "$gallery",
+                  cond: { $not: { $in: ["$$this", deleteGallery || []] } },
+                },
+              },
+              gallery || [],
+            ],
+          },
+        },
+      },
+    ];
 
-  if (gallery && gallery.length > 0) {
-    // Push new images into gallery
-    updateData.$push = { gallery: { $each: gallery } };
-  }
+    // Perform the update
+    const updatedDoc = await GearMarketplace.findOneAndUpdate(
+      { _id: id, authorId: userId, isDeleted: false },
+      updatePipeline,
+      { new: true }
+    );
 
-  if (deleteGallery && deleteGallery.length > 0) {
-    // Pull specific images from gallery
-    updateData.$pull = { gallery: { $in: deleteGallery } };
-  }
+    if (!updatedDoc) {
+      throw new AppError(400, "Gear Marketplace item not found or cannot be updated");
+    }
 
-  console.log('Final Update Data:', updateData); // Debug log
-  let updatedDoc = null;
-try {
-      // Update DB first
-  //  updatedDoc = await GearMarketplace.findOneAndUpdate(
-  //   { _id: id, authorId: userId, isDeleted: false },
-  //   updateData,
-  //   { new: true }
-  // );
-
-  await GearMarketplace.findOneAndUpdate(
-  { _id: id, authorId: userId, isDeleted: false },
-  [
-    {
-      $set: {
-        ...rest,
-        gallery: {
-          $concatArrays: [
-            {
-              $filter: {
-                input: "$gallery",
-                cond: { $not: { $in: ["$$this", deleteGallery] } }
-              }
-            },
-            gallery || []
-          ]
+    // Remove physical files if deleteGallery exists
+    if (deleteGallery && deleteGallery.length > 0) {
+      for (const filePath of deleteGallery) {
+        try {
+          await deleteFile(filePath);
+        } catch (err) {
+          console.error(`Failed to delete file ${filePath}:`, err);
+          // Skip error, don't crash server
         }
       }
     }
-  ],
-  { new: true }
-);
 
-} catch (error) {
-  console.error('Error updating GearMarketplace:', error);
-  throw error; // rethrow after logging
-}
-  // If DB update success and deleteGallery exists → remove physical files
-  if (updatedDoc && deleteGallery && deleteGallery.length > 0) {
-    for (const filePath of deleteGallery) {
-      try {
-        await deleteFile(filePath); // utility you already made
-      } catch (err) {
-        console.error(`Failed to delete file ${filePath}:`, err);
-      }
-    }
+    return updatedDoc;
+  } catch (error) {
+    console.error("Error updating GearMarketplace:", error);
+    throw error; // rethrow after logging
   }
-
-  return updatedDoc;
 };
 
 const updateApprovalStatusByAdmin = async (id: string, status: string) => {
@@ -145,7 +138,12 @@ const getPendingGearMarketplace = async (
     isDeleted: false
   };
 
-  const userQuery = new QueryBuilder(GearMarketplace.find(roleFilter), query)
+  const userQuery = new QueryBuilder(
+    GearMarketplace.find(roleFilter)
+      .populate({ path: "categoryId", select: "title" })
+      .populate({ path: "authorId", select: "name email role sureName" }), // adjust fields as needed
+    query
+  )
     .search(['name', 'description', 'condition']) // corrected search fields
     .filter()
     .sort()
@@ -158,12 +156,44 @@ const getPendingGearMarketplace = async (
   return { meta, result };
 };
 
-const deleteGearMarketplace = async (id: string, userId: string) => {
-  return await GearMarketplace.findOneAndUpdate(
-    { _id: id, authorId: userId, isDeleted: false }, // only author can delete
+
+const declineGearById = async (gearId: string, reason?: string) => {
+  // Soft delete + mark as declined
+  const gear = await GearMarketplace.findByIdAndUpdate(
+    gearId,
+    { 
+      isDeleted: true, 
+      approvalStatus: 'cancelled' // optional, could use 'declined' if you add this enum
+    },
+    { new: true, runValidators: true }
+  )
+
+  if (!gear) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the gear item or item not found');
+  }
+
+  return gear;
+};
+
+const deleteGearMarketplace = async (id: string, userId: string, userRole: string) => {
+  console.log(`Attempting to delete GearMarketplace with id: ${id} by user: ${userId}, role: ${userRole}`);
+
+  // Base query
+  const query: any = { _id: id, isDeleted: false };
+
+  // If not admin, enforce authorId check
+  if (userRole !== "admin") {
+    query.authorId = userId;
+  }
+
+  const result = await GearMarketplace.findOneAndUpdate(
+    query,
     { isDeleted: true },
     { new: true }
   );
+
+  console.log("Delete Result:", result);
+  return result;
 };
 
 export const GearMarketplaceService = {
@@ -175,4 +205,5 @@ export const GearMarketplaceService = {
   getMyGearMarketplaces,
   updateApprovalStatusByAdmin,
   getPendingGearMarketplace,
+  declineGearById
 };

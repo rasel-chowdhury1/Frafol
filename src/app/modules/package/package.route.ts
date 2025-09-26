@@ -59,6 +59,12 @@ router
     PackageController.updateApprovalStatusByAdmin
   )
 
+  .patch(
+    "/decline/:id",
+    auth(USER_ROLE.ADMIN),
+    PackageController.declinePackageById
+  )
+
   .delete(
     "/:id",
     auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.ADMIN),

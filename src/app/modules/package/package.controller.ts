@@ -111,6 +111,30 @@ const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Respons
   });
 });
 
+const declinePackageById = catchAsync(async (req: Request, res: Response) => {
+
+  const {reason} = req.body as { reason: string };
+
+    if (!reason) {
+      sendResponse(res, {
+        statusCode: httpStatus.BAD_REQUEST,
+        success: false,
+        message: "reason is required",
+        data: null,
+      });
+    } 
+  const result = await PackageService.declinePackageById(
+    req.params.id,
+    reason
+  );
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Package declined successfully",
+    data: result,
+  });
+});
+
 const deletePackage = catchAsync(async (req: Request, res: Response) => {
   await PackageService.deletePackage(req.params.id, req.user.userId);
 
@@ -130,5 +154,6 @@ export const PackageController = {
   getPendingPackages,
   updatePackage,
   updateApprovalStatusByAdmin,
+  declinePackageById,
   deletePackage,
 };

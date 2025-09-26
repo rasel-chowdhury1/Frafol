@@ -28,6 +28,7 @@ export interface IGearMarketplace {
 export interface IUpdateGearMarketplace {
   name?: string;
   price?: number;
+  categoryId?: Types.ObjectId;
   vatAmount?: number;
   description?: string;
   condition?: ConditionType;
