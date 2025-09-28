@@ -6,8 +6,9 @@ const packageSchema = new Schema<IPackage>(
     authorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
+    vatAmount: { type: Number, default: 0 },
     price: { type: Number, required: true },
-    role: { type: String, enum: ["photographer", "videographer", 'both'], required: true },
+    category: { type: String, enum: ["photography", "videography"], required: true },
     duration: { type: Number, required: true }, // in weeks
     approvalStatus: {
       type: String,
@@ -15,7 +16,7 @@ const packageSchema = new Schema<IPackage>(
       default: "pending",
     },
     isDeleted: { type: Boolean, default: false },
-    thumbnailImage: { type: String },
+    thumbnailImage: { type: String, default: "" },
   },
   { timestamps: true }
 );

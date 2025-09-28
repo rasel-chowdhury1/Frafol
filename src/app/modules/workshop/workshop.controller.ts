@@ -109,6 +109,28 @@ const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Respons
   });
 });
 
+const declineWorkshopById = catchAsync(async (req: Request, res: Response) => {
+    const {reason} = req.body as { reason: string };
+    if (!reason) {  
+      sendResponse(res, { 
+        statusCode: httpStatus.BAD_REQUEST,
+        success: false,   
+        message: "reason is required",
+        data: null,
+      });
+    }
+  const result = await WorkshopService.declineWorkshopById(
+    req.params.id,
+    reason
+  );
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Workshop declined successfully",
+    data: result,
+  });
+});
+
 const deleteWorkshop = catchAsync(async (req: Request, res: Response) => {
   const result = await WorkshopService.deleteWorkshop(
     req.params.id,
@@ -131,5 +153,6 @@ export const WorkshopController = {
   getPendingWorkshops,
   updateWorkshop,
   updateApprovalStatusByAdmin,
+  declineWorkshopById,
   deleteWorkshop,
 };

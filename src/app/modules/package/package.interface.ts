@@ -6,8 +6,9 @@ export interface IPackage extends Document {
   authorId: Types.ObjectId;
   title: string;
   description: string;
+  vatAmount?: number;
   price: number;
- role: "photographer" | "videographer" | 'both';
+ category: "photography" | "videography";
   duration: number; // in days
   approvalStatus: ApprovalStatus;
   isDeleted: boolean;
@@ -19,8 +20,9 @@ export interface IPackage extends Document {
 export interface IUpdatePackage {
   title?: string;
   description?: string;
+  vatAmount?: number;
   price?: number;
-    role?: "photographer" | "videographer" | 'both';
+    category?: "photography" | "videography";
   duration?: number;
   approvalStatus?: ApprovalStatus;
   thumbnailImage?: string;

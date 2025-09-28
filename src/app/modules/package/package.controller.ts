@@ -13,6 +13,8 @@ const createPackage = catchAsync(async (req: Request, res: Response) => {
     req.body.thumbnailImage = storeFile("package", req?.file?.filename);
   }
 
+  console.log("Request Body:", req.body); // Debugging line
+
   const result = await PackageService.createPackage(req.body);
 
   sendResponse(res, {

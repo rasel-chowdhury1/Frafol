@@ -10,7 +10,7 @@ const createPackage = async (payload: IPackage) => {
 
 const getAllPackages = async (query: Record<string, any> = {}) => {
   const packageQuery = new QueryBuilder(
-    Package.find({ isDeleted: false }).populate({
+    Package.find({ isDeleted: false,approvalStatus: "approved"  }).populate({
       path: "authorId",
       select: "name sureName role profileImage",
     }),
@@ -58,7 +58,10 @@ const getMyPackages = async (userId: string, query: Record<string, unknown>) => 
 const getPendingPackages = async (query: Record<string, any> = {}) => {
   const filter = { approvalStatus: "pending", isDeleted: false };
 
-  const packageQuery = new QueryBuilder(Package.find(filter), query)
+  const packageQuery = new QueryBuilder(Package.find(filter).populate({
+    path: "authorId",
+    select: "name sureName role profileImage",
+  }), query)
     .search(["title", "description"])
     .filter()
     .sort()

@@ -47,6 +47,7 @@ async function main() {
     //create a defult admin
     createDefaultAdmin()
 
+
     // Start HTTP server
     server = createServer(app);
 

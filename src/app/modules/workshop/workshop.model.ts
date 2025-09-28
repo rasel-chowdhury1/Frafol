@@ -10,6 +10,7 @@ const workshopSchema = new Schema<IWorkshop>(
     locationType: { type: String, enum: ["offline", "online"], required: true },
     location: { type: String },
     workshopLink: { type: String },
+    vatAmount: { type: Number, default: 0 },
     price: { type: Number, required: true },
     description: { type: String, required: true },
     image: { type: String, required: true },
@@ -19,6 +20,7 @@ const workshopSchema = new Schema<IWorkshop>(
       enum: ["pending", "approved", "cancelled"],
       default: "pending",
     },
+    declineReason: { type: String },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }

@@ -38,7 +38,7 @@ const getWorkshopById = async (id: string) => {
 const getMyWorkshops = async (userId: string, query: Record<string, unknown>) => {
   const gearQuery = new QueryBuilder(
     Workshop.find({ authorId:userId,isDeleted: false })
-      .populate({path: "authorId", select: "name sureName" }),
+      .populate({path: "authorId", select: "name sureName role profileImage" }),
     query
   )
     .search(["name", "description"]) // searchable fields
@@ -62,7 +62,8 @@ const getPendingWorkshops = async (
     isDeleted: false
   };
 
-  const userQuery = new QueryBuilder(Workshop.find(roleFilter), query)
+  const userQuery = new QueryBuilder(Workshop.find(roleFilter)
+                                              .populate({path: "authorId", select: "name sureName role profileImage" }), query)
     .search(['title', 'description']) // corrected search fields
     .filter()
     .sort()
@@ -116,21 +117,22 @@ const updateApprovalStatusByAdmin = async (id: string, status: string) => {
 };
 
 const declineWorkshopById = async (id: string, reason: string) => {
-
   const workshop = await Workshop.findOneAndUpdate(
-    id,
+    { _id: id }, // ✅ must pass filter object
     { 
-      isDeleted: true, 
-      approvalStatus: 'cancelled', // optional, could use 'declined' if you add this enum
+      isDeleted: true,
+      approvalStatus: 'cancelled', // or 'declined' if you add it to enum
+      declineReason: reason        // ✅ store reason if your schema supports it
     },
-    { new: true, runValidators: true }  
-  )
+    { new: true, runValidators: true }
+  );
 
   if (!workshop) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the workshop or workshop not found');
   }
+
   return workshop;
-}
+};
 
 const deleteWorkshop = async (id: string, userId: string) => {
   return await Workshop.findOneAndUpdate(
@@ -148,5 +150,6 @@ export const WorkshopService = {
   getPendingWorkshops,
   updateWorkshop,
   updateApprovalStatusByAdmin,
+  declineWorkshopById,
   deleteWorkshop,
 };

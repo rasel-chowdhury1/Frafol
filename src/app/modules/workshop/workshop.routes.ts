@@ -72,6 +72,12 @@ router
     WorkshopController.updateApprovalStatusByAdmin
     )
 
+  .patch(
+    "/decline/:id",
+    auth(USER_ROLE.ADMIN),
+    WorkshopController.declineWorkshopById
+    )
+
   .delete(
     "/:id",
     auth(

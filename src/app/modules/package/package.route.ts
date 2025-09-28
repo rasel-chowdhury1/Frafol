@@ -13,6 +13,9 @@ router
     "/add",
     auth(
       USER_ROLE.USER,
+      USER_ROLE.PHOTOGRAPHER,
+      USER_ROLE.VIDEOGRAPHER,
+      USER_ROLE.BOTH,
       USER_ROLE.COMPANY,
       USER_ROLE.ADMIN
     ),
@@ -25,7 +28,13 @@ router
 
   .get(
     "/my",
-    auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.ADMIN),
+    auth(
+      USER_ROLE.USER, 
+      USER_ROLE.COMPANY,
+      USER_ROLE.PHOTOGRAPHER,
+      USER_ROLE.VIDEOGRAPHER,
+      USER_ROLE.BOTH, 
+      USER_ROLE.ADMIN),
     PackageController.getMyPackages
   )
 
@@ -40,6 +49,9 @@ router
     auth(
       USER_ROLE.USER,
       USER_ROLE.COMPANY,
+      USER_ROLE.PHOTOGRAPHER,
+      USER_ROLE.VIDEOGRAPHER,
+      USER_ROLE.BOTH,
       USER_ROLE.ADMIN
     ),
     PackageController.getPackageById
@@ -47,7 +59,13 @@ router
 
   .patch(
     "/update/:id",
-    auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.ADMIN),
+    auth(
+      USER_ROLE.USER, 
+      USER_ROLE.COMPANY, 
+      USER_ROLE.PHOTOGRAPHER,
+      USER_ROLE.VIDEOGRAPHER,
+      USER_ROLE.BOTH,
+      USER_ROLE.ADMIN),
     upload.single("image"),
     parseData(),
     PackageController.updatePackage
@@ -67,7 +85,13 @@ router
 
   .delete(
     "/:id",
-    auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.ADMIN),
+    auth(
+      USER_ROLE.USER, 
+      USER_ROLE.COMPANY, 
+      USER_ROLE.PHOTOGRAPHER,
+      USER_ROLE.VIDEOGRAPHER,
+      USER_ROLE.BOTH,
+      USER_ROLE.ADMIN),
     PackageController.deletePackage
   );
 
