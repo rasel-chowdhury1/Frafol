@@ -134,9 +134,15 @@ const declineWorkshopById = async (id: string, reason: string) => {
   return workshop;
 };
 
-const deleteWorkshop = async (id: string, userId: string) => {
+const deleteWorkshop = async (id: string, userId: string, role: string) => {
+  const filter: any = { _id: id, isDeleted: false };
+
+  if (role !== "admin") {
+    filter.authorId = userId; // only add this check for normal users
+  }
+
   return await Workshop.findOneAndUpdate(
-    { _id: id, authorId: userId, isDeleted: false },
+    filter,
     { isDeleted: true },
     { new: true }
   );

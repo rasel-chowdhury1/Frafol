@@ -132,9 +132,11 @@ const declineWorkshopById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteWorkshop = catchAsync(async (req: Request, res: Response) => {
+  const {role} = req.user;
   const result = await WorkshopService.deleteWorkshop(
     req.params.id,
-    req.user.userId
+    req.user.userId,
+    role
   );
 
   sendResponse(res, {
