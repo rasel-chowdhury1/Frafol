@@ -69,6 +69,8 @@ export type IPaginationOption = {
 
 
 export interface PaginateQuery {
+  role?: string;
+  categoryName?: string;
   page?: number;
   limit?: number;
 }

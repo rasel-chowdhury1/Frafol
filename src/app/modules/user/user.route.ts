@@ -67,6 +67,13 @@ userRoutes
     userController.getProfessionalPhotographerAndVideographer
   )
   
+   
+    .get(
+    "/professionalsByCategory",
+    // auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getProfessionalUsersByCategory
+  )
+
   .get(
     '/:id',
     auth("user", "admin"),

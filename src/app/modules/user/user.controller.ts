@@ -168,6 +168,27 @@ const getProfessionalPhotographerAndVideographer = catchAsync(async (req: Reques
   });
 });
 
+const getProfessionalUsersByCategory = catchAsync(async (req: Request, res: Response) => {
+  const { page, limit, ...rest } = req.query;
+
+  console.log("query data =>> ",req.query)
+
+  const query = {
+    page: Number(page) || 1,
+    limit: Number(limit) || 10,
+    ...rest
+  };
+
+  const result = await userService.getProfessionalUsersByCategory(query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Professional photographers and videographers retrieved successfully",
+    data: result,
+  });
+});
+
 
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   
@@ -265,5 +286,6 @@ export const userController = {
   getProfessionalPhotographerAndVideographer,
   getPendingPhotographersVideographersBoth,
   verifyProfessionalUserController,
-  declineProfessionalUserController
+  declineProfessionalUserController,
+  getProfessionalUsersByCategory
 };

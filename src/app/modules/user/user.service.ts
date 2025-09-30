@@ -17,7 +17,7 @@ import Notification from '../notifications/notifications.model';
 import mongoose, { Types } from 'mongoose';
 import { getAdminId } from '../../DB/adminStrore';
 import { emitNotification } from '../../../socketIo';
-import { USER_ROLE } from './user.constants';
+import { USER_ROLE, UserRole } from './user.constants';
 import fs from 'fs';
 import path from 'path';
 export type IFilter = {
@@ -439,7 +439,16 @@ const updateUnAvailability = async (userId: string, dates: (Date | string)[]) =>
 // ............................rest
 
   const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
-    const roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+    const { role } = query;
+
+  let roles: UserRole[];
+  if (!role) {
+    roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+  } else {
+    roles = [role as UserRole]; // fixed: initialize as array instead of pushing to undefined
+  }
+    
 
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
@@ -470,6 +479,66 @@ const updateUnAvailability = async (userId: string, dates: (Date | string)[]) =>
       result,
     };
   };
+
+const getProfessionalUsersByCategory = async (query: Record<string, unknown>) => {
+  console.log("query data=>>. ", query)
+  const { role, categoryType } = query;
+
+  // Determine roles to filter
+  const roles = role
+    ? [role]
+    : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+    console.log({roles})
+
+  // Base query
+  let baseFilter: any = {
+    role: { $in: roles },
+    isDeleted: false,
+    isBlocked: false,
+  };
+
+  console.log("cateogory type==>>> ", categoryType)
+  // Apply categoryType filter depending on role
+  if (categoryType) {
+
+    
+    const regex = new RegExp(categoryType as string, "i");
+
+    console.log({regex})
+
+    if (role === USER_ROLE.PHOTOGRAPHER) {
+      baseFilter.photographerSpecializations = { $elemMatch: { $regex: regex } };
+    } else if (role === USER_ROLE.VIDEOGRAPHER) {
+      baseFilter.videographerSpecializations = { $elemMatch: { $regex: regex } };
+    } else if (role === USER_ROLE.BOTH) {
+      baseFilter.$or = [
+        { photographerSpecializations: { $elemMatch: { $regex: regex } } },
+        { videographerSpecializations: { $elemMatch: { $regex: regex } } },
+      ];
+    }
+  }
+
+  // Build initial query
+  let baseQuery = User.find(baseFilter).select(
+    "name sureName role profileImage town address country hourlyRate averageRating totalReview photographerSpecializations videographerSpecializations"
+  );
+
+  // Use QueryBuilder
+  const userQuery = new QueryBuilder(baseQuery, query)
+    .search(["name", "sureName"]) // searchable fields
+    .filter() // other filters
+    .sort()
+    .paginate()
+    .fields();
+
+  // Execute query
+  const result = await userQuery.modelQuery;
+  const meta = await userQuery.countTotal();
+
+  return { meta, result };
+};
+
 
 
 
@@ -756,5 +825,6 @@ export const userService = {
   getUserRoleStats,
   getAllPhotographersVideographersBoth,
   getPendingPhotographersVideographersBoth,
-  getProfessionalPhotographerAndVideographer
+  getProfessionalPhotographerAndVideographer,
+  getProfessionalUsersByCategory
 };

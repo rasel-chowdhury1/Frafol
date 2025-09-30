@@ -10,7 +10,7 @@ const createWorkshop = async (payload: IWorkshop) => {
 
 const getAllWorkshops = async (query: Record<string, any> = {}) => {
   const workshopQuery = new QueryBuilder(
-    Workshop.find({ isDeleted: false }).populate({
+    Workshop.find({ isDeleted: false, approvalStatus: "approved" }).populate({
       path: "authorId",
       select: "name sureName role profileImage",
     }),
