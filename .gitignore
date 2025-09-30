@@ -65,6 +65,7 @@ npm-debug.log* 
 # Ignore virtual environment
 venv/
 env/
+.env
 .vercel
 .vercel
 # public/
