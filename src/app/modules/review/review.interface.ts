@@ -14,3 +14,11 @@ export interface IUpdateReview {
   rating?: number;
   message?: string;
 }
+
+export interface GetReviewsQuery {
+  sort?: "all" | "newest" | "oldest";
+  rating?: number | string;
+  page?: number;
+  limit?: number;
+}
+

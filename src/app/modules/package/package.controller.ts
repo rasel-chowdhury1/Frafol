@@ -69,6 +69,19 @@ const getPendingPackages = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getUserPackageAndReviewStats = catchAsync(async (req: Request, res: Response) => {
+  const authorId = req.params.userId;
+
+  const result = await PackageService.getUserPackageAndReviewStats(authorId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User package and review stats retrieved successfully",
+    data: result,
+  });
+});
+
 const updatePackage = catchAsync(async (req: Request, res: Response) => {
   if (req?.file) {
     req.body.thumbnailImage = storeFile("package", req?.file?.filename);
@@ -154,6 +167,7 @@ export const PackageController = {
   getPackageById,
   getMyPackages,
   getPendingPackages,
+  getUserPackageAndReviewStats,
   updatePackage,
   updateApprovalStatusByAdmin,
   declinePackageById,

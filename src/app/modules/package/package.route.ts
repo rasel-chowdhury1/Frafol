@@ -45,6 +45,11 @@ router
   )
 
   .get(
+    "/stats/:userId",
+    PackageController.getUserPackageAndReviewStats
+  )
+
+  .get(
     "/:id",
     auth(
       USER_ROLE.USER,

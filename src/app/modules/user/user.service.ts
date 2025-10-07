@@ -20,6 +20,7 @@ import { emitNotification } from '../../../socketIo';
 import { USER_ROLE, UserRole } from './user.constants';
 import fs from 'fs';
 import path from 'path';
+import { getUserPackageAndReviewStats } from '../package/package.service';
 export type IFilter = {
   searchTerm?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -438,55 +439,97 @@ const updateUnAvailability = async (userId: string, dates: (Date | string)[]) =>
 
 // ............................rest
 
-  const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
+const getProfessionalPhotographerAndVideographer = async (query: Record<string, unknown>) => {
+  const { role,...rest } = query;
 
-    const { role } = query;
+  console.log("role==>>> ", role)
+  console.log("query==>>> ", rest)
 
-  let roles: UserRole[];
-  if (!role) {
-    roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
-  } else {
-    roles = [role as UserRole]; // fixed: initialize as array instead of pushing to undefined
-  }
+  // ✅ Determine applicable roles in a single expression
+  const roles: UserRole[] = role
+    ? [role as UserRole, USER_ROLE.BOTH]
+    : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+  // ✅ Base condition (reusable and consistent)
+  const baseCondition = {
+    role: { $in: roles },
+    isDeleted: false,
+    isBlocked: false,
+  };
+
+  console.log({ baseCondition });
+
+  // ✅ Initialize QueryBuilder
+  const userQuery = new QueryBuilder(User.find(baseCondition), rest)
+    .search(["name", "sureName", "town", "country"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  // ✅ Fetch results (sorted by rating by default)
+  const result = await userQuery.modelQuery
+    .sort({ averageRating: -1 })
+    .select("name sureName role profileImage town address country hourlyRate averageRating totalReview");
+
+  // ✅ Fetch meta information
+  const meta = await userQuery.countTotal();
+
+  return { meta, result };
+};
+
+  // const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
+
+  //   const { role } = query;
+
+  //   console.log("role==>>> ", role)
+  //   console.log("query==>>> ", query)
+
+  // let roles: UserRole[];
+  // if (!role) {
+  //   roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+  // } else {
+  //   roles = [role as UserRole, USER_ROLE.BOTH]; // fixed: initialize as array instead of pushing to undefined
+  // }
     
 
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
+  //   const page = Number(query.page) || 1;
+  //   const limit = Number(query.limit) || 10;
+  //   const skip = (page - 1) * limit;
 
-    // Fetch total count
-    const total = await User.countDocuments({
-      role: { $in: roles },
-      isDeleted: false,
-      isBlocked: false,
-    });
+  //   // Fetch total count
+  //   const total = await User.countDocuments({
+  //     role: { $in: roles },
+  //     isDeleted: false,
+  //     isBlocked: false,
+  //   });
 
-    // Fetch paginated results sorted by averageRating descending
-    const result = await User.find({
-      role: { $in: roles },
-      isDeleted: false,
-      isBlocked: false,
-    })
-      .sort({ averageRating: -1 }) // highest rating first
-      .skip(skip)
-      .limit(limit)
-      .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
+  //   // Fetch paginated results sorted by averageRating descending
+  //   const result = await User.find({
+  //     role: { $in: roles },
+  //     isDeleted: false,
+  //     isBlocked: false,
+  //   })
+  //     .sort({ averageRating: -1 }) // highest rating first
+  //     .skip(skip)
+  //     .limit(limit)
+  //     .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
 
-    const totalPage = Math.ceil(total / limit);
+  //   const totalPage = Math.ceil(total / limit);
 
-    return {
-      meta: { page, limit, total, totalPage },
-      result,
-    };
-  };
+  //   return {
+  //     meta: { page, limit, total, totalPage },
+  //     result,
+  //   };
+  // };
 
 const getProfessionalUsersByCategory = async (query: Record<string, unknown>) => {
   console.log("query data=>>. ", query)
-  const { role, categoryType } = query;
+  const { role, categoryType, ...rest } = query;
 
   // Determine roles to filter
   const roles = role
-    ? [role]
+    ? [role, USER_ROLE.BOTH]
     : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
 
     console.log({roles})
@@ -519,13 +562,17 @@ const getProfessionalUsersByCategory = async (query: Record<string, unknown>) =>
     }
   }
 
+
+
   // Build initial query
   let baseQuery = User.find(baseFilter).select(
     "name sureName role profileImage town address country hourlyRate averageRating totalReview photographerSpecializations videographerSpecializations"
   );
 
+    console.log({ baseFilter,baseQuery,query });
+
   // Use QueryBuilder
-  const userQuery = new QueryBuilder(baseQuery, query)
+  const userQuery = new QueryBuilder(baseQuery, rest)
     .search(["name", "sureName"]) // searchable fields
     .filter() // other filters
     .sort()
@@ -720,6 +767,37 @@ const getUserById = async (id: string) => {
   return result;
 };
 
+const getUserGalleryById = async (id: string) => {
+  const result = await User.findById(id).select('gallery');
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+  return result;
+};
+
+
+const getUserDetailsById = async (userId: string) => {
+  // ✅ Fetch user with selected fields and populated profile
+  const user = await User.findOne({ _id: userId, isDeleted: false, isBlocked: false })
+    .select("name sureName profileImage role hourlyRate address totalReview averageRating gallery profileId")
+    .populate({
+      path: "profileId",
+      select: "about",
+      model: "Profile",
+    });
+
+  // ✅ Handle user not found
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  // 3️⃣ Fetch user's package and review stats
+  const packageAndReviewStats = await getUserPackageAndReviewStats(userId);
+
+
+  return {    ...user.toObject(), totalReviews: packageAndReviewStats.totalReviews, averageRating: packageAndReviewStats.averageRating, starCounts: packageAndReviewStats.starCounts, package:packageAndReviewStats.packages};
+};
+
 
 
 
@@ -812,6 +890,8 @@ export const userService = {
   getMyProfile,
   getAdminProfile,
   getUserById,
+  getUserDetailsById,
+  getUserGalleryById,
   getUserByEmail,
   updateUser,
   updateGallery,

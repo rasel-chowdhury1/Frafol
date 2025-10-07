@@ -3,6 +3,8 @@ import { IPackage, IUpdatePackage } from "./package.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
 import AppError from "../../error/AppError";
+import mongoose from "mongoose";
+import { Review } from "../review/review.model";
 
 const createPackage = async (payload: IPackage) => {
   return await Package.create(payload);
@@ -74,6 +76,45 @@ const getPendingPackages = async (query: Record<string, any> = {}) => {
   return { meta, result };
 };
 
+export const getUserPackageAndReviewStats = async (authorId: string) => {
+  if (!mongoose.Types.ObjectId.isValid(authorId)) {
+    throw new Error("Invalid author ID");
+  }
+
+  // 1️⃣ Get all packages created by the user (latest first)
+  const packages = await Package.find({ authorId, approvalStatus: "approved", isDeleted: false })
+    .sort({ createdAt: -1 }); // 👈 latest first
+
+  // 2️⃣ Get all reviews received by this user
+  const reviews = await Review.find({ serviceProviderId: authorId, isDeleted: false });
+
+  const totalReviews = reviews.length;
+
+  // 3️⃣ Calculate average rating
+  const averageRating =
+    totalReviews > 0
+      ? parseFloat(
+          (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews).toFixed(1)
+        )
+      : 0;
+
+  // 4️⃣ Count how many reviews per star
+  const starCounts = {
+    5: reviews.filter((r) => r.rating === 5).length,
+    4: reviews.filter((r) => r.rating === 4).length,
+    3: reviews.filter((r) => r.rating === 3).length,
+    2: reviews.filter((r) => r.rating === 2).length,
+    1: reviews.filter((r) => r.rating === 1).length,
+  };
+
+  return {
+    totalReviews,
+    averageRating,
+    starCounts,
+    packages,
+  };
+};
+
 const updatePackage = async (id: string, userId: string, payload: IUpdatePackage) => {
   // Replace old thumbnail if a new one is uploaded
   if (payload.thumbnailImage) {
@@ -139,6 +180,7 @@ export const PackageService = {
   getPackageById,
   getMyPackages,
   getPendingPackages,
+  getUserPackageAndReviewStats,
   updatePackage,
   updateApprovalStatusByAdmin,
   declinePackageById,

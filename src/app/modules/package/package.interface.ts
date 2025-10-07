@@ -9,7 +9,8 @@ export interface IPackage extends Document {
   vatAmount?: number;
   price: number;
  category: "photography" | "videography";
-  duration: number; // in days
+  duration: string; 
+  deliveryTime: number;
   approvalStatus: ApprovalStatus;
   isDeleted: boolean;
   thumbnailImage?: string;
@@ -23,7 +24,8 @@ export interface IUpdatePackage {
   vatAmount?: number;
   price?: number;
     category?: "photography" | "videography";
-  duration?: number;
+  duration?: string;
+  deliveryTime?: number;
   approvalStatus?: ApprovalStatus;
   thumbnailImage?: string;
 }

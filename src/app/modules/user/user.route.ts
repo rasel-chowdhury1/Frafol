@@ -75,8 +75,14 @@ userRoutes
   )
 
   .get(
+    '/gallery/:id',
+    // auth("user", "admin"),
+    userController.getUserGalleryById
+  )
+
+  .get(
     '/:id',
-    auth("user", "admin"),
+    // auth("user", "admin"),
     userController.getUserById
   )
 

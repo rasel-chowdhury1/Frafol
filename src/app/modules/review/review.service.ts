@@ -1,6 +1,8 @@
 import { Review } from "./review.model";
-import { IReview, IUpdateReview } from "./review.interface";
+import { GetReviewsQuery, IReview, IUpdateReview } from "./review.interface";
 import { User } from "../user/user.models";
+import mongoose from "mongoose";
+import QueryBuilder from "../../builder/QueryBuilder";
 
 const createReview = async (payload: IReview) => {
   // 1. Create the review
@@ -29,8 +31,54 @@ const getAllReviews = async () => {
   return await Review.find({isDeleted: false});
 };
 
-const getReviewsByServiceProvider = async (serviceProviderId: string) => {
-  return await Review.find({ serviceProviderId }).populate("userId", "name email");
+const getReviewsByServiceProvider = async (
+  serviceProviderId: string,
+  query?: GetReviewsQuery // optional
+) => {
+  if (!mongoose.Types.ObjectId.isValid(serviceProviderId)) {
+    throw new Error("Invalid serviceProviderId");
+  }
+
+
+  
+  // 1️⃣ Base filter
+  const baseFilter: any = { serviceProviderId};
+
+  // 2️⃣ Safely destructure with default
+  const { rating, ...restQuery } = query || {};
+
+  // 3️⃣ Safely convert rating to number if provided
+  const numericRating = rating !== undefined ? Number(rating) : undefined;
+
+  if (numericRating && [1, 2, 3, 4, 5].includes(numericRating)) {
+    baseFilter.rating = numericRating;
+  }
+
+  // 4️⃣ Initialize QueryBuilder
+  const reviewQuery = new QueryBuilder(
+    Review.find(baseFilter).populate("userId", "name email"),
+    restQuery || {}
+  )
+    .paginate()
+    .fields(); // optionally add .search(["message"])
+
+  // 5️⃣ Handle sorting safely
+  const sortOption = query?.sort || "newest";
+
+
+  if (sortOption === "newest") {
+    reviewQuery.modelQuery = reviewQuery.modelQuery.sort({ createdAt: -1 });
+  } else if (sortOption === "oldest") {
+    reviewQuery.modelQuery = reviewQuery.modelQuery.sort({ createdAt: 1 });
+  } else {
+    reviewQuery.modelQuery = reviewQuery.modelQuery.sort({ createdAt: -1 }); // default
+  }
+
+  // 6️⃣ Execute query
+  const reviews = await reviewQuery.modelQuery;
+  const meta = await reviewQuery.countTotal();
+
+  return { meta, reviews };
 };
 
 const getReviewById = async (id: string) => {

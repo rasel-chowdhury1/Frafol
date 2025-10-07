@@ -8,7 +8,7 @@ const router = Router();
 router
     .post(
         "/add", 
-        auth(USER_ROLE.USER, USER_ROLE.ADMIN), 
+        auth(USER_ROLE.USER, USER_ROLE.ADMIN, USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH), 
         ReviewController.createReview
     )
 

@@ -27,7 +27,8 @@ const getAllReviews = catchAsync(async (req: Request, res: Response) => {
 
 const getReviewsByServiceProvider = catchAsync(async (req: Request, res: Response) => {
   const { serviceProviderId } = req.params;
-  const result = await ReviewService.getReviewsByServiceProvider(serviceProviderId);
+  console.log("serviceProviderId =>> ",serviceProviderId)
+  const result = await ReviewService.getReviewsByServiceProvider(serviceProviderId, req.query);
   sendResponse(res, {
     statusCode: 200,
     success: true,

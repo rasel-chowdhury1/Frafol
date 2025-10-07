@@ -118,11 +118,21 @@ const getPendingPhotographersVideographersBoth = catchAsync(async (req, res) => 
 });
 
 const getUserById = catchAsync(async (req: Request, res: Response) => {
-  const result = await userService.getUserById(req.params.id);
+  const result = await userService.getUserDetailsById(req.params.id);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'User fetched successfully',
+    data: result,
+  });
+});
+
+const getUserGalleryById = catchAsync(async (req: Request, res: Response) => {
+  const result = await userService.getUserGalleryById(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User gallery fetched successfully',
     data: result,
   });
 });
@@ -151,11 +161,12 @@ const getAdminProfile = catchAsync(async (req: Request, res: Response) => {
 
 
 const getProfessionalPhotographerAndVideographer = catchAsync(async (req: Request, res: Response) => {
-  const { page, limit } = req.query;
+  const { page, limit, ...rest } = req.query;
 
   const query = {
     page: Number(page) || 1,
     limit: Number(limit) || 10,
+    ...rest
   };
 
   const result = await userService.getProfessionalPhotographerAndVideographer(query);
@@ -274,6 +285,7 @@ export const userController = {
   createUser,
   userCreateVarification,
   getUserById,
+  getUserGalleryById,
   getMyProfile,
   getAdminProfile,
   updateMyProfile,

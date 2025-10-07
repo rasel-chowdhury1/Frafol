@@ -9,7 +9,8 @@ const packageSchema = new Schema<IPackage>(
     vatAmount: { type: Number, default: 0 },
     price: { type: Number, required: true },
     category: { type: String, enum: ["photography", "videography"], required: true },
-    duration: { type: Number, required: true }, // in weeks
+    duration: { type: String, required: true }, 
+    deliveryTime: { type: Number, required: true }, // in days
     approvalStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],

@@ -150,6 +150,8 @@ const updateGearMarketplace = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
+
+
 const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Response) => {
 
   const {approvalStatus} = req.body as { approvalStatus: ApprovalStatus };

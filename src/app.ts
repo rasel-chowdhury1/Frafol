@@ -19,6 +19,7 @@ const app: Application = express();
 /* ---------- Core middlewares ---------- */
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(

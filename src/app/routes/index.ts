@@ -13,6 +13,7 @@ import { ReportRoutes } from "../modules/report/report.route";
 import { WorkshopRoutes } from "../modules/workshop/workshop.routes";
 import path from "path";
 import { PackageRoutes } from "../modules/package/package.route";
+import { EventOrderRoutes } from "../modules/eventOrder/eventOrder.route";
 
 const router = Router();
 
@@ -69,6 +70,10 @@ const moduleRoutes = [
      path: "/report",
      route: ReportRoutes
   },
+   {
+      path: '/event-order',
+      route: EventOrderRoutes
+   }
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
