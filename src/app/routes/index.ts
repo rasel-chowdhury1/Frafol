@@ -1,0 +1,87 @@
+import { Router } from "express";
+import { userRoutes } from "../modules/user/user.route";
+import { authRoutes } from "../modules/auth/auth.route";
+import { otpRoutes } from "../modules/otp/otp.routes";
+import { settingsRoutes } from "../modules/setting/setting.route";
+import { notificationRoutes } from "../modules/notifications/notifications.route";
+import { CategoryRoutes } from "../modules/category/category.route";
+import { ReviewRoutes } from "../modules/review/review.route";
+import { FeedbackRoutes } from "../modules/feedback/feedback.route";
+import { GearMarketplaceRoutes } from "../modules/gearMarketplace/gearMarketplace.route";
+import { CommissionSetupRoutes } from "../commissionSetup/commissionSetup.route";
+import { ReportRoutes } from "../modules/report/report.route";
+import { WorkshopRoutes } from "../modules/workshop/workshop.routes";
+import path from "path";
+import { PackageRoutes } from "../modules/package/package.route";
+import { EventOrderRoutes } from "../modules/eventOrder/eventOrder.route";
+import { PaymentRoutes } from "../modules/payment/payment.route";
+
+const router = Router();
+
+const moduleRoutes = [
+  {
+    path: '/users',
+    route: userRoutes,
+  },
+  {
+    path: '/auth',
+    route: authRoutes,
+  },
+  {
+    path: "/otp",
+    route: otpRoutes
+  },
+  {
+    path: "/settings",
+    route: settingsRoutes
+  },
+  {
+     path: "/notifications",
+     route: notificationRoutes
+  },
+  {
+     path: "/category",
+     route: CategoryRoutes
+  },
+  {
+     path: "/review",
+     route: ReviewRoutes
+  },
+  {
+     path: "/feedback",
+     route: FeedbackRoutes
+  },
+  {
+     path: "/marketPlace",
+     route: GearMarketplaceRoutes
+  },
+  {
+     path: "/workshop",
+     route: WorkshopRoutes
+  },
+  {
+   path : "/package",
+   route : PackageRoutes
+  },
+  {
+     path: "/commissionSetup",
+     route: CommissionSetupRoutes
+  },
+  {
+     path: "/report",
+     route: ReportRoutes
+  },
+   {
+      path: '/event-order',
+      route: EventOrderRoutes
+   }
+  ,
+   {
+      path: '/payment',
+      route: PaymentRoutes
+   }
+];
+
+moduleRoutes.forEach((route) => router.use(route.path, route.route));
+
+export default router;

@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Project\\RaselDev\\Backend\\Frafol\\logs\\.53c2ecf66afba6c066792c05307fb9f3e865a57b-audit.json",
+    "files": [
+        {
+            "date": 1757401490224,
+            "name": "C:\\Project\\RaselDev\\Backend\\Frafol\\logs\\error-2025-09-09.log",
+            "hash": "196c77b565fa6b003c634b3c1e86bceb8268bdcc21881662025d7aaba1eea91a"
+        }
+    ],
+    "hashType": "sha256"
+}
