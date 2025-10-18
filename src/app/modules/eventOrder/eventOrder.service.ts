@@ -76,7 +76,7 @@ const getMyEventOrders = async (
         case "upcoming":
           baseQuery.status = "inProgress";
           baseQuery.date = { $gte: new Date() };
-          baseQuery.sort = "date"; 
+          // baseQuery.sort = "date"; 
           break;
         case "pending":
           baseQuery.status = "pending";
