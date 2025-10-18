@@ -69,7 +69,7 @@ const getMyEventOrders = async (
           baseQuery.status = "delivered";
           break;
         case "inProgress":
-          baseQuery.status = "inProgress";
+          baseQuery.status = { $in: ["inProgress", "deliveryRequest"] };
           baseQuery.date = { $lte: new Date() };
           // baseQuery.sort = "date"; 
           break;
@@ -84,6 +84,12 @@ const getMyEventOrders = async (
         case "accepted":
           
           baseQuery.status = "accepted";
+          break;
+        case "deliveryRequest":
+          baseQuery.status = "deliveryRequest";
+          break;
+        case "delivered":
+          baseQuery.status = "delivered";
           break;
         case "cancelled":
           baseQuery.status = "cancelled";
