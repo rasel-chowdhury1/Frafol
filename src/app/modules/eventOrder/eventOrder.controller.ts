@@ -247,6 +247,23 @@ const requestExtension = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+// ✅ Accept extension request
+const acceptExtensionRequest = catchAsync(async (req: Request, res: Response) => {
+  const { extensionRequestId } = req.body; // ID of the specific extension request to approve
+
+  const result = await EventOrderService.acceptExtensionRequest(
+    req.params.orderId, // orderId
+    extensionRequestId,
+    req.user.userId
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Delivery extension request accepted successfully",
+    data: result,
+  });
+});
 
 // 🗑️ Soft delete order
 const deleteEventOrder = catchAsync(async (req: Request, res: Response) => {

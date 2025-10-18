@@ -292,6 +292,40 @@ const requestExtension = async (
   return result;
 };
 
+const acceptExtensionRequest = async (
+  orderId: string,
+  extensionRequestId: string,
+  approvedBy: string
+) => {
+  // ✅ Find the order first
+  const order = await EventOrder.findById(orderId);
+  if (!order) throw new AppError(404, "Event order not found");
+
+  // ✅ Find the requested extension
+  const extensionRequest = order.extensionRequests.id(extensionRequestId);
+  if (!extensionRequest) {
+    throw new AppError(404, "Extension request not found");
+  }
+
+  // ✅ Prevent duplicate approvals
+  if (extensionRequest.approved) {
+    throw new AppError(400, "This extension request has already been approved");
+  }
+
+  // ✅ Approve the request and update delivery dates
+  extensionRequest.approved = true;
+  order.deliveryDate = extensionRequest.newDeliveryDate;
+  order.lastDeliveryDate = extensionRequest.newDeliveryDate;
+
+  // ✅ Save changes
+  await order.save();
+
+  // ✅ Optional: send notification or email to user
+  // await sendExtensionApprovedNotification(order.userId, order.serviceProviderId, extensionRequest.newDeliveryDate);
+
+  return order;
+};
+
 const deleteEventOrder = async (id: string) => {
   const result = await EventOrder.findByIdAndUpdate(
     id,
@@ -642,6 +676,7 @@ export const EventOrderService = {
   getEventOrderById,
   updateEventOrderStatus,
   requestExtension,
+  acceptExtensionRequest,
   deleteEventOrder,
   requestOrderDelivery,
   acceptDeliveryRequest,

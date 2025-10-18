@@ -3,6 +3,7 @@ import { Document, Model, Types } from "mongoose";
 export type OrderStatus = "pending" | "declined" | "accepted" | "inProgress" | "deliveryRequest" | "deliveryRequestDeclined" | "delivered" | "cancelled";
 
 export interface IExtensionRequest {
+    _id?: Types.ObjectId; // Added this
   requestedBy: Types.ObjectId;
   newDeliveryDate: Date;
   reason: string;
