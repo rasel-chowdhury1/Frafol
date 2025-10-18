@@ -349,7 +349,8 @@ const acceptCustomOrder = async (
   serviceProviderId: string,
   payload: Partial<IEventOrder>
 ) => {
-
+  
+  console.log("payload accepte custom order route =>>> ", payload)
   const { price, priceWithServiceFee, totalPrice, vatAmount, deliveryDate, description } = payload;
 
   // Validation for required pricing fields
@@ -395,6 +396,8 @@ const acceptCustomOrder = async (
   existingOrder.statusTimestamps.acceptedAt = new Date();
 
   await existingOrder.save();
+
+  console.log("existing order =>>>>", existingOrder)
 
   // 🔹 Get package title (if available)
   const packageName =
