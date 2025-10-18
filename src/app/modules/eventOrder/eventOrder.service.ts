@@ -69,7 +69,7 @@ const getMyEventOrders = async (
           baseQuery.status = "delivered";
           break;
         case "inProgress":
-          baseQuery.status = { $in: ["inProgress", "deliveryRequest"] };
+          baseQuery.status = { $in: ["inProgress", "deliveryRequest", "deliveryRequestDeclined"] };
           baseQuery.date = { $lte: new Date() };
           // baseQuery.sort = "date"; 
           break;
@@ -551,13 +551,13 @@ const declineOrderRequest = async (
   }
 
   // 4️⃣ Update order status
-  order.status = "declined";
-  order.declineReason = reason;
-  order.statusTimestamps.declinedAt = new Date();
+  order.status = "deliveryRequestDeclined";
+  order.deliveryRequestDeclinedReason = reason;
+  order.statusTimestamps.deliveryRequestDeclineAt = new Date();
 
   // 5️⃣ Push to status history
   order.statusHistory.push({
-    status: "declined",
+    status: "deliveryRequestDeclined",
     reason,
     changedAt: new Date(),
   });
