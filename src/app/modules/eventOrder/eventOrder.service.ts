@@ -70,7 +70,7 @@ const getMyEventOrders = async (
           break;
         case "inProgress":
           baseQuery.status = "inProgress";
-          // baseQuery.date = { $lte: new Date() };
+          baseQuery.date = { $lte: new Date() };
           // baseQuery.sort = "date"; 
           break;
         case "upcoming":
