@@ -2,6 +2,8 @@ import Stripe from "stripe";
 import AppError from "../../error/AppError";
 import { IPayment } from "./payment.interface";
 import { Payment } from "./payment.model";
+import { GearOrder } from "../gearOrder/gearOrder.model";
+import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-09-30.clover", // ✅ Valid latest version
@@ -39,7 +41,6 @@ export const createStripePaymentSession = async (payload: {
     paymentType,
     eventOrderId,
     workshopId,
-    gearOrderId,
   } = payload;
 
   // ✅ Validate required fields
@@ -85,7 +86,6 @@ export const createStripePaymentSession = async (payload: {
     paymentType,
     eventOrderId,
     workshopId,
-    gearOrderId,
   };
 
   const paymentRecord = await Payment.create(newPayment);
@@ -97,4 +97,105 @@ export const createStripePaymentSession = async (payload: {
     paymentId: paymentRecord._id,
     currency: "EUR",
   };
+};
+
+
+
+export const createGearStripePaymentSession = async (payload: {
+  userId: any;
+  serviceProviderId: any[]; // multiple sellers
+  gearOrderIds: any[];
+  amount: number;
+  commission: number;
+  netAmount: number;
+  paymentMethod: "stripe" | "card" | "bank";
+}) => {
+  const {
+    userId,
+    serviceProviderId,
+    gearOrderIds,
+    amount,
+    commission,
+    netAmount,
+    paymentMethod,
+  } = payload;
+
+  console.log({payload})
+
+  if (!userId || !amount || !paymentMethod) {
+    throw new AppError(400, "Missing required payment details");
+  }
+
+  // 🔹 Fetch GearOrders
+  const orders = await GearOrder.find({ _id: { $in: gearOrderIds } });
+  if (!orders.length) throw new AppError(404, "Gear orders not found");
+
+  // 🔹 Fetch corresponding GearMarketplace items
+  const gearItemIds = orders.map((o) => o.gearMarketplaceId);
+  const gearItems = await GearMarketplace.find({ _id: { $in: gearItemIds } });
+
+  // 🔹 Build service provider breakdown
+  const serviceProvidersBreakdown = orders.map((order) => {
+    const item = gearItems.find((g) => g._id.toString() === order.gearMarketplaceId.toString());
+    if (!item) throw new AppError(400, "GearMarketplace item not found for order");
+
+    const itemAmount = item.mainPrice || 0;
+    const itemCommission = itemAmount - ((item.price || 0) + (item.vatAmount || 0));
+    const itemNetAmount = itemAmount - itemCommission;
+
+    return {
+      serviceProviderId: order.sellerId,
+      amount: itemAmount,
+      commission: itemCommission,
+      netAmount: itemNetAmount,
+    };
+  });
+  
+  // ✅ Create Stripe Checkout Session (one for all)
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: "Gear Marketplace Payment",
+            description: `Payment for ${gearOrderIds.length} gear item(s)`,
+          },
+          unit_amount: Math.round(amount * 100),
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${process.env.BACKEND_URL}/api/v1/payment/confirm-payment?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.BACKEND_URL}/api/v1/payment/cancel`,
+    invoice_creation: { enabled: true },
+  });
+
+  try {
+      // ✅ Save one payment record for all orders
+  const paymentRecord = await Payment.create({
+    transactionId: session.id,
+    userId,
+    serviceProviders: serviceProvidersBreakdown, // array of seller IDs
+    amount,
+    commission,
+    netAmount,
+    paymentStatus: "pending",
+    paymentMethod,
+    paymentType: "gear",
+    gearOrderIds,
+  });
+
+
+  return {
+    checkoutUrl: session.url,
+    paymentId: paymentRecord._id,
+  };
+  } catch (error) {
+    console.log(error)
+  }
+
+  
 };

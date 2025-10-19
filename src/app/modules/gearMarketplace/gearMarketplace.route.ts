@@ -44,34 +44,34 @@ router
     )
 
 
-    .get(
-    "/:id",
-    GearMarketplaceController.getGearMarketplaceById
-    )
+      .get(
+      "/:id",
+      GearMarketplaceController.getGearMarketplaceById
+      )
 
-    .patch(
-    "/update/:id",
-    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
-    upload.fields([
-      { name: 'gallery', maxCount: 10 },
-    ]),
-    parseData(),
-    GearMarketplaceController.updateGearMarketplace
-    )
-
-
-    .patch(
-    "/updateApprovalStatus/:id",
-    auth(USER_ROLE.ADMIN),
-    GearMarketplaceController.updateApprovalStatusByAdmin
-    )
+      .patch(
+      "/update/:id",
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+      upload.fields([
+        { name: 'gallery', maxCount: 10 },
+      ]),
+      parseData(),
+      GearMarketplaceController.updateGearMarketplace
+      )
 
 
+      .patch(
+      "/updateApprovalStatus/:id",
+      auth(USER_ROLE.ADMIN),
+      GearMarketplaceController.updateApprovalStatusByAdmin
+      )
 
-    .delete(
-    "/:id",
-    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
-    GearMarketplaceController.deleteGearMarketplace
-    );
+
+
+      .delete(
+      "/:id",
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+      GearMarketplaceController.deleteGearMarketplace
+      );
 
 export const GearMarketplaceRoutes = router;

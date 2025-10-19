@@ -8,6 +8,7 @@ export interface IExtensionRequest {
   newDeliveryDate: Date;
   reason: string;
   approved: boolean;
+  status: "pending" | "accepted" | "reject"
 }
 
 export interface IStatusTimestamps {

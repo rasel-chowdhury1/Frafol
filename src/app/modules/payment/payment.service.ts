@@ -5,6 +5,8 @@ import { IPayment } from "./payment.interface";
 import { sentNotificationForPaymentSuccess } from "../../../socketIo";
 import mongoose from "mongoose";
 import { EventOrder } from "../eventOrder/eventOrder.model";
+import { GearOrder } from "../gearOrder/gearOrder.model";
+import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)
@@ -28,70 +30,119 @@ const createPaymentSession = async (payload: {
  * 🔹 Confirm Stripe Payment
  */
 const confirmPayment = async (sessionId: string) => {
-  // 🔹 Retrieve Stripe Checkout Session
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const dbSession = await mongoose.startSession();
+  dbSession.startTransaction();
 
-  const paymentIntentId = session.payment_intent as string | null;
-  
-  if (!paymentIntentId) {
-    throw new AppError(400, "Payment intent not found in Stripe session");
-  }
+  try {
+    // 🔹 Retrieve Stripe Checkout Session
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const paymentIntentId = session.payment_intent as string | null;
 
-  // 🔹 Retrieve PaymentIntent from Stripe
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (!paymentIntentId) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Payment intent not found in Stripe session");
+    }
 
-  // 🔹 Find local payment record by sessionId (not paymentIntentId)
-  const payment = await Payment.findOne({ transactionId: sessionId });
-  if (!payment) {
-    throw new AppError(404, "Payment record not found for this session");
-  }
+    // 🔹 Retrieve PaymentIntent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-  // 🔹 Handle Payment Status
-  if (paymentIntent.status === "succeeded") {
-    payment.paymentStatus = "completed";
-    await payment.save();
+    // 🔹 Find local payment record by sessionId (not paymentIntentId)
+    const payment = await Payment.findOne({ transactionId: sessionId }).session(dbSession);
+    if (!payment) {
+      throw new AppError(httpStatus.NOT_FOUND, "Payment record not found for this session");
+    }
 
-    // ✅ If related to an event order, update order status
-    if (payment.paymentType === "event" && payment.eventOrderId) {
-      const updatedOrder = await EventOrder.findByIdAndUpdate(
-        payment.eventOrderId,
-        {
-          status: "inProgress",
-          "statusTimestamps.inProgressAt": new Date(),
-          $push: {
-            statusHistory: {
-              status: "inProgress",
-              changedAt: new Date(),
+    // 🔹 Handle Payment Status
+    if (paymentIntent.status === "succeeded") {
+      payment.paymentStatus = "completed";
+      await payment.save({ session: dbSession });
+
+      // ======================================================
+      // ✅ EVENT Payment Handling
+      // ======================================================
+      if (payment.paymentType === "event" && payment.eventOrderId) {
+        const updatedOrder = await EventOrder.findByIdAndUpdate(
+          payment.eventOrderId,
+          {
+            status: "inProgress",
+            "statusTimestamps.inProgressAt": new Date(),
+            $push: {
+              statusHistory: {
+                status: "inProgress",
+                changedAt: new Date(),
+              },
             },
           },
-        },
-        { new: true }
-      );
+          { new: true, session: dbSession }
+        );
 
-      if (updatedOrder) {
-        // ✅ Send success notification to service provider
-        await sentNotificationForPaymentSuccess({
-          orderType: updatedOrder.orderType as "direct" | "custom",
-          userId: new mongoose.Types.ObjectId(payment.userId),
-          receiverId: new mongoose.Types.ObjectId(payment.serviceProviderId),
-          serviceType: updatedOrder.serviceType,
-          packageName: updatedOrder.packageName || undefined,
-        });
+        if (updatedOrder) {
+          // await sentNotificationForPaymentSuccess({
+          //   orderType: updatedOrder.orderType as "direct" | "custom",
+          //   userId: new mongoose.Types.ObjectId(payment.userId),
+          //   receiverId: new mongoose.Types.ObjectId(payment.serviceProviderId),
+          //   serviceType: updatedOrder.serviceType,
+          //   packageName: updatedOrder.packageName || undefined,
+          // });
 
-        console.log("✅ Payment succeeded & event order moved to 'inProgress'", {
-          orderId: updatedOrder._id,
+          console.log("✅ Payment succeeded & event order moved to 'inProgress'", {
+            orderId: updatedOrder._id,
+            paymentId: payment._id,
+          });
+        }
+      }
+
+      // ======================================================
+      // ✅ GEAR Payment Handling
+      // ======================================================
+      else if (payment.paymentType === "gear" && payment.gearOrderIds?.length) {
+        // Update all gear orders’ paymentStatus
+        await GearOrder.updateMany(
+          { _id: { $in: payment.gearOrderIds } },
+          { paymentStatus: "received", orderStatus: "pending" },
+          { session: dbSession }
+        );
+
+
+        // 2️⃣ Collect all related GearMarketplace IDs
+        const relatedOrders = await GearOrder.find(
+          { _id: { $in: payment.gearOrderIds } },
+          { gearMarketplaceId: 1 }
+        ).session(dbSession);
+
+        const gearIds = relatedOrders.map((o) => o.gearMarketplaceId);
+
+        // 3️⃣ Mark all related gear items as Sold Out
+        await GearMarketplace.updateMany(
+          { _id: { $in: gearIds } },
+          { status: "Sold Out" },
+          { session: dbSession }
+        );
+
+        console.log("✅ Payment succeeded & all gear orders marked as 'received'", {
+          gearOrderCount: payment.gearOrderIds.length,
           paymentId: payment._id,
         });
       }
+    } else {
+      payment.paymentStatus = "failed";
+      await payment.save({ session: dbSession });
+      console.log("❌ Payment failed for session:", sessionId);
     }
-  } else {
-    payment.paymentStatus = "failed";
-    await payment.save();
-    console.log("❌ Payment failed for session:", sessionId);
-  }
 
-  return payment;
+    // ✅ Commit all DB changes
+    await dbSession.commitTransaction();
+    dbSession.endSession();
+
+    return payment;
+  } catch (error) {
+    // ❌ Rollback all DB operations on failure
+    await dbSession.abortTransaction();
+    dbSession.endSession();
+    console.error("❌ Transaction rolled back due to error:", error);
+    throw error;
+  }
 };
+
 
 // const confirmStripePayment = async (req: Request, res: Response) => {
 //   try {

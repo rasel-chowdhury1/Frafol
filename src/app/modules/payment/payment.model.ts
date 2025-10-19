@@ -1,11 +1,26 @@
 import { Schema, model } from "mongoose";
-import { IPayment, IPaymentModel } from "./payment.interface";
+import { IPayment, IPaymentModel, IServiceProviderBreakdown } from "./payment.interface";
+
+// Schema for Gear service provider breakdown
+const ServiceProviderBreakdownSchema = new Schema<IServiceProviderBreakdown>(
+  {
+    serviceProviderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    amount: { type: Number, required: true },
+    commission: { type: Number, required: true },
+    netAmount: { type: Number, required: true },
+  },
+  { _id: false }
+);
 
 const PaymentSchema = new Schema<IPayment>(
   {
     transactionId: { type: String, required: true, unique: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    serviceProviderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    // For event/workshop: single service provider
+    serviceProviderId: { type: Schema.Types.ObjectId, ref: "User", required: false },
+
+    // For gear: multiple sellers
+    serviceProviders: { type: [ServiceProviderBreakdownSchema], default: [] },
     amount: { type: Number, required: true },
     commission: { type: Number, required: true },
     netAmount: { type: Number, required: true },
@@ -20,6 +35,7 @@ const PaymentSchema = new Schema<IPayment>(
       type: String,
       enum: ["stripe", "card", "bank"],
       required: true,
+
     },
 
     paymentType: {
@@ -29,7 +45,7 @@ const PaymentSchema = new Schema<IPayment>(
     },
 
     eventOrderId: { type: Schema.Types.ObjectId, ref: "EventOrder" },
-    gearOrderId: { type: Schema.Types.ObjectId, ref: "GearOrder" },
+    gearOrderIds: [{ type: Schema.Types.ObjectId, ref: "GearOrder" }],
     workshopId: { type: Schema.Types.ObjectId, ref: "Workshop" },
   },
   { timestamps: true, versionKey: false }

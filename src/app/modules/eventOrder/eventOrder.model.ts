@@ -10,6 +10,7 @@ const ExtensionRequestSchema = new Schema(
     newDeliveryDate: { type: Date, required: true },
     reason: { type: String, required: true },
     approved: { type: Boolean, default: false },
+    status: {type: String, enum: ["pending", "accepted", "reject"], default: "pending"}
   },
   { _id: true, timestamps: true }
 );
@@ -148,7 +149,7 @@ EventOrderSchema.pre("save", function (next) {
 
       case "declined":
         if (!this.statusTimestamps.acceptedAt)
-          this.statusTimestamps.acceptedAt = now;
+          this.statusTimestamps.declinedAt = now;
         break;
       
       case "inProgress":

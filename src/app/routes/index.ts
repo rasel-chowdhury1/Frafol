@@ -15,6 +15,8 @@ import path from "path";
 import { PackageRoutes } from "../modules/package/package.route";
 import { EventOrderRoutes } from "../modules/eventOrder/eventOrder.route";
 import { PaymentRoutes } from "../modules/payment/payment.route";
+import { GearOrder } from "../modules/gearOrder/gearOrder.model";
+import { GearOrderRoutes } from "../modules/gearOrder/gearOrder.route";
 
 const router = Router();
 
@@ -74,8 +76,11 @@ const moduleRoutes = [
    {
       path: '/event-order',
       route: EventOrderRoutes
-   }
-  ,
+   },
+   {
+      path: '/gear-order',
+      route: GearOrderRoutes
+   },
    {
       path: '/payment',
       route: PaymentRoutes

@@ -14,6 +14,7 @@ export interface IGearMarketplace {
   name: string;
   price: number;
   vatAmount?: number;
+  platformCommission?: number;
   mainPrice?: number;
   description: string;
   condition: ConditionType;

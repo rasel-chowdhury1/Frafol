@@ -191,6 +191,28 @@ const getMyEventOrders = catchAsync(async (req: Request, res: Response) => {
   
 });
 
+const getMyExtensionEventOrders = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId; 
+
+  if (!userId) {
+    throw new Error("Unauthorized: User ID missing from token");
+  }
+
+
+
+  const result = await EventOrderService.getMyExtensionEventOrders(
+    userId.toString()
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Extension request orders retrieved successfully",
+    data: result,
+  });
+  
+});
+
 
 
 // 🔍 Get a single event order by ID
@@ -233,6 +255,8 @@ const updateEventOrderStatus = catchAsync(async (req: Request, res: Response) =>
 // ⏳ Request delivery extension
 const requestExtension = catchAsync(async (req: Request, res: Response) => {
   const { newDeliveryDate, reason } = req.body;
+
+ console.log("body request extension data =>>>> ", req.body)
   const result = await EventOrderService.requestExtension(
     req.params.id,
     req.user.userId,
@@ -261,6 +285,24 @@ const acceptExtensionRequest = catchAsync(async (req: Request, res: Response) =>
     statusCode: 200,
     success: true,
     message: "Delivery extension request accepted successfully",
+    data: result,
+  });
+});
+
+// ✅ Reject extension request
+const rejectExtensionRequest = catchAsync(async (req: Request, res: Response) => {
+  const { extensionRequestId, reason } = req.body; // ID of the specific extension request to approve
+
+  const result = await EventOrderService.rejectExtensionRequest(
+    req.params.orderId, // orderId
+    extensionRequestId,
+    reason
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Reject extension request accepted successfully",
     data: result,
   });
 });
@@ -346,22 +388,38 @@ const acceptDeliveryRequest = catchAsync(async (req: Request, res: Response) => 
 });
 
 const declineOrderRequest = catchAsync(async (req: Request, res: Response) => {
+  // Destructuring the necessary parameters and body from the request
   const { orderId } = req.params;
-  const { reason } = req.body;
+  const { reason, status } = req.body;
   const { userId } = req.user;
 
+  // 1️⃣ Ensure userId is provided and valid
   if (!userId) {
     throw new AppError(401, "Unauthorized: User ID is missing");
   }
 
-  const result = await EventOrderService.declineOrderRequest(orderId, userId, reason);
+  // 2️⃣ Validate that required fields exist
+  if (!orderId || !reason || !status) {
+    throw new AppError(400, "Missing required fields: orderId, reason, or status");
+  }
 
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: "Order request declined successfully",
-    data: result,
-  });
+  // 3️⃣ Ensure status is either 'declined' or 'deliveryRequestDeclined' (based on your logic)
+  if (!["declined", "deliveryRequestDeclined"].includes(status)) {
+    throw new AppError(400, "Invalid status. Must be 'declined' or 'deliveryRequestDeclined'");
+  }
+
+  // 4️⃣ Call the service to decline the order
+  const result = await EventOrderService.declineOrderRequest(orderId, userId, reason, status);
+
+  // 5️⃣ Return a success response
+sendResponse(res, {
+  statusCode: 200,
+  success: true,
+  message: status === "declined"
+    ? "The order request has been successfully declined. The status of the order has been updated to 'Declined'."
+    : "The delivery request has been successfully declined. The status of the delivery request has been updated to 'Delivery Request Declined'.",
+  data: result,
+});
 });
 
 const cancelOrder = catchAsync(async (req: Request, res: Response) => {
@@ -390,6 +448,9 @@ export const EventOrderController = {
   getAllDeliveredOrders,
   updateEventOrderStatus,
   requestExtension,
+  getMyExtensionEventOrders,
+  acceptExtensionRequest,
+  rejectExtensionRequest,
   deleteEventOrder,
   acceptCustomOrder,  
   acceptDirectOrder,

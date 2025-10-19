@@ -3,10 +3,25 @@ import { IGearOrder } from './gearOrder.interface';
 
 const gearOrderSchema = new Schema<IGearOrder>(
   {
-    orderId: { type: String, required: true, },
-    clientId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    sellerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    gearMarketplaceId: { type: Schema.Types.ObjectId, ref: 'GearMarketplace', required: true },
+    orderId: { 
+      type: String, 
+      required: true, 
+    },
+    clientId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User', 
+      required: true 
+    },
+    sellerId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User', 
+      required: true 
+    },
+    gearMarketplaceId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'GearMarketplace', 
+      required: true 
+    },
     orderStatus: {
       type: String,
       enum: ['pending', 'shipped', 'cancelled'],
@@ -25,6 +40,14 @@ const gearOrderSchema = new Schema<IGearOrder>(
         type: String,
         default: ""
     },
+    postCode: {
+        type: String,
+        default: ""
+    },
+    town: {
+        type: String,
+        default: ""
+    },
     mobileNumber: {
         type: String,
         required: true
@@ -32,6 +55,10 @@ const gearOrderSchema = new Schema<IGearOrder>(
     email: {
         type: String,
         required: true
+    },
+    loginAsCompany: {
+      type: Boolean,
+      default: false
     },
     ico: {
         type: String,
@@ -45,7 +72,15 @@ const gearOrderSchema = new Schema<IGearOrder>(
         type: String,
         default: ""
     },
-    isDeleted: { type: Boolean, default: false },
+    deliveryNote: {
+        type: String,
+        default: ""
+    },
+   
+    isDeleted: { 
+      type: Boolean, 
+      default: false 
+    },
   },
   {
     timestamps: true,

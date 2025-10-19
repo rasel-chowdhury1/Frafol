@@ -170,6 +170,60 @@ const getMyEventOrders = async (
   };
 };
 
+
+const getMyExtensionEventOrders = async (userId: string) => {
+  try {
+    // ✅ Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid user ID");
+    }
+
+    // ✅ Find orders for this user with specific statuses
+    const orders = await EventOrder.find({
+      userId: userId,
+      status: { $in: ["inProgress", "deliveryRequestDeclined"] },
+      "extensionRequests.status": "pending", 
+      "extensionRequests.0": { $exists: true },
+      isDeleted: false,
+    })
+      .populate("userId", "name email")
+      .populate("serviceProviderId", "name email")
+      .populate("extensionRequests.requestedBy", "name email")
+      .sort({ createdAt: -1 });
+
+    if (!orders || orders.length === 0) {
+      return {
+        success: true,
+        message: "No extension requests found for this user.",
+        data: [],
+      };
+    }
+
+    // ✅ Only keep the last extension request per order
+    const result = orders.map(order => {
+      const lastExtensionRequest =
+        order.extensionRequests.length > 0
+          ? order.extensionRequests[order.extensionRequests.length - 1]
+          : null;
+
+      return {
+        ...order.toObject(),
+        extensionRequests: lastExtensionRequest ? [lastExtensionRequest] : [],
+      };
+    });
+
+    return result
+  } catch (error: any) {
+    console.error("❌ Error in getMyExtensionEventOrders:", error.message);
+    return {
+      success: false,
+      message: error.message || "Failed to fetch extension request orders.",
+      data: [],
+    };
+  }
+};
+
+
 const getAllDeliveredOrders = async (query: Record<string, any>) => {
   const baseFilter = {
     deliveryStatus: "delivered",
@@ -278,19 +332,33 @@ const requestExtension = async (
   newDeliveryDate: Date,
   reason: string
 ) => {
+  // 1️⃣ Check if there is any pending extension request
+  const order = await EventOrder.findById(orderId);
+
+  if (!order) throw new Error("EventOrder not found");
+
+  const pendingExtensionRequest = order.extensionRequests.some(
+    (request) => request.status === "pending"
+  );
+
+  if (pendingExtensionRequest) {
+    throw new Error("There is already a pending extension request.");
+  }
+
+  // 2️⃣ If no pending request, create a new extension request
   const result = await EventOrder.findByIdAndUpdate(
     orderId,
     {
       $push: {
-        extensionRequests: { requestedBy, newDeliveryDate, reason, approved: false },
+        extensionRequests: { requestedBy, newDeliveryDate, reason, approved: false, status: "pending" },
       },
     },
     { new: true }
   );
 
-  if (!result) throw new Error("EventOrder not found");
   return result;
 };
+
 
 const acceptExtensionRequest = async (
   orderId: string,
@@ -314,8 +382,43 @@ const acceptExtensionRequest = async (
 
   // ✅ Approve the request and update delivery dates
   extensionRequest.approved = true;
+  extensionRequest.status = "accepted";
   order.deliveryDate = extensionRequest.newDeliveryDate;
   order.lastDeliveryDate = extensionRequest.newDeliveryDate;
+
+  // ✅ Save changes
+  await order.save();
+
+  // ✅ Optional: send notification or email to user
+  // await sendExtensionApprovedNotification(order.userId, order.serviceProviderId, extensionRequest.newDeliveryDate);
+
+  return order;
+};
+
+const rejectExtensionRequest = async (
+  orderId: string,
+  extensionRequestId: string,
+  reason: string
+) => {
+  // ✅ Find the order first
+  const order = await EventOrder.findById(orderId);
+  if (!order) throw new AppError(404, "Event order not found");
+
+  // ✅ Find the requested extension
+  const extensionRequest = order.extensionRequests.id(extensionRequestId);
+  if (!extensionRequest) {
+    throw new AppError(404, "Extension request not found");
+  }
+
+  // ✅ Prevent duplicate approvals
+  if (extensionRequest.status === "accepted" || extensionRequest.status === "reject") {
+    throw new AppError(400, "This extension request has already been approved");
+  }
+
+  // ✅ Approve the request and update delivery dates
+  extensionRequest.approved = true;
+  extensionRequest.status = "reject";
+  extensionRequest.reason = reason;
 
   // ✅ Save changes
   await order.save();
@@ -566,50 +669,64 @@ const acceptDeliveryRequest = async (
 const declineOrderRequest = async (
   orderId: string,
   clientId: string,
-  reason: string
+  reason: string,
+  status: "declined" | "deliveryRequestDeclined" // Ensure that the status can only be these two values
 ) => {
-
+  
   // 1️⃣ Find the order
   const order = await EventOrder.findById(orderId).populate("packageId", "title");
-
   if (!order) throw new AppError(404, "Order not found");
 
+
   // 2️⃣ Only the client can decline
-  if (order.serviceProviderId.toString() !== clientId) {
-    throw new AppError(403, "You are not authorized to decline this order");
-  }
+  // if (order.serviceProviderId.toString() !== clientId) {
+  //   throw new AppError(403, "You are not authorized to decline this order");
+  // }
 
   // 3️⃣ Only pending or deliveryRequest orders can be declined
   if (!["pending", "deliveryRequest"].includes(order.status)) {
-    throw new AppError(400, "Only pending or delivery requests can be declined");
+    throw new AppError(400, "Only pending or delivery request orders can be declined");
   }
 
-  // 4️⃣ Update order status
-  order.status = "deliveryRequestDeclined";
-  order.deliveryRequestDeclinedReason = reason;
-  order.statusTimestamps.deliveryRequestDeclineAt = new Date();
+  // 4️⃣ Update order status based on the provided status value
+  if (status === "declined") {
+    if (order.serviceProviderId.toString() !== clientId) {
+      throw new AppError(403, "You are not authorized to decline this order");
+    }
 
-  // 5️⃣ Push to status history
+    order.status = "declined";
+    order.declineReason = reason;
+    order.statusTimestamps.declinedAt = new Date();
+  } else if (status === "deliveryRequestDeclined") {
+    if (order.userId.toString() !== clientId) {
+      throw new AppError(403, "You are not authorized to decline this order");
+    }
+    order.status = "deliveryRequestDeclined";
+    order.deliveryRequestDeclinedReason = reason;
+    order.statusTimestamps.deliveryRequestDeclineAt = new Date();
+  }
+
+  // 5️⃣ Push the status change to history
   order.statusHistory.push({
-    status: "deliveryRequestDeclined",
+    status,
     reason,
     changedAt: new Date(),
   });
 
+  // 6️⃣ Save the order after all updates
   await order.save();
 
-  // 6️⃣ Notify the service provider
+  // Optionally, notify the service provider (uncomment to enable)
   // sentNotificationForOrderDeclined({
   //   orderType: order.orderType,
   //   userId: new mongoose.Types.ObjectId(clientId), // sender = client
   //   receiverId: new mongoose.Types.ObjectId(order.serviceProviderId), // receiver = service provider
   //   serviceType: order.serviceType,
-  //   packageName: order.packageId ? undefined : undefined,
+  //   packageName: order.packageId ? order.packageId.title : undefined,
   // }).catch((err) => console.error("Notification failed:", err));
 
   return order;
 };
-
 
 const cancelOrder = async (
   orderId: string,
@@ -672,11 +789,13 @@ export const EventOrderService = {
   acceptCustomOrder,
   getEventOrders,
   getMyEventOrders,
+  getMyExtensionEventOrders,
   getAllDeliveredOrders,
   getEventOrderById,
   updateEventOrderStatus,
   requestExtension,
   acceptExtensionRequest,
+  rejectExtensionRequest,
   deleteEventOrder,
   requestOrderDelivery,
   acceptDeliveryRequest,
