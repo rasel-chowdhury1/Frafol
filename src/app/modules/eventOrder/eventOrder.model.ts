@@ -24,6 +24,7 @@ const StatusTimestampsSchema = new Schema(
     acceptedAt: { type: Date },
     inProgressAt: { type: Date },
     deliveryRequestAt: { type: Date },
+    deliveryRequestDeclineAt: { type: Date },
     deliveredAt: { type: Date },
     cancelledAt: { type: Date },
   },
@@ -83,12 +84,16 @@ const EventOrderSchema = new Schema<IEventOrder>(
     // ✅ Order Status
     status: {
       type: String,
-      enum: ["pending", "declined", "accepted", "inProgress", "deliveryRequest", "delivered", "cancelled"],
+      enum: ["pending", "declined", "accepted", "inProgress", "deliveryRequest","deliveryRequestDeclined", "delivered", "cancelled"],
       default: "pending",
     },
 
     // ✅ Reason fields
     declineReason: { type: String, trim: true },
+    deliveryRequestDeclinedReason: {
+      type: String,
+      trim: true
+    },
     cancelReason: { type: String, trim: true },
     cancelledBy: { type: Schema.Types.ObjectId, ref: "User" },
 
@@ -104,7 +109,7 @@ const EventOrderSchema = new Schema<IEventOrder>(
         {
           status: {
             type: String,
-            enum: ["pending", "declined", "accepted", "inProgress", "deliveryRequest", "delivered", "cancelled"],
+            enum: ["pending", "declined", "accepted", "inProgress", "deliveryRequest", "deliveryRequestDeclined", "delivered", "cancelled"],
             required: true,
           },
           reason: { type: String },
@@ -153,6 +158,10 @@ EventOrderSchema.pre("save", function (next) {
       case "deliveryRequest":
         if (!this.statusTimestamps.deliveredAt)
           this.statusTimestamps.deliveryRequestAt = now;
+        break;
+      case "deliveryRequestDeclined":
+        if (!this.statusTimestamps.deliveredAt)
+          this.statusTimestamps.deliveryRequestDeclineAt = now;
         break;
       case "delivered":
         if (!this.statusTimestamps.deliveredAt)

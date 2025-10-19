@@ -69,7 +69,7 @@ const getMyEventOrders = async (
           baseQuery.status = "delivered";
           break;
         case "inProgress":
-          baseQuery.status = "inProgress";
+          baseQuery.status = { $in: ["inProgress", "deliveryRequest", "deliveryRequestDeclined"] };
           baseQuery.date = { $lte: new Date() };
           // baseQuery.sort = "date"; 
           break;
@@ -84,6 +84,12 @@ const getMyEventOrders = async (
         case "accepted":
           
           baseQuery.status = "accepted";
+          break;
+        case "deliveryRequest":
+          baseQuery.status = "deliveryRequest";
+          break;
+        case "delivered":
+          baseQuery.status = "delivered";
           break;
         case "cancelled":
           baseQuery.status = "cancelled";
@@ -286,6 +292,40 @@ const requestExtension = async (
   return result;
 };
 
+const acceptExtensionRequest = async (
+  orderId: string,
+  extensionRequestId: string,
+  approvedBy: string
+) => {
+  // ✅ Find the order first
+  const order = await EventOrder.findById(orderId);
+  if (!order) throw new AppError(404, "Event order not found");
+
+  // ✅ Find the requested extension
+  const extensionRequest = order.extensionRequests.id(extensionRequestId);
+  if (!extensionRequest) {
+    throw new AppError(404, "Extension request not found");
+  }
+
+  // ✅ Prevent duplicate approvals
+  if (extensionRequest.approved) {
+    throw new AppError(400, "This extension request has already been approved");
+  }
+
+  // ✅ Approve the request and update delivery dates
+  extensionRequest.approved = true;
+  order.deliveryDate = extensionRequest.newDeliveryDate;
+  order.lastDeliveryDate = extensionRequest.newDeliveryDate;
+
+  // ✅ Save changes
+  await order.save();
+
+  // ✅ Optional: send notification or email to user
+  // await sendExtensionApprovedNotification(order.userId, order.serviceProviderId, extensionRequest.newDeliveryDate);
+
+  return order;
+};
+
 const deleteEventOrder = async (id: string) => {
   const result = await EventOrder.findByIdAndUpdate(
     id,
@@ -349,7 +389,8 @@ const acceptCustomOrder = async (
   serviceProviderId: string,
   payload: Partial<IEventOrder>
 ) => {
-
+  
+  console.log("payload accepte custom order route =>>> ", payload)
   const { price, priceWithServiceFee, totalPrice, vatAmount, deliveryDate, description } = payload;
 
   // Validation for required pricing fields
@@ -395,6 +436,8 @@ const acceptCustomOrder = async (
   existingOrder.statusTimestamps.acceptedAt = new Date();
 
   await existingOrder.save();
+
+  console.log("existing order =>>>>", existingOrder)
 
   // 🔹 Get package title (if available)
   const packageName =
@@ -542,13 +585,13 @@ const declineOrderRequest = async (
   }
 
   // 4️⃣ Update order status
-  order.status = "declined";
-  order.declineReason = reason;
-  order.statusTimestamps.declinedAt = new Date();
+  order.status = "deliveryRequestDeclined";
+  order.deliveryRequestDeclinedReason = reason;
+  order.statusTimestamps.deliveryRequestDeclineAt = new Date();
 
   // 5️⃣ Push to status history
   order.statusHistory.push({
-    status: "declined",
+    status: "deliveryRequestDeclined",
     reason,
     changedAt: new Date(),
   });
@@ -633,6 +676,7 @@ export const EventOrderService = {
   getEventOrderById,
   updateEventOrderStatus,
   requestExtension,
+  acceptExtensionRequest,
   deleteEventOrder,
   requestOrderDelivery,
   acceptDeliveryRequest,

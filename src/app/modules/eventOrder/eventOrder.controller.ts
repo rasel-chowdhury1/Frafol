@@ -46,6 +46,9 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
     const orderDate = new Date(req.body.date || new Date());
     req.body.date = orderDate;
 
+    console.log("body data for direct =>> ", req.body)
+    console.log("package data for direct =>>> ", packageData)
+
     // ✅ Correct delivery date calculation
     const deliveryDate = new Date(
       orderDate.getTime() + (packageData.deliveryTime || 0) * 24 * 60 * 60 * 1000
@@ -53,6 +56,8 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
 
     req.body.deliveryDate = deliveryDate;
     req.body.lastDeliveryDate = deliveryDate;
+
+     console.log("body data for direct after=>> ", req.body);
     }
 
   // ==============================
@@ -239,6 +244,23 @@ const requestExtension = catchAsync(async (req: Request, res: Response) => {
     statusCode: 200,
     success: true,
     message: "Delivery extension request submitted successfully",
+    data: result,
+  });
+});
+// ✅ Accept extension request
+const acceptExtensionRequest = catchAsync(async (req: Request, res: Response) => {
+  const { extensionRequestId } = req.body; // ID of the specific extension request to approve
+
+  const result = await EventOrderService.acceptExtensionRequest(
+    req.params.orderId, // orderId
+    extensionRequestId,
+    req.user.userId
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Delivery extension request accepted successfully",
     data: result,
   });
 });

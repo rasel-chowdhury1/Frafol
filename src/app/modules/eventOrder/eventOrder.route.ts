@@ -86,7 +86,7 @@ router.post(
     EventOrderController.updateEventOrderStatus
 )
 .post(
-    "/:id/extension", 
+    "/extension/:id", 
     auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN), 
     EventOrderController.requestExtension
 )
