@@ -36,7 +36,7 @@ router.post(
 .patch(
     "/cancel/:orderId",
      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER), 
-     EventOrderController.requestOrderDelivery
+     EventOrderController.cancelOrder
     )
 
 .patch(

@@ -66,8 +66,7 @@ npm-debug.log* 
 venv/
 env/
 .env
+.env.example
 .vercel
 .vercel
 
-.env
-.env
