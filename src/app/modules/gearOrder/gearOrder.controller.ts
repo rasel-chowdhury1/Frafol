@@ -61,7 +61,7 @@ const createGearOrders = catchAsync(async (req: Request, res: Response) => {
 );
 
 const getAllGearOrders = catchAsync(async (req: Request, res: Response) => {
-  const result = await GearOrderService.getAllGearOrders();
+  const result = await GearOrderService.getAllGearOrders(req.query);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

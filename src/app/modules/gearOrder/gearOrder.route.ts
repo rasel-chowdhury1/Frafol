@@ -13,7 +13,7 @@ router
     )
     .get('/', GearOrderController.getAllGearOrders)
     
-        .get(
+    .get(
         "/my-orders", 
         auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),  
         GearOrderController.getMyGearOrders

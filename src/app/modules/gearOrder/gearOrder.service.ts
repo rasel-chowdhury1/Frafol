@@ -127,9 +127,23 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
 
 
 
-const getAllGearOrders = async () => {
-  return await GearOrder.find({ isDeleted: false })
-    .populate('clientId sellerId gearMarketplaceId');
+const getAllGearOrders = async (query: Record<string, unknown>) => {
+  const gearOrderQuery = new QueryBuilder(GearOrder.find({ isDeleted: false }), query)
+    .filter() // apply filter by query params (e.g. clientId, sellerId, orderStatus)
+    .search(['orderId', 'gearName', 'location']) // searchable fields (customize as needed)
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await gearOrderQuery.modelQuery
+    .populate('clientId', 'name sureName')
+    .populate('sellerId', 'name sureName')
+    .populate('gearMarketplaceId', 'title price')
+    .exec();
+
+  const meta = await gearOrderQuery.countTotal();
+
+  return { meta, result };
 };
 
 const getMyGearOrders = async (

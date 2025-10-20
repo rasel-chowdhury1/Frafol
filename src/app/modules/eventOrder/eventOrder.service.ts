@@ -35,8 +35,8 @@ const getEventOrders = async (query: Record<string, unknown>) => {
     .fields();
 
   const result = await eventOrderQuery.modelQuery
-    .populate("userId", "name sureName")
-    .populate("serviceProviderId", "name sureName")
+    .populate("userId", "name sureName profileImage role switchRole")
+    .populate("serviceProviderId", "name sureName profileImage role switchRole")
     .exec();
 
   const meta = await eventOrderQuery.countTotal();
@@ -731,7 +731,8 @@ const declineOrderRequest = async (
 const cancelOrder = async (
   orderId: string,
   userId: string,
-  reason: string
+  reason: string, 
+  role: string
 ) => {
   // 🔍 Find order
   const order = await EventOrder.findById(orderId)
@@ -744,6 +745,7 @@ const cancelOrder = async (
     throw new AppError(400, "This order is already cancelled");
   }
 
+  if(role !== "admin"){
   // 🧾 Authorization: only the client or assigned service provider can cancel
   const isAuthorized =
     order.userId.toString() === userId ||
@@ -752,6 +754,7 @@ const cancelOrder = async (
   if (!isAuthorized) {
     throw new AppError(403, "You are not authorized to cancel this order");
   }
+}
 
   // 🚫 Update order status
   order.status = "cancelled";

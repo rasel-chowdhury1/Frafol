@@ -425,11 +425,11 @@ sendResponse(res, {
 const cancelOrder = catchAsync(async (req: Request, res: Response) => {
   const { orderId } = req.params;
   const { reason } = req.body;
-  const { userId } = req.user;
+  const { userId, role } = req.user;
 
   if (!userId) throw new AppError(401, "Unauthorized");
 
-  const result = await EventOrderService.cancelOrder(orderId, userId, reason);
+  const result = await EventOrderService.cancelOrder(orderId, userId, reason, role);
 
   sendResponse(res, {
     statusCode: 200,
