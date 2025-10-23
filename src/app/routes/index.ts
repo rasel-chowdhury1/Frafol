@@ -11,12 +11,11 @@ import { GearMarketplaceRoutes } from "../modules/gearMarketplace/gearMarketplac
 import { CommissionSetupRoutes } from "../commissionSetup/commissionSetup.route";
 import { ReportRoutes } from "../modules/report/report.route";
 import { WorkshopRoutes } from "../modules/workshop/workshop.routes";
-import path from "path";
 import { PackageRoutes } from "../modules/package/package.route";
 import { EventOrderRoutes } from "../modules/eventOrder/eventOrder.route";
 import { PaymentRoutes } from "../modules/payment/payment.route";
-import { GearOrder } from "../modules/gearOrder/gearOrder.model";
 import { GearOrderRoutes } from "../modules/gearOrder/gearOrder.route";
+import { CommunityRoutes } from "../modules/community/community.routes";
 
 const router = Router();
 
@@ -84,6 +83,10 @@ const moduleRoutes = [
    {
       path: '/payment',
       route: PaymentRoutes
+   },
+   {
+      path: "/community",
+      route: CommunityRoutes
    }
 ];
 

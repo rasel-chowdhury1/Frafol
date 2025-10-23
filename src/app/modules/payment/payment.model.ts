@@ -21,6 +21,7 @@ const PaymentSchema = new Schema<IPayment>(
 
     // For gear: multiple sellers
     serviceProviders: { type: [ServiceProviderBreakdownSchema], default: [] },
+    mainOrderIdForGear: { type: String},
     amount: { type: Number, required: true },
     commission: { type: Number, required: true },
     netAmount: { type: Number, required: true },

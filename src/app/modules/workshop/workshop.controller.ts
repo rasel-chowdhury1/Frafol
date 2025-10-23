@@ -53,12 +53,40 @@ const getMyWorkshops = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyRegisteredWorkshops = catchAsync(async (req: Request, res: Response) => {
+  const {userId} = req.user; // assuming you attach user from auth middleware
+  const query = req.query;
+
+
+  const result = await WorkshopService.getMyRegisteredWorkshops(userId, query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Registered workshops retrieved successfully",
+    data: result,
+  });
+});
+
 const getPendingWorkshops = catchAsync(async (req: Request, res: Response) => {
   const result = await WorkshopService.getPendingWorkshops(req.query);  
   sendResponse(res, {
     statusCode: 200,
     success: true,  
     message: "Pending workshops retrieved successfully",
+    data: result,
+  });
+});
+
+const getParticipantsByWorkshop = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await WorkshopService.getParticipantsByWorkshop(id);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Workshop participants retrieved successfully",
     data: result,
   });
 });
@@ -152,7 +180,9 @@ export const WorkshopController = {
   getAllWorkshops,
   getWorkshopById,
   getMyWorkshops,
+  getMyRegisteredWorkshops,
   getPendingWorkshops,
+  getParticipantsByWorkshop,
   updateWorkshop,
   updateApprovalStatusByAdmin,
   declineWorkshopById,

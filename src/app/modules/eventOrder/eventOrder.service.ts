@@ -584,7 +584,7 @@ const requestOrderDelivery = async (
   order.status = "deliveryRequest";
   order.statusTimestamps = {
     ...order.statusTimestamps,
-    deliveredAt: new Date(),
+    deliveryRequestAt: new Date(),
   };
   order.statusHistory.push({
     status: "deliveryRequest",

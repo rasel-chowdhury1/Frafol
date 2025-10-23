@@ -9,12 +9,12 @@ const upload = fileUpload('./public/uploads/community');
 const router = Router();
 
 router.post(
-  "/add",
-  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
+  "/create",
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   upload.fields([
         { name: 'images', maxCount: 10 },
     ]),
-    parseData(),
+  parseData(),
   CommunityController.createCommunity
 )
 

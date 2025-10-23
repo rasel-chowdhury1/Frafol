@@ -8,6 +8,7 @@ export interface IWorkshop {
   locationType: "offline" | "online";
   location?: string; // required if offline
   workshopLink?: string; // required if online
+  vatPercent?: number;
   vatAmount?: number;
   price: number;
   mainPrice: number;
@@ -28,6 +29,7 @@ export interface IUpdateWorkshop {
   locationType?: "offline" | "online";
   location?: string;
   workshopLink?: string;
+  vatPercent?: string;
   vatAmount?: number;
   price?: number;
   mainPrice?: number;

@@ -39,6 +39,32 @@ router
   )
 
   .get(
+    "/participants/:id",
+    // auth(
+    //   USER_ROLE.USER,
+    //   USER_ROLE.COMPANY,
+    //   USER_ROLE.PHOTOGRAPHER,
+    //   USER_ROLE.VIDEOGRAPHER,
+    //   USER_ROLE.BOTH,
+    //   USER_ROLE.ADMIN
+    // ),
+    WorkshopController.getParticipantsByWorkshop
+  )
+
+  .get(
+    "/my-registerd",
+    auth(
+      USER_ROLE.USER,
+      USER_ROLE.COMPANY,
+      USER_ROLE.PHOTOGRAPHER,
+      USER_ROLE.VIDEOGRAPHER,
+      USER_ROLE.BOTH,
+      USER_ROLE.ADMIN
+    ),
+    WorkshopController.getMyRegisteredWorkshops
+  )
+
+  .get(
     "/:id",
     auth(
       USER_ROLE.USER,

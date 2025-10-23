@@ -3,10 +3,18 @@ import { IWorkshop, IUpdateWorkshop } from "./workshop.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
 import AppError from "../../error/AppError";
+import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
 
 const createWorkshop = async (payload: IWorkshop) => {
+  // ✅ Keep vatPercent as percentage (e.g., 15 for 15%)
+  payload.vatPercent = payload.vatAmount as number;
+
+  // ✅ Calculate actual VAT amount based on main price
+  payload.vatAmount = (payload.mainPrice * payload.vatPercent) / 100;
+
   return await Workshop.create(payload);
 };
+
 
 const getAllWorkshops = async (query: Record<string, any> = {}) => {
   const workshopQuery = new QueryBuilder(
@@ -22,8 +30,23 @@ const getAllWorkshops = async (query: Record<string, any> = {}) => {
     .paginate()
     .fields();
 
-  const result = await workshopQuery.modelQuery;
+  const workshops = await workshopQuery.modelQuery;
   const meta = await workshopQuery.countTotal();
+
+    // ✅ Add total participants count for each workshop
+  const result = await Promise.all(
+    workshops.map(async (workshop: any) => {
+      const totalParticipants = await WorkshopParticipant.countDocuments({
+        workshopId: workshop._id,
+        isDeleted: false,
+      });
+
+      return {
+        ...workshop.toObject(),
+        totalParticipants,
+      };
+    })
+  );
 
   return { meta, result };
 };
@@ -47,8 +70,53 @@ const getMyWorkshops = async (userId: string, query: Record<string, unknown>) =>
     .paginate()
     .fields();
 
-  const result = await gearQuery.modelQuery;
+  const workshops = await gearQuery.modelQuery;
   const meta = await gearQuery.countTotal();
+
+      // ✅ Add total participants count for each workshop
+  const result = await Promise.all(
+    workshops.map(async (workshop: any) => {
+      const totalParticipants = await WorkshopParticipant.countDocuments({
+        workshopId: workshop._id,
+        isDeleted: false,
+      });
+
+      return {
+        ...workshop.toObject(),
+        totalParticipants,
+      };
+    })
+  );
+
+  return { meta, result };
+};
+
+const getMyRegisteredWorkshops = async (userId: string, query: Record<string, unknown>) => {
+  const workshopQuery = new QueryBuilder(
+    WorkshopParticipant.find({ clientId: userId, isDeleted: false })
+      .populate({
+        path: "workshopId",
+        populate: {
+          path: "authorId",
+          select: "name sureName role profileImage",
+        },
+      }),
+    query
+  )
+    .search(["workshopId.title", "workshopId.description", "workshopId.location"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const participants = await workshopQuery.modelQuery;
+  const meta = await workshopQuery.countTotal();
+
+  // ✅ Format response to include direct workshop info
+  const result = participants.map((p: any) => ({
+    ...p.toObject(),
+    workshop: p.workshopId,
+  }));
 
   return { meta, result };
 };
@@ -76,6 +144,15 @@ const getPendingWorkshops = async (
   return { meta, result };
 };
 
+
+const getParticipantsByWorkshop = async (workshopId: string) => {
+
+  const participants = await WorkshopParticipant.find({workshopId,isDeleted: false})
+                                                .populate('clientId', 'name email profileImage')
+
+  return participants || [];
+
+}
 
 
 const updateWorkshop = async (
@@ -153,7 +230,9 @@ export const WorkshopService = {
   getAllWorkshops,
   getWorkshopById,
   getMyWorkshops,
+  getMyRegisteredWorkshops,
   getPendingWorkshops,
+  getParticipantsByWorkshop,
   updateWorkshop,
   updateApprovalStatusByAdmin,
   declineWorkshopById,

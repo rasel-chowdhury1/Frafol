@@ -9,8 +9,27 @@ const workshopParticipantSchema = new Schema<IWorkshopParticipant>(
     workshopId: { type: Schema.Types.ObjectId, ref: 'Workshop', required: true },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'received'],
-      default: 'pending',
+      enum: ["pending", "completed", "failed"],
+      default: "completed",
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    instructorPayment: {
+      status: {
+        type: String,
+        enum: ["pending", "received"],
+        default: "pending",
+      },
+      amount: {
+        type: Number,
+        required: true,
+      },
+      paidAt: {
+        type: Date,
+        default: null,
+      },
     },
     isDeleted: { type: Boolean, default: false },
   },
