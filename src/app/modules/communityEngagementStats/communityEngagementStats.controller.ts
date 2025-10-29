@@ -38,11 +38,14 @@ const addComment = catchAsync(async (req: Request, res: Response) => {
 });
 
 const addReply = catchAsync(async (req: Request, res: Response) => {
+  const {userId} = req.user;
+  const {commentId} = req.params;
+  const {communityId,text} = req.body;
   const result = await CommunityEngagementService.addReply(
-    req.params.id,
-    req.params.commentId,
-    req.user.userId,
-    req.body.text
+    communityId,
+    commentId,
+    userId,
+    text
   );
   sendResponse(res, {
     statusCode: 200,

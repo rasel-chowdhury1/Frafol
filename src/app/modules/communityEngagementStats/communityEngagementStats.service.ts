@@ -31,11 +31,18 @@ const addReply = async (
   userId: string,
   text: string
 ) => {
-  return await CommunityEngagementStats.findOneAndUpdate(
-    { communityId, "comments._id": commentId },
-    { $push: { "comments.$.replies": { user: userId, text } } },
-    { new: true }
-  );
+
+  console.log({communityId,commentId,userId,text});
+  // const result = await CommunityEngagementStats.findOneAndUpdate(
+  //   { communityId, "comments._id": commentId },
+  //   { $push: { "comments.$.replies": { user: userId, text } } },
+  //   { new: true }
+  // );
+
+  const result2 = await CommunityEngagementStats.findOne({communityId, "comments._id": commentId})
+
+  console.log("result data =>>>>>> ", result2);
+  return result2 ;
 };
 
 const addViewer = async (communityId: string, userId: string) => {

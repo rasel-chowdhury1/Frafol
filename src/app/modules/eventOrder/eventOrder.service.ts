@@ -576,9 +576,9 @@ const requestOrderDelivery = async (
   }
 
   // 🔹 Validate current status
-  if (order.status !== "inProgress") {
-    throw new AppError(400, "You can only send a delivery request for an order that is in progress");
-  }
+  // if (order.status !== "inProgress") {
+  //   throw new AppError(400, "You can only send a delivery request for an order that is in progress");
+  // }
 
   // 🔹 Update order status
   order.status = "deliveryRequest";
