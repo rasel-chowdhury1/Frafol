@@ -6,6 +6,7 @@ import moment from "moment";
 import httpStatus from 'http-status';
 import { createGearStripePaymentSession } from '../payment/payment.utils';
 import QueryBuilder from '../../builder/QueryBuilder';
+import mongoose from 'mongoose';
 
 const createGearOrder = async (payload: IGearOrder) => {
   const order = await GearOrder.create(payload);
@@ -26,6 +27,7 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
     ico = "",
     dic = "",
     ic_dph = "",
+    companyAddress = "",
     deliveryNote = "",
   } = payload;
 
@@ -82,7 +84,15 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
       ico,
       dic,
       ic_dph,
+      companyAddress,
       deliveryNote,
+      statusTimestamps: {
+        createdAt: new Date(), // Initialize createdAt
+        deliveryRequestAt: null,
+        deliveryRequestDeclineAt: null,
+        deliveredAt: null,
+        cancelledAt: null,
+      },
     };
   });
 
@@ -105,7 +115,6 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
   // ========================================
   const stripeSession = await createGearStripePaymentSession({
     userId,
-    serviceProviderId: gearItems.map((g) => g.authorId), // multiple sellers
     gearOrderIds: createdOrders.map((o) => o._id),
     amount: totalAmount + totalShippingCharge,
     commission,
@@ -126,24 +135,176 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
 }
 
 
+const requestGearMarketplaceDelivery = async (
+  orderId: string,
+  sellerId: mongoose.Types.ObjectId
+) => {
+  // 🔹 Find the order
+  const order = await GearOrder.findOne({
+    _id: orderId,
+    sellerId,
+    isDeleted: false,
+  }).populate("gearMarketplaceId");
+
+  if (!order) {
+    throw new AppError(404, "Gear order not found or unauthorized");
+  }
+
+  // 🔹 Validate current status
+  if (!["inProgress", "deliveryRequestDeclined"].includes(order.orderStatus)) {
+    throw new AppError(
+      400,
+      "You can only send a delivery request for an order that is pending or previously declined"
+    );
+  }
+
+  // 🔹 Update order status and timestamp
+  order.orderStatus = "deliveryRequest";
+  order.statusTimestamps = {
+    ...order.statusTimestamps,
+    deliveryRequestAt: new Date(),
+  };
+
+  await order.save();
+
+  return order;
+};
+
+const acceptDeliveryRequestByClient = async (
+  orderId: string,
+  clientId: mongoose.Types.ObjectId
+) => {
+  // 🔹 Find the order for the client
+  const order = await GearOrder.findOne({
+    _id: orderId,
+    clientId,
+    isDeleted: false,
+  }).populate("gearMarketplaceId");
+
+  if (!order) {
+    throw new AppError(404, "Gear order not found or unauthorized");
+  }
+
+  // 🔹 Validate current status
+  if (order.orderStatus !== "deliveryRequest") {
+    throw new AppError(
+      400,
+      "Only orders with a delivery request can be accepted"
+    );
+  }
+
+  // 🔹 Update order status
+  order.orderStatus = "delivered"; // Or "delivered" if this indicates completion
+  order.statusTimestamps = {
+    ...order.statusTimestamps,
+    deliveredAt: new Date(), // mark acceptance timestamp
+  };
+
+  await order.save();
+
+  return order;
+};
+
+const declineDeliveryRequestByClient = async (
+  orderId: string,
+  clientId: mongoose.Types.ObjectId,
+  reason: string
+) => {
+  // 🔹 Find the order for the client
+  const order = await GearOrder.findOne({
+    _id: orderId,
+    clientId,
+    isDeleted: false,
+  }).populate("gearMarketplaceId");
+
+  if (!order) {
+    throw new AppError(404, "Gear order not found or unauthorized");
+  }
+
+  // 🔹 Validate current status
+  if (order.orderStatus !== "deliveryRequest") {
+    throw new AppError(
+      400,
+      "Only orders with a delivery request can be declined"
+    );
+  }
+
+  // 🔹 Update order status and reason
+  order.orderStatus = "deliveryRequestDeclined";
+  order.deliveryRequestDeclinedReason = reason;
+  order.statusTimestamps = {
+    ...order.statusTimestamps,
+    deliveryRequestDeclineAt: new Date(), // mark decline timestamp
+  };
+
+  await order.save();
+
+  return order;
+};
+
+const cancelGearOrderBySeller = async (
+  orderId: string,
+  sellerId: mongoose.Types.ObjectId,
+  role: string,
+  reason: string
+) => {
+  // 🔹 Build query dynamically based on role
+  const query: any = { _id: orderId, isDeleted: false };
+  if (role !== "admin") query.sellerId = sellerId;
+
+  // 🔹 Fetch the order
+  const order = await GearOrder.findOne(query);
+  if (!order) throw new AppError(404, "Gear order not found or unauthorized");
+
+  // 🔹 Prevent invalid cancellations
+  if (["delivered", "cancelled"].includes(order.orderStatus)) {
+    throw new AppError(400, "Delivered or already cancelled orders cannot be cancelled");
+  }
+
+  // 🔹 Update and save
+  Object.assign(order, {
+    orderStatus: "cancelled",
+    cancelReason: reason,
+    cancelledBy: sellerId,
+    "statusTimestamps.cancelledAt": new Date(),
+  });
+
+  await order.save();
+
+  return order;
+};
+
+
 
 const getAllGearOrders = async (query: Record<string, unknown>) => {
-  const gearOrderQuery = new QueryBuilder(GearOrder.find({ isDeleted: false }), query)
-    .filter() // apply filter by query params (e.g. clientId, sellerId, orderStatus)
-    .search(['orderId', 'gearName', 'location']) // searchable fields (customize as needed)
+
+    // 🎯 Base query (non-deleted only)
+  const baseQuery: any = { isDeleted: false };
+
+  // 🧠 Initialize QueryBuilder
+  const queryBuilder = new QueryBuilder(
+    GearOrder.find(baseQuery)
+      .populate("clientId", "name profileImage email")
+      .populate("sellerId", "name profileImage email")
+      .populate("gearMarketplaceId", " name price vatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
+      .populate("paymentId", "transactionId paymentMethod"),
+    query
+  )
     .sort()
     .paginate()
     .fields();
 
-  const result = await gearOrderQuery.modelQuery
-    .populate('clientId', 'name sureName')
-    .populate('sellerId', 'name sureName')
-    .populate('gearMarketplaceId', 'title price')
-    .exec();
+  // ✅ Execute query and get total count
+  const [result, meta] = await Promise.all([
+    queryBuilder.modelQuery.lean(),
+    queryBuilder.countTotal(),
+  ]);
 
-  const meta = await gearOrderQuery.countTotal();
-
-  return { meta, result };
+    // ✅ Return paginated result with meta
+  return {
+    meta,
+    data: result,
+  };
 };
 
 const getMyGearOrders = async (
@@ -160,12 +321,70 @@ const getMyGearOrders = async (
   if (role === "user") baseQuery.clientId = userId;
 
 
+    // 🎯 Tab-based filtering
+  switch (role) {
+    case "professional":
+
+    if (!tab) {
+    // Default when tab is not provided
+    baseQuery.orderStatus = { $in: ["inProgress", "deliveryRequest", "delivered", "cancelled "] };
+    break;
+  }
+      switch (tab) {
+        case "pending":
+          baseQuery.orderStatus = "pending";
+          break;
+        case "inProgress":
+          baseQuery.orderStatus = "inProgress";
+          break;
+        case "delivered":
+          baseQuery.orderStatus = "delivered";
+          break;
+        case "cancelled":
+          baseQuery.orderStatus = "cancelled";
+          break;
+        case "deliveryRequest":
+          baseQuery.orderStatus = "deliveryRequest";
+          break;
+        default:
+          throw new AppError(400, `Invalid tab for professional: ${tab}`);
+      }
+      break;
+
+    case "user":
+      switch (tab) {
+        case "currentOrder":
+          baseQuery.orderStatus = "inProgress";
+          break;
+        case "inProgress":
+          baseQuery.orderStatus = "inProgress";
+          break;
+        case "toConfirm":
+          baseQuery.orderStatus = "deliveryRequest";
+          break;
+        case "delivered":
+          baseQuery.orderStatus = "delivered";
+          break;
+        case "cancelled":
+          baseQuery.orderStatus = "cancelled";
+          break;
+        default:
+          throw new AppError(400, `Invalid tab for user: ${tab}`);
+      }
+      break;
+
+    // default:
+    //   throw new AppError(400, "Invalid role type — must be 'user' or 'professional'");
+  }
+
+
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
     GearOrder.find(baseQuery)
       .populate("clientId", "name profileImage email")
       .populate("sellerId", "name profileImage email")
-      .populate("gearMarketplaceId", " name price vatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus "),
+      .populate("gearMarketplaceId", " name price vatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
+      .populate("paymentId", "transactionId paymentMethod"),
     queryParams
   )
     .sort()
@@ -221,4 +440,8 @@ export const GearOrderService = {
   getGearOrderById,
   updateGearOrder,
   deleteGearOrder,
+  requestGearMarketplaceDelivery,
+  declineDeliveryRequestByClient,
+  acceptDeliveryRequestByClient,
+  cancelGearOrderBySeller
 };

@@ -10,6 +10,7 @@ const workshopSchema = new Schema<IWorkshop>(
     locationType: { type: String, enum: ["offline", "online"], required: true },
     location: { type: String },
     workshopLink: { type: String },
+    vatPercent: { type: Number, default: 0 },
     vatAmount: { type: Number, default: 0 },
     price: { type: Number, required: true },
     mainPrice: {type: Number, required: true},

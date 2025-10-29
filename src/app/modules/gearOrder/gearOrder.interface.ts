@@ -1,12 +1,19 @@
 import { Types } from 'mongoose';
 
+export interface IStatusTimestamps {
+  createdAt?: Date;
+  deliveryRequestAt?: Date;
+  deliveryRequestDeclineAt?: Date;
+  deliveredAt?: Date;
+  cancelledAt?: Date;
+}
+
 export interface IGearOrder {
   orderId: string;
-  mainOrderId: string;
   clientId: Types.ObjectId;
   sellerId: Types.ObjectId;
   gearMarketplaceId: Types.ObjectId;
-  orderStatus: 'pending' | 'shipped' | 'cancelled';
+  orderStatus: 'pending' | 'inProgress' | 'deliveryRequest' | 'deliveryRequestDeclined' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'received';
   name: string;
   shippingAddress: string;
@@ -18,7 +25,15 @@ export interface IGearOrder {
    ico?: string;
   dic?: string;
   ic_dph?: string;
+  companyAddress?: string;
   deliveryNote?: string;
+  deliveryRequestDeclinedReason?: string;
+  cancelReason?: string;
+  cancelledBy?: Types.ObjectId;
+  statusTimestamps: IStatusTimestamps;
+  paymentMethod?: string;
+  transactionId?: string;
+  paymentId?: Types.ObjectId;
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -37,5 +52,6 @@ export interface ICreateGearOrderPayload {
   ico?: string;
   dic?: string;
   ic_dph?: string;
+  companyAddress?: string;
   deliveryNote?: string;
 }

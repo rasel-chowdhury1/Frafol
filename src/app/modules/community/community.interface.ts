@@ -6,6 +6,7 @@ export interface ICommunity {
   text: string;
   images?: string[];
   isDeleted?: boolean;
+  approvalStatus?: "pending" | "approved" | "rejected";
 }
 
 export interface ICommunityModel extends Model<ICommunity> {}

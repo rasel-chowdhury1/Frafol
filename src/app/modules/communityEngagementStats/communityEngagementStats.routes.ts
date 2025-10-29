@@ -7,28 +7,28 @@ const router = Router();
 
 router
 .post(
-    "/:id/like", 
-    auth(USER_ROLE.USER, USER_ROLE.ADMIN), 
+    "/like/:id", 
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH, USER_ROLE.ADMIN), 
     CommunityEngagementController.likeCommunity
 )
 
 
 .post(
-    "/:id/unlike", 
+    "/unlike/:id", 
     auth(USER_ROLE.USER, USER_ROLE.ADMIN), 
     CommunityEngagementController.unlikeCommunity
 )
 
 
 .post(
-    "/:id/comment", 
+    "/comment/:id", 
     auth(USER_ROLE.USER, USER_ROLE.ADMIN), 
     CommunityEngagementController.addComment
 )
 
 .post(
-    "/:id/comment/:commentId/reply", 
-    auth(USER_ROLE.USER, USER_ROLE.ADMIN), 
+    "/comment-reply/:commentId", 
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH, USER_ROLE.ADMIN),  
     CommunityEngagementController.addReply
 )
 

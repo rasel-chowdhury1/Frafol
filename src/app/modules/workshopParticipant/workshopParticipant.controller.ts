@@ -5,7 +5,24 @@ import httpStatus from 'http-status';
 import { WorkshopParticipantService } from './workshopParticipant.service';
 
 const createWorkshopParticipant = catchAsync(async (req: Request, res: Response) => {
+
+  const {userId} = req.user;
+  const {uorkshopId} = req.body;
+
+
+  if (!uorkshopId) {
+      sendResponse(res, {
+        statusCode: httpStatus.BAD_REQUEST,
+        success: false,
+        message: "No workshop id provided",
+        data: ""
+      });
+    }
+
+    req.body.clientId = userId;
+
   const result = await WorkshopParticipantService.createWorkshopParticipant(req.body);
+
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,

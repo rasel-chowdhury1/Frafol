@@ -17,6 +17,7 @@ export interface IPayment {
   serviceProviderId: Types.ObjectId;
     // Multiple sellers for gear payments
   serviceProviders?: IServiceProviderBreakdown[];
+  mainOrderIdForGear?: string;
   amount: number;
   commission: number;
   netAmount: number;

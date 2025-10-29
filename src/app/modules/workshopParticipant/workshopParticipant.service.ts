@@ -1,10 +1,34 @@
+import moment from 'moment';
 import AppError from '../../error/AppError';
+import { Workshop } from '../workshop/workshop.model';
 import { IWorkshopParticipant } from './workshopParticipant.interface';
 import { WorkshopParticipant } from './workshopParticipant.model';
 
 import httpStatus from 'http-status';
 
 const createWorkshopParticipant = async (payload: IWorkshopParticipant) => {
+
+  const isExistWorkshop = await Workshop.findOne({_id: payload.workshopId, approvalStatus: "approved", isDeleted: false  });
+
+    // ========================================
+    // 🔢 Generate Custom Workshop Order ID
+    // ========================================
+    const today = moment().format("YYYYMMDD");
+    const prefix = "WORKSHOP";
+    let orderCount = await WorkshopParticipant.countDocuments({
+      createdAt: {
+        $gte: moment().startOf("day").toDate(),
+        $lte: moment().endOf("day").toDate(),
+      },
+    });
+
+
+  const sequence = String(orderCount+1).padStart(4, "0");
+  const customOrderId = `${prefix}-${today}-${sequence}`;
+
+  payload.orderId = customOrderId;
+  payload.instructorId = isExistWorkshop?.authorId as any;
+
   const participant = await WorkshopParticipant.create(payload);
   return participant;
 };

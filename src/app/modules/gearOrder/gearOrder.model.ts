@@ -1,6 +1,21 @@
 import { Schema, model } from 'mongoose';
 import { IGearOrder } from './gearOrder.interface';
 
+// =========================
+// 🕒 Status Timestamps Subdocument
+// =========================
+const StatusTimestampsSchema = new Schema(
+  {
+    createdAt: { type: Date },
+    paymentCompletedAt: {type: Date},
+    deliveryRequestAt: { type: Date },
+    deliveryRequestDeclineAt: { type: Date },
+    deliveredAt: { type: Date },
+    cancelledAt: { type: Date },
+  },
+  { _id: false }
+);
+
 const gearOrderSchema = new Schema<IGearOrder>(
   {
     orderId: { 
@@ -24,7 +39,7 @@ const gearOrderSchema = new Schema<IGearOrder>(
     },
     orderStatus: {
       type: String,
-      enum: ['pending', 'shipped', 'cancelled'],
+      enum: ['pending', 'inProgress', "deliveryRequest","deliveryRequestDeclined", "delivered", 'cancelled'],
       default: 'pending',
     },
     paymentStatus: {
@@ -72,11 +87,32 @@ const gearOrderSchema = new Schema<IGearOrder>(
         type: String,
         default: ""
     },
+    companyAddress: {
+        type: String,
+        default: ""
+    },
+
     deliveryNote: {
         type: String,
         default: ""
     },
-   
+    deliveryRequestDeclinedReason: {
+      type: String,
+      trim: true
+    },
+    cancelReason: { type: String, trim: true },
+    cancelledBy: { type: Schema.Types.ObjectId, ref: "User" },
+        // ✅ Status Timestamps
+    statusTimestamps: {
+      type: StatusTimestampsSchema,
+      default: () => ({ createdAt: new Date() }),
+    },
+
+    paymentId: {
+      type: Schema.Types.ObjectId, 
+      ref: 'Payment' 
+    },
+
     isDeleted: { 
       type: Boolean, 
       default: false 

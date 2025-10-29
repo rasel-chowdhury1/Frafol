@@ -4,6 +4,7 @@ import sendResponse from '../../utils/sendResponse';
 import httpStatus from 'http-status';
 import { GearOrderService } from './gearOrder.service';
 import { GearMarketplace } from '../gearMarketplace/gearMarketplace.model';
+import mongoose from 'mongoose';
 
 const createGearOrder = catchAsync(async (req: Request, res: Response) => {
 
@@ -128,6 +129,91 @@ const deleteGearOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+// ========================================
+// 🔹 Seller requests delivery
+// ========================================
+const requestGearMarketplaceDelivery = async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+  const sellerId = req.user.userId; // seller's ID from auth
+
+  const result = await GearOrderService.requestGearMarketplaceDelivery(orderId, new mongoose.Types.ObjectId(sellerId));
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Delivery request sent successfully",
+    data: result,
+  });
+};
+
+
+// ========================================
+// Client accepts delivery request
+// ========================================
+const acceptGearDeliveryRequest = async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+  const clientId = req.user.userId;
+
+  const result = await GearOrderService.acceptDeliveryRequestByClient(
+    orderId,
+    new mongoose.Types.ObjectId(clientId)
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Delivery request accepted successfully",
+    data: result,
+  });
+};
+
+// ========================================
+// Client declines delivery request
+// ========================================
+const declineGearDeliveryRequest = async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+  const { reason } = req.body;
+  const clientId = req.user.userId;
+
+  const result = await GearOrderService.declineDeliveryRequestByClient(
+    orderId,
+    new mongoose.Types.ObjectId(clientId),
+    reason
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Delivery request declined",
+    data: result,
+  });
+};
+
+// ========================================
+// Seller cancels the order
+// ========================================
+const cancelGearOrderBySeller = async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+  const { reason } = req.body;
+  const sellerId = req.user.userId;
+  const role = req.user.role;
+
+  const result = await GearOrderService.cancelGearOrderBySeller(
+    orderId,
+    new mongoose.Types.ObjectId(sellerId),
+    role,
+    reason
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Gear order cancelled successfully",
+    data: result,
+  });
+};
+
 export const GearOrderController = {
   createGearOrder,
   createGearOrders,
@@ -136,4 +222,8 @@ export const GearOrderController = {
   getGearOrderById,
   updateGearOrder,
   deleteGearOrder,
+  requestGearMarketplaceDelivery,
+  acceptGearDeliveryRequest,
+  declineGearDeliveryRequest,
+  cancelGearOrderBySeller
 };

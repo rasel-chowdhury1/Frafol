@@ -7,6 +7,9 @@ import mongoose from "mongoose";
 import { EventOrder } from "../eventOrder/eventOrder.model";
 import { GearOrder } from "../gearOrder/gearOrder.model";
 import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
+import { Workshop } from "../workshop/workshop.model";
+import moment from "moment";
+import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)
@@ -98,7 +101,7 @@ const confirmPayment = async (sessionId: string) => {
         // Update all gear orders’ paymentStatus
         await GearOrder.updateMany(
           { _id: { $in: payment.gearOrderIds } },
-          { paymentStatus: "received", orderStatus: "pending" },
+          {  orderStatus: "inProgress", paymentId: payment._id },
           { session: dbSession }
         );
 
@@ -122,6 +125,47 @@ const confirmPayment = async (sessionId: string) => {
           gearOrderCount: payment.gearOrderIds.length,
           paymentId: payment._id,
         });
+      }
+
+      else if(payment.paymentType === "workshop" && payment.workshopId){
+        
+
+       // 1️⃣ Generate custom order ID
+        const today = moment().format("YYYYMMDD");
+        const prefix = "WORKSHOP";
+        const orderCount = await WorkshopParticipant.countDocuments({
+          createdAt: {
+            $gte: moment().startOf("day").toDate(),
+            $lte: moment().endOf("day").toDate(),
+          },
+        });
+
+        const sequence = String(orderCount + 1).padStart(4, "0");
+        const customOrderId = `${prefix}-${today}-${sequence}`;
+
+        // 2️⃣ Create Workshop Participant entry
+        const participant = await WorkshopParticipant.create(
+          [
+            {
+              orderId: customOrderId,
+              clientId: payment.userId,
+              instructorId: payment.serviceProviderId,
+              workshopId: payment.workshopId,
+              paymentStatus: "completed",
+              instructorPayment: {
+                status: "pending",
+                amount: payment.netAmount, // from your Payment model
+                paidAt: null,
+              },
+            },
+          ],
+          { session: dbSession }
+        );
+
+
+
+
+        
       }
     } else {
       payment.paymentStatus = "failed";

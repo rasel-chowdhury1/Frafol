@@ -4,6 +4,9 @@ import { IPayment } from "./payment.interface";
 import { Payment } from "./payment.model";
 import { GearOrder } from "../gearOrder/gearOrder.model";
 import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
+import { Workshop } from "../workshop/workshop.model";
+import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
+
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-09-30.clover", // ✅ Valid latest version
@@ -31,6 +34,7 @@ export const createStripePaymentSession = async (payload: {
   workshopId?: any;
   gearOrderId?: any;
 }) => {
+  
   const {
     userId,
     serviceProviderId,
@@ -49,6 +53,51 @@ export const createStripePaymentSession = async (payload: {
   }
 
 
+  
+  let finalServiceProviderId = serviceProviderId;
+
+  // ======================================================
+  // 🔹 Workshop Specific Validations
+  // ======================================================
+  if (paymentType === "workshop") {
+    if (!workshopId) throw new AppError(400, "workshopId is required for workshop payment");
+
+    const workshop = await Workshop.findById(workshopId);
+    if (!workshop) throw new AppError(404, "Workshop not found");
+
+     // 🚫 Prevent the author from joining their own workshop
+    if (workshop.authorId.toString() === userId.toString()) {
+      throw new AppError(400, "Authors cannot register for their own workshop");
+    }
+    
+     // 🔸 Check if user already joined this workshop
+    const existingParticipant = await WorkshopParticipant.findOne({
+      workshopId,
+      clientId: userId,
+      isDeleted: false,
+    });
+
+    if (existingParticipant) {
+      throw new AppError(400, "You are already registered for this workshop");
+    }
+
+    // Check if workshop expired
+    const now = new Date();
+    const workshopDateTime = new Date(workshop.date);
+    if (workshop.time) {
+      const [hours, minutes] = workshop.time.split(":").map(Number);
+      workshopDateTime.setHours(hours, minutes, 0, 0);
+    }
+    if (workshopDateTime < now) throw new AppError(400, "Workshop is already expired");
+
+    // Check participant limit
+    const participantsCount = await WorkshopParticipant.countDocuments({ workshopId });
+    if (workshop.maxParticipant > 0 && participantsCount >= workshop.maxParticipant) {
+      throw new AppError(400, "Workshop participant limit reached");
+    }
+
+    finalServiceProviderId = workshop.authorId; // instructor
+  }
 
     // ✅ Create Stripe Checkout Session
   const session = await stripe.checkout.sessions.create({
@@ -103,7 +152,6 @@ export const createStripePaymentSession = async (payload: {
 
 export const createGearStripePaymentSession = async (payload: {
   userId: any;
-  serviceProviderId: any[]; // multiple sellers
   gearOrderIds: any[];
   amount: number;
   commission: number;
@@ -112,7 +160,6 @@ export const createGearStripePaymentSession = async (payload: {
 }) => {
   const {
     userId,
-    serviceProviderId,
     gearOrderIds,
     amount,
     commission,
@@ -185,7 +232,7 @@ export const createGearStripePaymentSession = async (payload: {
     paymentStatus: "pending",
     paymentMethod,
     paymentType: "gear",
-    gearOrderIds,
+    gearOrderIds
   });
 
 
