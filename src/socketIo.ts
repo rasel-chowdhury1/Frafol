@@ -11,6 +11,10 @@ import Notification from "./app/modules/notifications/notifications.model";
 import colors from 'colors';
 import { callbackFn } from "./app/utils/callbackFn";
 import { sendBookingNotificationEmail } from "./app/utils/eamilNotifiacation";
+import Chat from "./app/modules/chat/chat.model";
+import moment from "moment";
+import Message from "./app/modules/message/message.model";
+import { ChatService } from "./app/modules/chat/chat.service";
 
 // Define the socket server port
 const socketPort: number = parseInt(process.env.SOCKET_PORT || "9020", 10);
@@ -126,6 +130,144 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
 
       // ===================== join by user id ================================
       // socket.join(user?._id?.toString());
+
+      // ======= message send ====
+      socket.on(
+        'send-message',
+        async (payload: { text: string; chatId: string }, callback) => {
+          console.log({ payload });
+          // Check if chatId is provided
+          if (!payload.chatId) {
+            callbackFn(callback, {
+              success: false,
+              message: 'chatId is required',
+            });
+            io.emit('io-error', {
+              success: false,
+              message: 'chatId is required',
+            });
+            return;
+          }
+
+          try {
+            // Find the chat by chatId
+            const chatData = await Chat.findById(payload.chatId).select(
+              'users',
+            );
+
+            // Check if the chat exists
+            if (!chatData) {
+              callbackFn(callback, {
+                success: false,
+                message: 'Chat not found',
+              });
+              io.emit('io-error', {
+                success: false,
+                message: 'Chat not found',
+              });
+              return; // Exit if chat doesn't exist
+            }
+
+            // Extract users and filter out the sender
+            const usersToNotify = chatData.users.filter(
+              (user) => user.toString() !== socket?.user?._id,
+            );
+
+            // Notify users who are online
+            const userSocketIds: string[] = [];
+            usersToNotify.forEach((user) => {
+              const userSocket = connectedUsers.get(user.toString());
+              if (userSocket) {
+                userSocketIds.push(userSocket.socketID); // Collect socket IDs
+              }
+            });
+
+            socket.emit(`message_received::${payload.chatId}`, {
+              success: true,
+              sender: socket?.user?._id,
+              message: payload.text,
+            });
+            // If there are users to notify, emit the message to them
+            if (userSocketIds.length > 0) {
+              // const messageTime = new Date()
+
+              
+              const userTimeZone =  'Asia/Dhaka'; // Dynamic time zone or default to Asia/Dhaka
+     
+              // Get the current time in the user's time zone
+            const messageTime = moment().tz(userTimeZone).format('YYYY-MM-DDTHH:mm:ss.SSS');
+            console.log({messageTime})
+              io.to(userSocketIds).emit('newMessage', {
+                success: true,
+                chatId: payload.chatId,
+                message: payload.text,
+                time: messageTime
+              })
+              io.to(userSocketIds).emit(`message_received::${payload.chatId}`, {
+                success: true,
+                sender: socket?.user?._id,
+                message: payload.text,
+              });
+            }
+
+            // Store the message in the database
+            await Message.create({
+              sender: socket?.user?._id,
+              text: payload.text,
+              chat: payload.chatId,
+            });
+
+            // Send success callback to the sender
+            callbackFn(callback, {
+              success: true,
+              message: { message: payload.text },
+            });
+          } catch (error) {
+            // Handle any potential errors (e.g., database issues)
+            console.error('Error sending message: ', error);
+            callbackFn(callback, {
+              success: false,
+              message: 'An error occurred while sending the message',
+            });
+            io.emit('io-error', {
+              success: false,
+              message: 'An error occurred while sending the message',
+            });
+          }
+        },
+      );
+
+
+            //----------------------chat list start------------------------//
+      socket.on('my-chat-list', async ({}, callback) => {
+        try {
+          const chatList = await ChatService.getMyChatList(
+            (socket as any).user._id,
+            {},
+          );
+
+          const userSocket = connectedUsers.get((socket as any).user._id);
+
+          if (userSocket) {
+            io.to(userSocket.socketID).emit('chat-list', chatList);
+            callbackFn(callback, { success: true, message: chatList });
+          }
+
+          callbackFn(callback, {
+            success: false,
+            message: 'not found your socket id.',
+          });
+        } catch (error: any) {
+
+          callbackFn(callback, {
+            success: false,
+            message: error.message,
+          });
+          
+          io.emit('io-error', { success: false, message: error.message });
+        }
+      });
+      //----------------------chat list end------------------------//
 
 
 

@@ -57,9 +57,6 @@ userRoutes
 
 
 
-  
-
-
 // featured profestions routes
   .get(
     "/professionals",

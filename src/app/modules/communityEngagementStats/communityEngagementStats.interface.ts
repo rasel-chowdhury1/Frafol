@@ -9,6 +9,7 @@ export interface IReply {
 export interface IComment {
   user: Types.ObjectId;
   text: string;
+  isAnonymous: boolean;
   createdAt?: Date;
   replies?: IReply[];
 }
