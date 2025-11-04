@@ -17,6 +17,8 @@ import { PaymentRoutes } from "../modules/payment/payment.route";
 import { GearOrderRoutes } from "../modules/gearOrder/gearOrder.route";
 import { CommunityRoutes } from "../modules/community/community.routes";
 import { CommunityEngagementRoutes } from "../modules/communityEngagementStats/communityEngagementStats.routes";
+import { ChatRoutes } from "../modules/chat/chat.route";
+import { messageRoutes } from "../modules/message/message.route";
 
 const router = Router();
 
@@ -93,6 +95,14 @@ const moduleRoutes = [
    {
    path: "/community-engagement",
    route: CommunityEngagementRoutes
+   },
+   {
+   path: "/chat",
+   route: ChatRoutes
+   },
+   {
+   path: "/message",
+   route: messageRoutes
    },
 
 ];

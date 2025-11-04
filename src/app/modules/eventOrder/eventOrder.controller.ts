@@ -440,6 +440,34 @@ const cancelOrder = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+const getUpcomingEventsOfSpecificProfessional = catchAsync(async (req: Request, res: Response) => {
+  const { userId: serviceProviderId } = req.user;
+
+  const result = await EventOrderService.getUpcomingEventsOfSpecificProfessional(serviceProviderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Upcoming events fetched successfully",
+    data: result,
+  });
+});
+
+
+const getPendingEventOrders = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.userId; // ✅ Authenticated professional user
+  const result = await EventOrderService.getPendingEventOrders( userId, req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Pending event orders retrieved successfully',
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
+
 export const EventOrderController = {
   createEventOrder,
   getAllEventOrders,
@@ -457,5 +485,7 @@ export const EventOrderController = {
   requestOrderDelivery,
   acceptDeliveryRequest,
   declineOrderRequest,
-  cancelOrder
+  cancelOrder,
+  getUpcomingEventsOfSpecificProfessional,
+  getPendingEventOrders
 };

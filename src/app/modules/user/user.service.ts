@@ -21,6 +21,10 @@ import { USER_ROLE, UserRole } from './user.constants';
 import fs from 'fs';
 import path from 'path';
 import { getUserPackageAndReviewStats } from '../package/package.service';
+import { GearOrder } from '../gearOrder/gearOrder.model';
+import { EventOrder } from '../eventOrder/eventOrder.model';
+import { Payment } from '../payment/payment.model';
+import { Review } from '../review/review.model';
 export type IFilter = {
   searchTerm?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -763,6 +767,7 @@ const getUserRoleStats = async () => {
 
 
 
+
 const getUserById = async (id: string) => {
   const result = await User.findById(id);
   if (!result) {
@@ -889,6 +894,174 @@ const blockedUser = async (id: string) => {
   return {status, user};
 };
 
+
+  const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
+    if (!Types.ObjectId.isValid(serviceProviderId)) {
+      throw new Error("Invalid serviceProviderId");
+    }
+
+    const providerObjectId = new Types.ObjectId(serviceProviderId);
+
+    // Run all in parallel for efficiency
+    const [
+      totalPendingGearOrders,
+      totalUpcomingEvents,
+      totalOverallEarningsAgg,
+      totalReviewsReceived,
+    ] = await Promise.all([
+      // 🧾 Pending gear orders
+      GearOrder.countDocuments({
+        sellerId: providerObjectId,
+        orderStatus: "pending",
+        isDeleted: false,
+      }),
+
+      // 🗓️ Upcoming accepted or in-progress events
+      EventOrder.countDocuments({
+        serviceProviderId: providerObjectId,
+        isDeleted: false,
+        status: { $in: ["accepted", "inProgress"] },
+        date: { $gte: new Date() },
+      }),
+
+      // 💰 Calculate total earnings from completed payments
+      Payment.aggregate([
+        {
+          $match: {
+            paymentStatus: "completed",
+            $or: [
+              { serviceProviderId: providerObjectId },
+              { "serviceProviders.serviceProviderId": providerObjectId },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalEarnings: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$serviceProviderId", providerObjectId] },
+                  "$netAmount", // direct match
+                  {
+                    // inside serviceProviders array
+                    $sum: {
+                      $map: {
+                        input: {
+                          $filter: {
+                            input: "$serviceProviders",
+                            as: "sp",
+                            cond: { $eq: ["$$sp.serviceProviderId", providerObjectId] },
+                          },
+                        },
+                        as: "matched",
+                        in: "$$matched.netAmount",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ]),
+
+      // ⭐ Reviews count
+      Review.countDocuments({
+        serviceProviderId: providerObjectId,
+        isDeleted: false,
+      }),
+    ]);
+
+    const totalOverallEarnings =
+      totalOverallEarningsAgg.length > 0
+        ? totalOverallEarningsAgg[0].totalEarnings
+        : 0;
+
+    return {
+      totalPendingGearOrders,
+      totalUpcomingEvents,
+      totalOverallEarnings,
+      totalReviewsReceived,
+      
+    };
+  };
+
+
+  const getMonthlyEarningsOfSpecificProfessional = async (
+  serviceProviderId: string,
+  year?: number
+) => {
+  if (!Types.ObjectId.isValid(serviceProviderId)) {
+    throw new Error("Invalid serviceProviderId");
+  }
+
+  const providerObjectId = new Types.ObjectId(serviceProviderId);
+  const targetYear = year || new Date().getFullYear();
+
+  // 🧾 Aggregate earnings grouped by month
+  const monthlyAgg = await Payment.aggregate([
+    {
+      $match: {
+        paymentStatus: "completed",
+        createdAt: {
+          $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
+          $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
+        },
+        $or: [
+          { serviceProviderId: providerObjectId },
+          { "serviceProviders.serviceProviderId": providerObjectId },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        matchedNetAmount: {
+          $cond: [
+            { $eq: ["$serviceProviderId", providerObjectId] },
+            "$netAmount",
+            {
+              $sum: {
+                $map: {
+                  input: {
+                    $filter: {
+                      input: "$serviceProviders",
+                      as: "sp",
+                      cond: { $eq: ["$$sp.serviceProviderId", providerObjectId] },
+                    },
+                  },
+                  as: "matched",
+                  in: "$$matched.netAmount",
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        totalEarnings: { $sum: "$matchedNetAmount" },
+      },
+    },
+    { $sort: { "_id": 1 } },
+  ]);
+
+  // 🧮 Map to 12-month structure
+  const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+    month: new Date(0, i).toLocaleString("default", { month: "short" }), // Jan, Feb...
+    totalEarnings:
+      monthlyAgg.find((m) => m._id === i + 1)?.totalEarnings || 0,
+  }));
+
+  return {
+    year: targetYear,
+    monthlyEarnings: monthlyData,
+  };
+};
+
+
 export const userService = {
   createUserToken,
   otpVerifyAndCreateUser,
@@ -911,5 +1084,7 @@ export const userService = {
   getAllPhotographersVideographersBoth,
   getPendingPhotographersVideographersBoth,
   getProfessionalPhotographerAndVideographer,
-  getProfessionalUsersByCategory
+  getProfessionalUsersByCategory,
+  getOverviewOfSpecificProfessional,
+  getMonthlyEarningsOfSpecificProfessional
 };

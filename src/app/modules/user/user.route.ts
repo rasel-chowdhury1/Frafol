@@ -78,6 +78,18 @@ userRoutes
   )
 
   .get(
+    '/specific-professional-overview',
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getOverviewOfSpecificProfessional  
+  )
+
+  .get(
+    '/monthly-earning-statistics',
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getMonthlyEarnings  
+  )
+
+  .get(
     '/:id',
     // auth("user", "admin"),
     userController.getUserById

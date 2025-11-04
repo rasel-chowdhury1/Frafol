@@ -6,8 +6,11 @@ import sendResponse from '../../utils/sendResponse';
 import { ChatService } from './chat.service';
 
 const addNewChat = catchAsync(async (req: Request, res: Response) => {
+  
   const { userId } = req.user;
   const { users = [] } = req.body;
+
+
   // Ensure the current userId is included in the `users` array if not already present
   if (!users.includes(userId)) {
     users.push(userId); // Add the current userId to the users array
@@ -30,7 +33,6 @@ const addNewChat = catchAsync(async (req: Request, res: Response) => {
     users, // Use the modified users array
   };
 
-  console.log('chat data ====>>>> ', { chatData });
   const result = await ChatService.addNewChat(chatData);
 
   sendResponse(res, {
@@ -41,47 +43,7 @@ const addNewChat = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const createGroupChat = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user; // Extract userId from the authenticated user
-  const chatData = { ...req.body }; // Copy the request body into chatData
 
-  // If a file is uploaded (group profile image), store it and save the file path
-  if (req?.file) {
-    chatData.groupProfileImage = storeFile('chat', req?.file?.filename);
-  }
-
-  // Ensure groupAdmins is an array and add the current user as an admin if not provided
-  if (!chatData.groupAdmins || chatData.groupAdmins.length === 0) {
-    chatData.groupAdmins = [userId]; // Add userId to groupAdmins if not provided
-  }
-
-  // Ensure users is always an array and includes the user creating the group
-  if (!chatData.users || !Array.isArray(chatData.users)) {
-    chatData.users = [];
-  }
-
-  // Add the user creating the group to the users list (if not already present)
-  if (!chatData.users.includes(userId)) {
-    chatData.users.push(userId);
-  }
-
-  // Add the creator's userId and mark it as a group chat
-  chatData.createdBy = userId;
-  chatData.isGroupChat = true;
-
-  console.log('chat data ====>>>> ', chatData);
-
-  // Call the service to create the group chat
-  const result = await ChatService.createGroupChat(chatData);
-
-  // Send success response
-  sendResponse(res, {
-    statusCode: httpStatus.CREATED,
-    success: true,
-    message: 'Group chat is created successfully!',
-    data: result,
-  });
-});
 
 // const getUserChats = catchAsync(async (req: Request, res: Response) => {
 //   const {userId} = req.user;
@@ -96,9 +58,13 @@ const createGroupChat = catchAsync(async (req: Request, res: Response) => {
 // });
 
 const getMyChatList = catchAsync(async (req: Request, res: Response) => {
+
+  console.log("hitteed this =>>>> ", req.query,req.user)
   const { userId } = req.user;
 
   const result = await ChatService.getMyChatList(userId, req.query);
+
+  console.log("result =>>>> ", result)
   
   sendResponse(res, {
     statusCode: 200,
@@ -277,7 +243,7 @@ const getChatById = async (req: Request, res: Response, next: NextFunction) => {
 
 export const ChatController = {
   addNewChat,
-  createGroupChat,
+  // createGroupChat,
   // getUserChats,
   getConnectionUsersOfSpecificUser,
   getOnlineConnectionUsersOfSpecificUser,

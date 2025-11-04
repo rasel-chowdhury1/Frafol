@@ -1,10 +1,10 @@
 
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { EventOrder } from "./eventOrder.model";
 import { IEventOrder } from "./eventOrder.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
-import { sentNotificationForBookingRequest, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled } from "../../../socketIo";
+import { sentNotificationForOrderCancelled } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -784,6 +784,67 @@ const cancelOrder = async (
   return order;
 };
 
+// const getTotalStatsOfSpeceficProfessional = async (serviceProviderId: string) => {
+//   if (!Types.ObjectId.isValid(serviceProviderId)) {
+//     throw new Error("Invalid serviceProviderId");
+//   }
+
+//   const totalComp
+
+// }
+
+
+
+const getUpcomingEventsOfSpecificProfessional = async (serviceProviderId: string) => {
+  if (!Types.ObjectId.isValid(serviceProviderId)) {
+    throw new Error("Invalid serviceProviderId");
+  }
+
+  const now = new Date();
+
+  const upcomingEvents = await EventOrder.find({
+    serviceProviderId: new Types.ObjectId(serviceProviderId),
+    status: { $in: ["accepted", "inProgress"] },
+    date: { $gte: now },
+    isDeleted: false,
+  })
+    .populate({
+      path: "userId",
+      select: "name sureName profileImage email phone",
+    })
+    .populate({
+      path: "packageId",
+      select: "title price description",
+    })
+    .sort({ date: 1 }) // sort nearest upcoming first
+    .lean();
+
+  return upcomingEvents;
+};
+
+
+
+
+const getPendingEventOrders = async ( userId: string,query: Record<string, unknown>) => {
+  // ✅ Only fetch pending orders of the specific professional
+  const filter = {
+    professionalId: userId,
+    status: 'pending',
+  };
+
+  // ✅ Apply QueryBuilder utilities for pagination, filtering, sorting, etc.
+  const eventOrderQuery = new QueryBuilder(EventOrder.find(filter), query)
+    .search(['eventName', 'customerName']) // searchable fields
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await eventOrderQuery.modelQuery;
+  const meta = await eventOrderQuery.countTotal();
+
+  return { meta, result };
+};
 
 
 export const EventOrderService = {
@@ -803,7 +864,9 @@ export const EventOrderService = {
   requestOrderDelivery,
   acceptDeliveryRequest,
   declineOrderRequest,
-  cancelOrder
+  cancelOrder,
+  getUpcomingEventsOfSpecificProfessional,
+  getPendingEventOrders
 };
 
 

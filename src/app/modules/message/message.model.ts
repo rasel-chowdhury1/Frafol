@@ -33,7 +33,7 @@ const MessageSchema = new Schema<IMessage>(
     },
     approvalStatus: {
       type: String,
-      enum: ["pending", "approved"],
+      enum: ["pending", "approved", "rejected"],
       default: "approved",
     },
   },

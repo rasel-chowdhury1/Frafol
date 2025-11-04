@@ -7,9 +7,10 @@ import { IChat } from '../chat/chat.interface';
 import Chat from '../chat/chat.model';
 import AppError from '../../error/AppError';
 import { ChatService } from '../chat/chat.service';
+import { storeFiles } from '../../utils/fileHelper';
 
 const sendMessage = catchAsync(async (req: Request, res: Response) => {
-  const {text, chatId} = req.body;
+  const {text, images, chatId} = req.body;
   const {userId} = req.user;
 
     // Validate input data
@@ -23,10 +24,12 @@ const sendMessage = catchAsync(async (req: Request, res: Response) => {
 
   const msgData ={
     text,
+    images: images || [],
     sender: userId,
     chat: chatId
   }
   const result = await messageService.sendMessage(msgData);
+
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -105,7 +108,8 @@ const deleteMessage = catchAsync(async (req: Request, res: Response) => {
 })
 
 const getMessagesForChat = catchAsync(async (req: Request, res: Response) => {
-  const result = await messageService.getMessagesForChat(req.params.chatId);
+  const {userId} = req.user;
+  const result = await messageService.getMessagesForChat(req.params.chatId, userId, req.query);
 
   console.log("result ",{result})
   sendResponse(res, {
@@ -116,10 +120,60 @@ const getMessagesForChat = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+const fileUpload = catchAsync(async (req: Request, res: Response) => {
+
+    let result;
+
+      if (req.files) {
+    try {
+      // Use storeFiles to process all uploaded files
+      const filePaths = storeFiles(
+        'chat',
+        req.files as { [fieldName: string]: Express.Multer.File[] },
+      );
+
+      // Set photos (multiple files)
+      if (filePaths.images && filePaths.images.length > 0) {
+        result = filePaths.images; // Assign full array of photos
+      }
+
+    } catch (error: any) {
+      console.error('Error processing files:', error.message);
+      return sendResponse(res, {
+        statusCode: httpStatus.BAD_REQUEST,
+        success: false,
+        message: 'Failed to process uploaded files',
+        data: null,
+      });
+    }
+  }
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'file upload successfully',
+    data: result,
+  });
+});
+
+
+const getAllPendingMessages = catchAsync(async (req: Request, res: Response) => {
+  const messages = await messageService.getPendingMessages();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Pending messages retrieved successfully",
+    data: messages,
+  });
+});
+
 export const messageController = {
   sendMessage,
   getMessagesForChat,
   updateMessage,
   seenMessage,
-  deleteMessage
+  deleteMessage,
+  fileUpload,
+  getAllPendingMessages
 };

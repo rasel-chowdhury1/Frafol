@@ -12,9 +12,10 @@ import colors from 'colors';
 import { callbackFn } from "./app/utils/callbackFn";
 import { sendBookingNotificationEmail } from "./app/utils/eamilNotifiacation";
 import Chat from "./app/modules/chat/chat.model";
-import moment from "moment";
+import moment from "moment-timezone";
 import Message from "./app/modules/message/message.model";
 import { ChatService } from "./app/modules/chat/chat.service";
+import { text } from "stream/consumers";
 
 // Define the socket server port
 const socketPort: number = parseInt(process.env.SOCKET_PORT || "9020", 10);
@@ -85,7 +86,19 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
       );
     }
 
-    const userDetails = verifyToken({token, access_secret: config.jwt_access_secret as string});
+    // const userDetails = verifyToken({token, access_secret: config.jwt_access_secret as string});
+
+    let userDetails;
+    try {
+      userDetails = verifyToken({
+        token, 
+        access_secret: config.jwt_access_secret as string
+      });
+    } catch (err) {
+      console.error("Socket JWT verify error:", err);
+      return next(new Error("Authentication error: Invalid token"));
+    }
+
 
 
     if (!userDetails) {
@@ -133,110 +146,97 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
 
       // ======= message send ====
       socket.on(
-        'send-message',
-        async (payload: { text: string; chatId: string }, callback) => {
-          console.log({ payload });
-          // Check if chatId is provided
-          if (!payload.chatId) {
-            callbackFn(callback, {
-              success: false,
-              message: 'chatId is required',
-            });
-            io.emit('io-error', {
-              success: false,
-              message: 'chatId is required',
-            });
-            return;
-          }
-
+        "send-message",
+        async (
+          payload: { text: string; images: string[]; chatId: string },
+          callback
+        ) => {
           try {
-            // Find the chat by chatId
-            const chatData = await Chat.findById(payload.chatId).select(
-              'users',
-            );
-
-            // Check if the chat exists
-            if (!chatData) {
-              callbackFn(callback, {
+            const { chatId, text, images } = payload;
+            if (!chatId) {
+              return callbackFn(callback, {
                 success: false,
-                message: 'Chat not found',
-              });
-              io.emit('io-error', {
-                success: false,
-                message: 'Chat not found',
-              });
-              return; // Exit if chat doesn't exist
-            }
-
-            // Extract users and filter out the sender
-            const usersToNotify = chatData.users.filter(
-              (user) => user.toString() !== socket?.user?._id,
-            );
-
-            // Notify users who are online
-            const userSocketIds: string[] = [];
-            usersToNotify.forEach((user) => {
-              const userSocket = connectedUsers.get(user.toString());
-              if (userSocket) {
-                userSocketIds.push(userSocket.socketID); // Collect socket IDs
-              }
-            });
-
-            socket.emit(`message_received::${payload.chatId}`, {
-              success: true,
-              sender: socket?.user?._id,
-              message: payload.text,
-            });
-            // If there are users to notify, emit the message to them
-            if (userSocketIds.length > 0) {
-              // const messageTime = new Date()
-
-              
-              const userTimeZone =  'Asia/Dhaka'; // Dynamic time zone or default to Asia/Dhaka
-     
-              // Get the current time in the user's time zone
-            const messageTime = moment().tz(userTimeZone).format('YYYY-MM-DDTHH:mm:ss.SSS');
-            console.log({messageTime})
-              io.to(userSocketIds).emit('newMessage', {
-                success: true,
-                chatId: payload.chatId,
-                message: payload.text,
-                time: messageTime
-              })
-              io.to(userSocketIds).emit(`message_received::${payload.chatId}`, {
-                success: true,
-                sender: socket?.user?._id,
-                message: payload.text,
+                message: "chatId is required",
               });
             }
 
-            // Store the message in the database
-            await Message.create({
-              sender: socket?.user?._id,
-              text: payload.text,
-              chat: payload.chatId,
+            // ✅ Validate chat exists
+            const chat = await Chat.findById(chatId).select("users");
+            if (!chat) {
+              return callbackFn(callback, {
+                success: false,
+                message: "Chat not found",
+              });
+            }
+
+            // ✅ Filter other users in chat
+            const receivers = chat.users.filter(
+              (u) => u.toString() !== socket.user?._id
+            );
+
+            // ✅ Find online users
+            const receiverSocketIds = receivers
+              .map((u) => connectedUsers.get(u.toString())?.socketID)
+              .filter((id): id is string => Boolean(id));
+
+            // ✅ Format time in timezone
+            const time = moment()
+              .tz("Asia/Dhaka")
+              .format("YYYY-MM-DDTHH:mm:ss.SSS");
+
+            // ✅ Create message first (important!)
+            const newMessage = await Message.create({
+              sender: socket.user?._id,
+              chat: chatId,
+              text,
+              images,
+              time,
             });
 
-            // Send success callback to the sender
-            callbackFn(callback, {
+            // ✅ Outgoing payload
+            const messagePayload = {
               success: true,
-              message: { message: payload.text },
-            });
-          } catch (error) {
-            // Handle any potential errors (e.g., database issues)
-            console.error('Error sending message: ', error);
+              chatId,
+              sender: {
+                _id: socket.user?._id,
+                name: socket.user?.name,
+                email: socket.user?.email,
+                role: socket.user?.role,
+              },
+              text,
+              images,
+              time,
+              messageId: newMessage._id,
+            };
+
+            // ✅ Emit to sender (local message)
+            socket.emit(`message_received::${chatId}`, messagePayload);
+
+            // ✅ Emit only if receivers exist
+            if (receiverSocketIds.length > 0) {
+              io.to(receiverSocketIds).emit("newMessage", messagePayload);
+              io.to(receiverSocketIds).emit(
+                `message_received::${chatId}`,
+                messagePayload
+              );
+            }
+
+            // ✅ Reply callback
+            callbackFn(callback, { success: true, message: messagePayload });
+          } catch (err: any) {
+            console.error("Socket send-message error:", err);
             callbackFn(callback, {
               success: false,
-              message: 'An error occurred while sending the message',
+              message: err.message || "Failed to send message",
             });
-            io.emit('io-error', {
+
+            io.emit("io-error", {
               success: false,
-              message: 'An error occurred while sending the message',
+              message: "Error sending message",
             });
           }
-        },
+        }
       );
-
 
             //----------------------chat list start------------------------//
       socket.on('my-chat-list', async ({}, callback) => {
@@ -287,7 +287,10 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
           }
         }
 
+        console.log('connectedUsers', Array.from(connectedUsers));
         io.emit('onlineUser', Array.from(connectedUsers));
+
+
       });
       //-----------------------Disconnect functionlity end ------------------------//
       

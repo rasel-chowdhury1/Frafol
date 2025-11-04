@@ -286,6 +286,42 @@ const deleteMyAccount = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+const getOverviewOfSpecificProfessional = catchAsync(async (req: Request, res: Response) => {
+  const {userId} = req.user
+
+  const result =
+    await userService.getOverviewOfSpecificProfessional(
+      userId
+    );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Professional overview fetched successfully",
+    data: result,
+  });
+});
+
+
+const getMonthlyEarnings = catchAsync(async (req: Request, res: Response) => {
+  const { userId: serviceProviderId } = req.user;
+  const { year } = req.query;
+
+  const result =
+    await userService.getMonthlyEarningsOfSpecificProfessional(
+      serviceProviderId,
+      year ? parseInt(year as string) : undefined
+    );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Monthly earnings statistics fetched successfully",
+    data: result,
+  });
+});
+
 export const userController = {
   createUser,
   userCreateVarification,
@@ -304,5 +340,7 @@ export const userController = {
   getPendingPhotographersVideographersBoth,
   verifyProfessionalUserController,
   declineProfessionalUserController,
-  getProfessionalUsersByCategory
+  getProfessionalUsersByCategory,
+  getOverviewOfSpecificProfessional,
+  getMonthlyEarnings
 };

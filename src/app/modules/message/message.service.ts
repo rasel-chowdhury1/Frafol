@@ -3,6 +3,8 @@ import AppError from '../../error/AppError';
 import httpStatus from 'http-status';
 import Message from './message.model';
 import Chat from '../chat/chat.model';
+import { Types } from 'mongoose';
+import QueryBuilder from '../../builder/QueryBuilder';
 
 const sendMessage = async (data: any) => {
   console.log({data})
@@ -115,8 +117,83 @@ const deleteMessage = async (data: { userId: string, msgId: string }) => {
   return deleteMessage;
 };
 
-const getMessagesForChat = async (chatId: string) => {
-  return await Message.find({ chat: chatId });
+// const getMessagesForChat = async (chatId: string, userId: string) => {
+//   if (!Types.ObjectId.isValid(chatId) || !Types.ObjectId.isValid(userId)) {
+//     throw new Error("Invalid chatId or userId");
+//   }
+
+//   // Mark all unseen messages from others as seen
+//   await Message.updateMany(
+//     {
+//       chat: new Types.ObjectId(chatId),
+//       sender: { $ne: new Types.ObjectId(userId) },
+//       seen: false,
+//     },
+//     { $set: { seen: true } }
+//   );
+
+//   // Return all messages for this chat, sorted by creation time
+//   const messages = await Message.find({ chat: chatId })
+//     .populate("sender", "name profileImage") // optional: populate sender details
+//     .sort({ createdAt: 1 });
+
+//   return messages;
+// };
+
+
+const getMessagesForChat = async (
+  chatId: string,
+  userId: string,
+  query: Record<string, unknown>
+) => {
+  if (!Types.ObjectId.isValid(chatId) || !Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid chatId or userId");
+  }
+
+  // Mark all unseen messages from others as seen
+  await Message.updateMany(
+    {
+      chat: new Types.ObjectId(chatId),
+      sender: { $ne: new Types.ObjectId(userId) },
+      seen: false,
+    },
+    { $set: { seen: true } }
+  );
+
+  // Use QueryBuilder for pagination, sorting, filtering
+  const messageQuery = new QueryBuilder(
+    Message.find({ chat: chatId }).populate("sender", "name profileImage"),
+    query
+  )
+    .sort() // will default to '-createdAt' if no sort param is passed
+    .paginate();
+
+  // Execute query and count total messages for pagination metadata
+  const messages = await messageQuery.modelQuery;
+  const meta = await messageQuery.countTotal();
+
+  return {
+    meta,
+    data: messages,
+  };
+};
+
+const getPendingMessages = async () => {
+  const pendingMessages = await Message.find({ approvalStatus: "pending" })
+    .populate({
+      path: "sender",
+      select: "name sureName profileImage email role", // adjust fields as needed
+    })
+    .populate({
+      path: "chat",
+      populate: {
+        path: "users", // assuming Chat model has 'users: [ObjectId]' field
+        select: "name sureName profileImage email role",
+      },
+    })
+    .sort({ createdAt: -1 }); // newest first
+
+  return pendingMessages;
 };
 
 export const messageService = {
@@ -124,5 +201,6 @@ export const messageService = {
   getMessagesForChat,
   updateMessage,
   seenMessage,
-  deleteMessage
+  deleteMessage,
+  getPendingMessages
 };

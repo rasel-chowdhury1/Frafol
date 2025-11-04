@@ -108,6 +108,24 @@ router.post(
     )
 
     .get(
+        "/pending",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        EventOrderController.getPendingEventOrders
+    )
+    .get(
+        "/upcoming",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        EventOrderController.getUpcomingEventsOfSpecificProfessional
+    )
+    .get(
+        "/extension-request",
+        auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        EventOrderController.getMyExtensionEventOrders
+    )
+
+
+
+    .get(
         "/:id", 
         auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN), 
         EventOrderController.getEventOrderById

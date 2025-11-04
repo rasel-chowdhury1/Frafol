@@ -3,6 +3,8 @@ import fileUpload from '../../middleware/fileUpload';
 import parseData from '../../middleware/parseData';
 import { ChatController } from './chat.controller';
 import auth from '../../middleware/auth';
+import { User } from '../user/user.models';
+import { USER_ROLE } from '../user/user.constants';
 const upload = fileUpload('./public/uploads/chat');
 
 const router = express.Router();
@@ -10,33 +12,33 @@ const router = express.Router();
 // Add a new chat
 router.post(
   '/create',
-  auth("user", "admin"),
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   ChatController.addNewChat,
 );
 
 
 router.get(
   "/my-chat-list",
-  auth("user", "admin"),
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   ChatController.getMyChatList
 )
 
 router.get(
   "/my-connection-users",
-  auth("user", "admin"),
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   ChatController.getConnectionUsersOfSpecificUser
 )
 
 router.get(
   "/my-online-users",
-  auth("user", "admin"),
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   ChatController.getOnlineConnectionUsersOfSpecificUser
 )
 
 
 router.patch(
   '/leave-chat/:chatId',
-  auth("user", "admin"),
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   ChatController.leaveUserFromSpecificChatController,
 )
 
@@ -44,7 +46,7 @@ router.patch(
 
 router.get(
   "/:chatId",
-  auth("user", "admin"),
+  auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
   ChatController.getChatById
 )
 

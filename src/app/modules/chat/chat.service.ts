@@ -6,6 +6,8 @@ import { User } from '../user/user.models';
 import { IChat} from './chat.interface';
 import Chat from './chat.model';
 import httpStatus from 'http-status';
+import { Types } from 'mongoose';
+import { Console } from 'console';
 // Convert string to ObjectId
 const toObjectId = (id: string): mongoose.Types.ObjectId =>
   new mongoose.Types.ObjectId(id);
@@ -32,7 +34,6 @@ const existingChat = await Chat.findOne({
       users: { $all: data.users, $size: 2 }, // Ensure both users exist in the chat
     });
 
-    console.log('=========existing chat ====>>>>> ', existingChat);
 
     if (existingChat) {
       return;
@@ -46,134 +47,202 @@ const existingChat = await Chat.findOne({
 
 
 // =========== Get my chat list start ===========
-const getMyChatList = async (userId: string, query: any) => {
-  // Build the query object to filter the chats
-  const filterQuery: any = { users: { $all: userId } };
+// const getMyChatList = async (userId: string, query: any) => {
+//   // Build the query object to filter the chats
+//   const filterQuery: any = { users: { $all: userId } };
 
-  // Fetch chats based on the filterQuery, populate user details
+//   // Fetch chats based on the filterQuery, populate user details
+//   const chats = await Chat.find(filterQuery).populate({
+//     path: 'users',
+//     select: 'name email profileImage _id',
+//     match: { _id: { $ne: userId } },
+//   });
+
+//   if (!chats) {
+//     throw new AppError(httpStatus.BAD_REQUEST, 'Chat list not found');
+//   }
+
+//   const data = [];
+//   for (const chatItem of chats) {
+//     if (!chatItem.users.length) continue;
+
+//     const chatId = chatItem?._id;
+
+  
+
+//     let users;
+//     // Check if a search query exists and filter users
+//     if (query.search) {
+//       users = chatItem.users.filter((user) => {
+//         return (user as any)?.fullName
+//           .toLowerCase()
+//           .includes(query.search.toLowerCase());
+//       });
+//       if (!users?.length) continue;
+//     }
+
+//     // Find the latest message in the chat
+//     const message: any = await Message.findOne({ chat: chatId }).sort({
+//       updatedAt: -1,
+//     });
+
+//     const unreadMessageCount = await Message.countDocuments({
+//       chat: chatId,
+//       seen: false,
+//       sender: { $ne: userId },
+//     });
+
+//     if (message) {
+//       data.push({
+//         chat: chatItem,
+//         message: message.text,
+//         unreadMessageCount,
+//         lastMessageCreatedAt: message.updatedAt,
+//       });
+//     } else {
+//       data.push({
+//         chat: chatItem,
+//         message: message || null,
+//         unreadMessageCount,
+//         lastMessageCreatedAt: null,
+//       });
+//     }
+//   }
+
+//   // data.sort((a, b) => {
+//   //   const dateA = (a.message && a.message.createdAt) || 0;
+//   //   const dateB = (b.message && b.message.createdAt) || 0;
+//   //   return dateB - dateA;
+//   // });
+
+//     // Sorting the data by lastMessageCreatedAt
+//     data.sort((a, b) => {
+//       const dateA = a.lastMessageCreatedAt ? new Date(a.lastMessageCreatedAt).getTime() : 0;
+//       const dateB = b.lastMessageCreatedAt ? new Date(b.lastMessageCreatedAt).getTime() : 0;
+//       return dateB - dateA;  // Sort in descending order
+//     });
+
+//   return data;
+// };
+
+
+
+const getMyChatList = async (userId: string, query: any) => {
+  
+  // Build the query object to filter the chats
+  const filterQuery: any = { users: { $all: [new Types.ObjectId(userId)] } };
+
+
   const chats = await Chat.find(filterQuery).populate({
-    path: 'users',
-    select: 'fullName email profileImage _id',
+    path: "users",
+    select: "name sureName profileImage email _id",
     match: { _id: { $ne: userId } },
   });
 
-  if (!chats) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Chat list not found');
+
+  // ✅ Instead of throwing error, just return empty array
+  if (!chats || chats.length === 0) {
+    return [];
   }
 
-  const data = [];
+  const data: any[] = [];
+
   for (const chatItem of chats) {
+    console.log('chatItem', chatItem);
     if (!chatItem.users.length) continue;
 
-    const chatId = chatItem?._id;
+    const chatId = chatItem._id;
 
-    // If this is a group chat, populate the groupChatId
-    if (chatItem.isGroupChat) {
-      await chatItem.populate('groupChatId');
-    }
-
-    let users;
-    // Check if a search query exists and filter users
+    // optional search filter for chat user name
     if (query.search) {
-      users = chatItem.users.filter((user) => {
-        return (user as any)?.fullName
-          .toLowerCase()
-          .includes(query.search.toLowerCase());
-      });
-      if (!users?.length) continue;
+      const matched = chatItem.users.filter((user) =>
+        (user as any).name?.toLowerCase().includes(query.search.toLowerCase())
+      );
+      if (!matched.length) continue;
     }
 
-    // Find the latest message in the chat
-    const message: any = await Message.findOne({ chat: chatId }).sort({
-      updatedAt: -1,
-    });
+    // Find the latest message (no populate)
+    const message = await Message.findOne({ chat: chatId })
+      .sort({ updatedAt: -1 })
+      .select("text sender updatedAt");
 
+    // Count unread messages for this user
     const unreadMessageCount = await Message.countDocuments({
       chat: chatId,
       seen: false,
       sender: { $ne: userId },
     });
 
-    if (message) {
-      data.push({
-        chat: chatItem,
-        message: message.text,
-        unreadMessageCount,
-        lastMessageCreatedAt: message.updatedAt,
-      });
-    } else {
-      data.push({
-        chat: chatItem,
-        message: message || null,
-        unreadMessageCount,
-        lastMessageCreatedAt: null,
-      });
-    }
+    data.push({
+      chat: chatItem,
+      lastMessage: message?.text || null,
+      images: message?.images || [],
+      lastMessageSender: message?.sender || null, // 👈 only sender _id
+      unreadMessageCount,
+      lastMessageCreatedAt: message?.updatedAt || null,
+    });
   }
 
-  // data.sort((a, b) => {
-  //   const dateA = (a.message && a.message.createdAt) || 0;
-  //   const dateB = (b.message && b.message.createdAt) || 0;
-  //   return dateB - dateA;
-  // });
 
-    // Sorting the data by lastMessageCreatedAt
-    data.sort((a, b) => {
-      const dateA = a.lastMessageCreatedAt ? new Date(a.lastMessageCreatedAt).getTime() : 0;
-      const dateB = b.lastMessageCreatedAt ? new Date(b.lastMessageCreatedAt).getTime() : 0;
-      return dateB - dateA;  // Sort in descending order
-    });
+  console.log('data', data);
+  // Sort chats by last message time (descending)
+  data.sort((a, b) => {
+    const dateA = a.lastMessageCreatedAt ? new Date(a.lastMessageCreatedAt).getTime() : 0;
+    const dateB = b.lastMessageCreatedAt ? new Date(b.lastMessageCreatedAt).getTime() : 0;
+    return dateB - dateA;
+  });
 
   return data;
 };
 
+
 // =========== Get my chat list end ===========
 
 // Function to get the list of friends (connected users) for a specific user
-const getOnlineConnectionUsersOfSpecificUser = async (userId: string) => {
-  // Query the Friendship collection to find a record for the specific user (userId)
-  const userList = await Friendship.findOne({ userId: userId }).populate(
-    'friendship',
-    'fullName profileImage',
-  ); // Populate the 'friendship' field with 'fullName' and 'profileImage'
+// const getOnlineConnectionUsersOfSpecificUser = async (userId: string) => {
+//   // Query the Friendship collection to find a record for the specific user (userId)
+//   const userList = await Friendship.findOne({ userId: userId }).populate(
+//     'friendship',
+//     'fullName profileImage',
+//   ); // Populate the 'friendship' field with 'fullName' and 'profileImage'
 
-  // If no friends found, return an empty array
-  if (!userList || !userList.friendship) {
-    return [];
-  }
+//   // If no friends found, return an empty array
+//   if (!userList || !userList.friendship) {
+//     return [];
+//   }
 
-  // Filter the friends list to only include those who are currently connected
-  const onlineConnectedFriends = userList.friendship.filter((friend) => {
-    return connectedUsers.has((friend as any)._id.toString()); // Check if the friend is in the connectedUsers map
-  });
+//   // Filter the friends list to only include those who are currently connected
+//   const onlineConnectedFriends = userList.friendship.filter((friend) => {
+//     return connectedUsers.has((friend as any)._id.toString()); // Check if the friend is in the connectedUsers map
+//   });
 
-  console.log('connected user ->>>> ', onlineConnectedFriends);
+//   console.log('connected user ->>>> ', onlineConnectedFriends);
 
-  return onlineConnectedFriends || [];
-};
+//   return onlineConnectedFriends || [];
+// };
 
 // Function to get the list of friends (connected users) for a specific user
-const getConnectionUsersOfSpecificUser = async (userId: string, query: any) => {
-  // Query the Friendship collection to find a record for the specific user (userId)
-  const userList = await Friendship.findOne({ userId: userId }).populate(
-    'friendship',
-    'fullName profileImage',
-  ); // Populate the 'friendship' field with 'fullName' and 'profileImage'
+// const getConnectionUsersOfSpecificUser = async (userId: string, query: any) => {
+//   // Query the Friendship collection to find a record for the specific user (userId)
+//   const userList = await Friendship.findOne({ userId: userId }).populate(
+//     'friendship',
+//     'fullName profileImage',
+//   ); // Populate the 'friendship' field with 'fullName' and 'profileImage'
 
-  if (!userList || !userList.friendship) return [];
+//   if (!userList || !userList.friendship) return [];
 
-  // Step 2: Normalize query string
-  const searchTerm = query?.trim().toLowerCase();
+//   // Step 2: Normalize query string
+//   const searchTerm = query?.trim().toLowerCase();
 
-  // Step 3: Filter if search term exists, otherwise return all friends
-  const filteredFriends = searchTerm
-    ? userList.friendship.filter((friend: any) =>
-        friend.fullName.toLowerCase().includes(searchTerm),
-      )
-    : userList.friendship; // If query is empty, return all
+//   // Step 3: Filter if search term exists, otherwise return all friends
+//   const filteredFriends = searchTerm
+//     ? userList.friendship.filter((friend: any) =>
+//         friend.fullName.toLowerCase().includes(searchTerm),
+//       )
+//     : userList.friendship; // If query is empty, return all
 
-  return filteredFriends;
-};
+//   return filteredFriends;
+// };
 
 const getChatById = async (chatId: string) => {
   const result = await Chat.findById(chatId);
@@ -417,8 +486,8 @@ const leaveUserFromSpecific = async (payload: any) => {
 export const ChatService = {
   addNewChat,
   getMyChatList,
-  getConnectionUsersOfSpecificUser,
-  getOnlineConnectionUsersOfSpecificUser,
+  // getConnectionUsersOfSpecificUser,
+  // getOnlineConnectionUsersOfSpecificUser,
   // getUserChats,
   getChatById,
   leaveUserFromSpecific,
