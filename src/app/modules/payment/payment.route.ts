@@ -16,7 +16,13 @@ router.post(
 //  Confirm payment (redirect URL from Stripe)
 .get("/confirm-payment", PaymentController.confirmPayment)
 
-//  Cancel payment
+
+
+.get(
+    "/earnings", 
+    PaymentController.getPayments
+)
+
 .get("/cancel", PaymentController.cancelPayment);
  
 export const PaymentRoutes = router;

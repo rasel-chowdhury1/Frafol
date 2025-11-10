@@ -28,6 +28,8 @@ const StatusTimestampsSchema = new Schema(
     deliveryRequestDeclineAt: { type: Date },
     deliveredAt: { type: Date },
     cancelledAt: { type: Date },
+    cancelRequestAt: { type: Date },
+    cancelRequestDeclinedAt: { type: Date }
   },
   { _id: false }
 );
@@ -85,18 +87,52 @@ const EventOrderSchema = new Schema<IEventOrder>(
     // ✅ Order Status
     status: {
       type: String,
-      enum: ["pending", "declined", "accepted", "inProgress", "deliveryRequest","deliveryRequestDeclined", "delivered", "cancelled"],
+      enum: [
+        "pending", 
+        "declined", 
+        "accepted", 
+        "inProgress", 
+        "deliveryRequest",
+        "deliveryRequestDeclined", 
+        "delivered", 
+        "cancelled",
+        "cancelRequest",
+        "cancelRequestDeclined"
+      ],
       default: "pending",
     },
 
     // ✅ Reason fields
-    declineReason: { type: String, trim: true },
+    declineReason: { 
+      type: String, 
+      trim: true 
+    },
     deliveryRequestDeclinedReason: {
       type: String,
       trim: true
     },
-    cancelReason: { type: String, trim: true },
-    cancelledBy: { type: Schema.Types.ObjectId, ref: "User" },
+
+    cancelReason: { 
+      type: String, 
+      trim: true 
+    },
+    cancelledBy: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User" 
+    },
+
+    // ✅ Cancel Request Fields
+    cancelRequestedBy: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User" 
+    },
+    cancelApprovalBy: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User" 
+    },
+    cancelApprovalDate: { 
+      type: Date 
+    },
 
     // ✅ Status Timestamps
     statusTimestamps: {
@@ -110,7 +146,18 @@ const EventOrderSchema = new Schema<IEventOrder>(
         {
           status: {
             type: String,
-            enum: ["pending", "declined", "accepted", "inProgress", "deliveryRequest", "deliveryRequestDeclined", "delivered", "cancelled"],
+            enum: [
+              "pending", 
+              "declined", 
+              "accepted", 
+              "inProgress", 
+              "deliveryRequest", 
+              "deliveryRequestDeclined", 
+              "delivered", 
+              "cancelled",
+              "cancelRequest",
+              "cancelRequestDeclined"
+            ],
             required: true,
           },
           reason: { type: String },
@@ -121,11 +168,15 @@ const EventOrderSchema = new Schema<IEventOrder>(
     },
 
     // ✅ Extension Requests
-    extensionRequests: { type: [ExtensionRequestSchema], default: [] },
+    extensionRequests: { 
+      type: [ExtensionRequestSchema], 
+      default: [] 
+    },
 
     description: { type: String },
     paymentStatus: {
        type: String,
+       enum: ["Unpaid", "Paid"],
        default: "Unpaid"
     },
     isDeleted: { type: Boolean, default: false },
@@ -168,6 +219,10 @@ EventOrderSchema.pre("save", function (next) {
         if (!this.statusTimestamps.deliveredAt)
           this.statusTimestamps.deliveredAt = now;
         break;
+      case "cancelRequest":
+        if (!this.statusTimestamps.cancelRequestAt) 
+          this.statusTimestamps.cancelRequestAt = now;
+        break;
       case "declined":
         if (!this.statusTimestamps.declinedAt)
           this.statusTimestamps.declinedAt = now;
@@ -176,13 +231,17 @@ EventOrderSchema.pre("save", function (next) {
         if (!this.statusTimestamps.cancelledAt)
           this.statusTimestamps.cancelledAt = now;
         break;
+      case "cancelRequestDeclined":
+        if (!this.statusTimestamps.cancelRequestDeclinedAt) 
+          this.statusTimestamps.cancelRequestDeclinedAt = now;
+        break;
     }
 
     // ✅ Add reason if applicable
     const reason =
       this.status === "declined"
         ? this.declineReason
-        : this.status === "cancelled"
+        : this.status === "cancelRequest"
         ? this.cancelReason
         : undefined;
 

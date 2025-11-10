@@ -304,6 +304,20 @@ const getOverviewOfSpecificProfessional = catchAsync(async (req: Request, res: R
 });
 
 
+const getMyEarnings = catchAsync(async (req: Request, res: Response) => {
+  const { userId: serviceProviderId } = req.user;
+
+  const result =
+    await userService.getMyEarnings(serviceProviderId, req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Earnings history fetched successfully",
+    data: result,
+  });
+});
+
 const getMonthlyEarnings = catchAsync(async (req: Request, res: Response) => {
   const { userId: serviceProviderId } = req.user;
   const { year } = req.query;
@@ -318,6 +332,125 @@ const getMonthlyEarnings = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Monthly earnings statistics fetched successfully",
+    data: result,
+  });
+});
+
+const getMonthlyCommission = catchAsync(async (req: Request, res: Response) => {
+  const { year } = req.query;
+
+  const result =
+    await userService.getMonthlyCommission(
+      year ? parseInt(year as string) : undefined
+    );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Monthly commission statistics fetched successfully",
+    data: result,
+  });
+});
+
+const getAdminDashboardStats = catchAsync(async (req: Request, res: Response) => {
+
+  const {userId} = req.user;
+
+  const result = await userService.getAdminDashboardStats(userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Admin dashboard stats fetched successfully",
+    data: result,
+  });
+});
+
+const getAdminOrderStats = catchAsync(async (req: Request, res: Response) => {
+  // ✅ Extract the type query parameter
+  const { type } = req.query;
+
+  // ⚠️ Validate type
+  if (!type || !["photographer", "videographer", "gear"].includes(String(type))) {
+    return sendResponse(res, {
+      statusCode: httpStatus.BAD_REQUEST,
+      success: false,
+      message:
+        "Invalid type provided. Allowed values are: 'photographer', 'videographer', or 'gear'. Please provide a valid type to fetch order statistics.",
+      data: null,
+    });
+  }
+
+  // ✅ Fetch order statistics from service
+  const result = await userService.getAdminOrderStats(
+    String(type) as "photographer" | "videographer" | "gear"
+  );
+
+  // ✅ Send back structured response
+  return sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Order statistics for '${type}' fetched successfully. This includes the percentage of completed, pending, and cancelled orders for the selected type.`,
+    data: result,
+  });
+});
+
+
+const getOrderManagementStats = catchAsync(
+  async (req: Request, res: Response) => {
+    const stats = await userService.getOrderManagementStats();
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Order management stats fetched successfully",
+      data: stats,
+    });
+  }
+);
+
+
+const getOrders = catchAsync(async (req, res) => {
+  const { type, ...rest } = req.query;
+
+  const validTypes = ["gear", "professional"] as const;
+
+  const orderType: "gear" | "professional" =
+    validTypes.includes(type as any)
+      ? (type as "gear" | "professional")
+      : "professional"; // default type
+
+  const result = await userService.getOrders(orderType, rest);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Orders retrieved successfully",
+    data: result,
+  });
+});
+
+
+const getDeliveryOrders = catchAsync(async (req, res) => {
+  const { type, ...rest } = req.query;
+
+  const validTypes = ["professional", "gear"] as const;
+
+  if (!validTypes.includes(type as any)) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "Invalid type. Allowed: professional, gear",
+      data: null,
+    });
+  }
+
+  const result = await userService.getDeliveryOrders(type as "professional" | "gear", rest);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Delivery orders retrieved successfully",
     data: result,
   });
 });
@@ -342,5 +475,12 @@ export const userController = {
   declineProfessionalUserController,
   getProfessionalUsersByCategory,
   getOverviewOfSpecificProfessional,
-  getMonthlyEarnings
+  getMonthlyEarnings,
+  getMonthlyCommission,
+  getMyEarnings,
+  getAdminDashboardStats,
+  getAdminOrderStats,
+  getOrderManagementStats,
+  getOrders,
+  getDeliveryOrders
 };

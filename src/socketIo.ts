@@ -139,7 +139,7 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
     });
 
       //----------------------online array send for front end------------------------//
-      io.emit('onlineUser', Array.from(connectedUsers));
+      io.emit('onlineUser', Array.from(connectedUsers.keys()));
 
       // ===================== join by user id ================================
       // socket.join(user?._id?.toString());
@@ -214,6 +214,7 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
 
             // ✅ Emit only if receivers exist
             if (receiverSocketIds.length > 0) {
+              socket.emit("newMessage", messagePayload);
               io.to(receiverSocketIds).emit("newMessage", messagePayload);
               io.to(receiverSocketIds).emit(
                 `message_received::${chatId}`,
@@ -288,7 +289,7 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
         }
 
         console.log('connectedUsers', Array.from(connectedUsers));
-        io.emit('onlineUser', Array.from(connectedUsers));
+        io.emit('onlineUser', Array.from(connectedUsers.keys()));
 
 
       });
@@ -312,7 +313,8 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
             break;
           }
         }
-        io.emit('onlineUser', Array.from(connectedUsers));
+        // io.emit('onlineUser', Array.from(connectedUsers));
+        io.emit('onlineUser', Array.from(connectedUsers.keys()));
       });
       //-----------------------Disconnect functionlity end ------------------------//
     }

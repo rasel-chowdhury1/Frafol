@@ -201,8 +201,22 @@ const confirmStripePayment = async (req: Request, res: Response) => {
 });
 
 
+const getPayments = catchAsync(async (req: Request, res: Response) => {
+  const query = req.query;
+
+  const result = await PaymentService.getPayments(query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Payments retrieved successfully",
+    data: result,
+  });
+});
+
 export const PaymentController = {
   createPaymentSession,
   confirmPayment,
-  cancelPayment
+  cancelPayment,
+  getPayments
 }

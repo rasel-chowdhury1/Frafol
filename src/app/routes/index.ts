@@ -19,6 +19,7 @@ import { CommunityRoutes } from "../modules/community/community.routes";
 import { CommunityEngagementRoutes } from "../modules/communityEngagementStats/communityEngagementStats.routes";
 import { ChatRoutes } from "../modules/chat/chat.route";
 import { messageRoutes } from "../modules/message/message.route";
+import { CouponRoutes } from "../modules/coupon/coupon.route";
 
 const router = Router();
 
@@ -103,6 +104,10 @@ const moduleRoutes = [
    {
    path: "/message",
    route: messageRoutes
+   },
+   {
+   path: "/coupon",
+   route: CouponRoutes
    },
 
 ];

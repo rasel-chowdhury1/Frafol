@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
 import AppError from '../../error/AppError';
-import { DeleteAccountPayload, PaginateQuery, TUser, TUserCreate, VerifiedProfessionalPayload } from './user.interface';
+import { DeleteAccountPayload, IOrderStats, OrderStats, PaginateQuery, TUser, TUserCreate, VerifiedProfessionalPayload } from './user.interface';
 import { User } from './user.models';
 import config from '../../config';
 import QueryBuilder from '../../builder/QueryBuilder';
@@ -25,6 +25,10 @@ import { GearOrder } from '../gearOrder/gearOrder.model';
 import { EventOrder } from '../eventOrder/eventOrder.model';
 import { Payment } from '../payment/payment.model';
 import { Review } from '../review/review.model';
+import { Package } from '../package/package.model';
+import { GearMarketplace } from '../gearMarketplace/gearMarketplace.model';
+import { Workshop } from '../workshop/workshop.model';
+import { aggregateOrders } from './user.utils';
 export type IFilter = {
   searchTerm?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -664,8 +668,25 @@ const getProfessionalUsersByCategory = async (query: Record<string, unknown>) =>
     };
   };
 
-const getAllUserQuery = async (userId: string, query: Record<string, unknown>) => {
-  const userQuery = new QueryBuilder(User.find({ _id: { $ne: userId } }), query)
+const getAllUserQuery = async (
+  userId: string,
+  query: Record<string, unknown>,
+) => {
+  const { type, ...rest } = query;
+
+  // Base filter: exclude the requesting user
+  let filter: Record<string, any> = { _id: { $ne: userId } };
+
+  // Apply type filter only if type exists
+  if (type === 'professional') {
+    filter.role = { $in: [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH] };
+  } else if (type === 'user') {
+    filter.role = { $in: [USER_ROLE.USER, USER_ROLE.COMPANY] };
+  }
+  // if type is undefined or invalid, no role filter is applied (all users included)
+
+  // Build query with QueryBuilder
+  const userQuery = new QueryBuilder(User.find(filter), rest)
     .search(['fullName'])
     .filter()
     .sort()
@@ -674,6 +695,7 @@ const getAllUserQuery = async (userId: string, query: Record<string, unknown>) =
 
   const result = await userQuery.modelQuery;
   const meta = await userQuery.countTotal();
+
   return { meta, result };
 };
 
@@ -988,6 +1010,38 @@ const blockedUser = async (id: string) => {
   };
 
 
+const getMyEarnings = async (
+  serviceProviderId: string,
+  query: Record<string, unknown>
+) => {
+  if (!Types.ObjectId.isValid(serviceProviderId)) {
+    throw new Error("Invalid serviceProviderId");
+  }
+
+  const filter = {
+    serviceProviderId: new Types.ObjectId(serviceProviderId),
+    paymentStatus: "completed",
+    isDeleted: false,
+  };
+
+  
+
+  const earningsQuery = new QueryBuilder(
+    Payment.find(filter).populate("userId", "name profileImage email"),
+    query
+  )
+    .search(["transactionId", "paymentType", "method"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await earningsQuery.modelQuery;
+  const meta = await earningsQuery.countTotal();
+
+  return { meta, result };
+};
+
   const getMonthlyEarningsOfSpecificProfessional = async (
   serviceProviderId: string,
   year?: number
@@ -1061,6 +1115,267 @@ const blockedUser = async (id: string) => {
   };
 };
 
+const getMonthlyCommission = async (year?: number) => {
+  const targetYear = year || new Date().getFullYear();
+
+  // 🧾 Aggregate commission grouped by month
+  const monthlyAgg = await Payment.aggregate([
+    {
+      $match: {
+        paymentStatus: "completed",
+        commission: { $gt: 0 },
+        createdAt: {
+          $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
+          $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        totalCommission: { $sum: "$commission" },
+      },
+    },
+    { $sort: { "_id": 1 } },
+  ]);
+
+  // 🧮 Map to 12-month structure
+  const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+    month: new Date(0, i).toLocaleString("default", { month: "short" }), // Jan, Feb...
+    totalCommission:
+      monthlyAgg.find((m) => m._id === i + 1)?.totalCommission || 0,
+  }));
+
+  return {
+    year: targetYear,
+    monthlyCommission: monthlyData,
+  };
+};
+
+const getAdminDashboardStats = async (adminId: string) => {
+
+    if (!Types.ObjectId.isValid(adminId)) {
+    throw new Error("Invalid adminId");
+  }
+  const adminObjectId = new Types.ObjectId(adminId);
+
+  // ✅ Aggregate user stats in one query
+  const userStats = await User.aggregate([
+    { $match: { isDeleted: { $ne: true } } },
+    {
+      $group: {
+        _id: null,
+        totalUsers: { $sum: 1 },
+        totalRegularUsers: { $sum: { $cond: [{ $eq: ["$role", USER_ROLE.USER] }, 1, 0] } },
+        totalProfessionals: {
+          $sum: {
+            $cond: [
+              { $in: ["$role", [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH]] },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const { totalUsers = 0, totalRegularUsers = 0, totalProfessionals = 0 } = userStats[0] || {};
+
+  // ✅ Active Event Orders count
+  const activeEventOrders = await EventOrder.countDocuments({
+    status: { $in: ["accepted", "inProgress", "deliveryRequest"] }
+  });
+
+  // ✅ Total commission
+  const commissionAgg = await Payment.aggregate([
+    { $match: { paymentStatus: "completed", commission: { $gt: 0 } } },
+    { $group: { _id: null, totalCommission: { $sum: "$commission" } } }
+  ]);
+  const totalCommission = commissionAgg[0]?.totalCommission || 0;
+
+  // ✅ Quick actions
+  const [
+    totalPendingUsers,
+    totalPendingPackages,
+    totalPendingGears,
+    totalPendingWorkshops,
+    confirmedEventOrders,
+    confirmedGearOrders,
+  ] = await Promise.all([
+    User.countDocuments({ adminVerified: "pending", isDeleted: false  }),
+    Package.countDocuments({ approvalStatus: "pending", isDeleted: false }),
+    GearMarketplace.countDocuments({ approvalStatus: "pending", isDeleted: false  }),
+    Workshop.countDocuments({ approvalStatus: "pending", isDeleted: false  }),
+    EventOrder.countDocuments({ status: "confirmed", isDeleted: false  }),
+    GearOrder.countDocuments({ status: "confirmed", isDeleted: false }),
+  ]);
+
+  // Combine confirmed deliveries into one variable
+  const totalConfirmedDeliveries = confirmedEventOrders + confirmedGearOrders;
+
+  const quickActions = {
+    totalPendingUsers,
+    totalPendingPackages,
+    totalPendingGears,
+    totalPendingWorkshops,
+    totalConfirmedDeliveries, // combined deliveries
+  };
+
+  // ✅ Fetch latest 15 notifications for this admin only
+  const latestNotifications = await Notification.find({ receiverId: adminObjectId })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .populate("userId", "name profileImage")
+    .populate("receiverId", "name profileImage");
+
+  return {
+    totalUsers,
+    totalRegularUsers,
+    totalProfessionals,
+    activeEventOrders,
+    totalCommission,
+    quickActions, // all quick actions in one variable
+    latestNotifications
+  };
+};
+
+
+
+const getAdminOrderStats = async (
+  type: "photographer" | "videographer" | "gear"
+): Promise<OrderStats> => {
+  let model;
+  let matchStage = {};
+
+  switch (type) {
+    case "photographer":
+      model = EventOrder;
+      matchStage = { serviceType: "photography" }; // Only photography event orders
+      break;
+    case "videographer":
+      model = EventOrder;
+      matchStage = { serviceType: "videography" }; // Only videography event orders
+      break;
+    case "gear":
+      model = GearOrder;
+      matchStage = {}; // All gear orders
+      break;
+    default:
+      throw new Error("Invalid type");
+  }
+
+  const stats = await model.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const totalOrders = stats.reduce((sum, item) => sum + item.count, 0);
+  const completed = stats.find((s) => s._id === "delivered" || s._id === "completed")?.count || 0;
+  const pending = stats.find((s) => s._id === "pending")?.count || 0;
+  const cancelled = stats.find((s) => ["cancelled", "cancelRequestDeclined", "declined"].includes(s._id))?.count || 0;
+
+  const percentage = (count: number) => (totalOrders > 0 ? (count / totalOrders) * 100 : 0);
+
+  return {
+    totalOrders,
+    completedPercentage: parseFloat(percentage(completed).toFixed(2)),
+    pendingPercentage: parseFloat(percentage(pending).toFixed(2)),
+    cancelledPercentage: parseFloat(percentage(cancelled).toFixed(2)),
+  };
+};
+
+
+
+const getOrderManagementStats = async (): Promise<IOrderStats> => {
+  // ✅ Aggregate EventOrders & GearOrders in parallel
+  const [eventStats, gearStats] = await Promise.all([
+    aggregateOrders(EventOrder),
+    aggregateOrders(GearOrder),
+  ]);
+
+  return {
+    totalOrders: eventStats.total + gearStats.total,
+    completedOrders: eventStats.completed + gearStats.completed,
+    activeOrders: eventStats.active + gearStats.active,
+    cancelledOrders: eventStats.cancelled + gearStats.cancelled,
+  };
+};
+
+const getOrders = async (type: "professional" | "gear", query: Record<string, unknown>) => {
+  let model: any;
+  let queryBuilder;
+
+  if (type === "professional") {
+    model = EventOrder;
+    queryBuilder = model.find().populate("userId").populate("serviceProviderId");
+  } 
+  else if (type === "gear") {
+    model = GearOrder;
+    queryBuilder = model.find().populate("clientId").populate("sellerId");
+  } 
+  else {
+    throw new Error("Invalid type. Allowed: professional, gear");
+  }
+
+  const orderQuery = new QueryBuilder(queryBuilder, query)
+    .search(["orderId"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const orders = await orderQuery.modelQuery;
+  const meta = await orderQuery.countTotal();
+
+  return { meta, orders };
+};
+
+
+const getDeliveryOrders = async (
+  type: "professional" | "gear",
+  query: Record<string, unknown>
+) => {
+  let model: any;
+  let deliveryStatuses: string[] = [];
+  let baseQuery: any;
+
+  if (type === "professional") {
+    model = EventOrder;
+    deliveryStatuses = ["deliveryRequest", "deliveryAccepted", "delivered"];
+    baseQuery = model.find({ status: { $in: deliveryStatuses } })
+      .populate("userId")
+      .populate("serviceProviderId");
+  } 
+  else if (type === "gear") {
+    model = GearOrder;
+    deliveryStatuses = ["deliveryRequest", "deliveryRequestDeclined", "delivered"];
+    baseQuery = model.find({ orderStatus: { $in: deliveryStatuses } })
+      .populate("clientId")
+      .populate("sellerId")
+      .populate("gearMarketplaceId");
+  } 
+  else {
+    throw new Error("Invalid type. Allowed: professional, gear");
+  }
+
+  const deliveryQuery = new QueryBuilder(baseQuery, query)
+    .search(["orderId"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const orders = await deliveryQuery.modelQuery;
+  const meta = await deliveryQuery.countTotal();
+
+  return { meta, orders };
+};
 
 export const userService = {
   createUserToken,
@@ -1086,5 +1401,12 @@ export const userService = {
   getProfessionalPhotographerAndVideographer,
   getProfessionalUsersByCategory,
   getOverviewOfSpecificProfessional,
-  getMonthlyEarningsOfSpecificProfessional
+  getMonthlyEarningsOfSpecificProfessional,
+  getMonthlyCommission,
+  getMyEarnings,
+  getAdminDashboardStats,
+  getAdminOrderStats,
+  getOrderManagementStats,
+  getOrders,
+  getDeliveryOrders
 };
