@@ -178,22 +178,31 @@ const getMessagesForChat = async (
   };
 };
 
-const getPendingMessages = async () => {
-  const pendingMessages = await Message.find({ approvalStatus: "pending" })
+const getPendingMessages = async (query: Record<string, any>) => {
+  const baseQuery = Message.find({ approvalStatus: "pending" })
     .populate({
       path: "sender",
-      select: "name sureName profileImage email role", // adjust fields as needed
+      select: "name sureName profileImage email role",
     })
     .populate({
       path: "chat",
       populate: {
-        path: "users", // assuming Chat model has 'users: [ObjectId]' field
+        path: "users",
         select: "name sureName profileImage email role",
       },
-    })
-    .sort({ createdAt: -1 }); // newest first
+    });
 
-  return pendingMessages;
+  const messageQuery = new QueryBuilder(baseQuery, query)
+    .search(["sender.name", "sender.sureName", "chat.users.name", "chat.users.sureName"]) // optional
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await messageQuery.modelQuery;
+  const meta = await messageQuery.countTotal();
+
+  return { meta, result };
 };
 
 export const messageService = {

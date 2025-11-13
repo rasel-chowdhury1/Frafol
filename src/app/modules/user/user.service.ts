@@ -1349,15 +1349,15 @@ const getDeliveryOrders = async (
     model = EventOrder;
     deliveryStatuses = ["deliveryRequest", "deliveryAccepted", "delivered"];
     baseQuery = model.find({ status: { $in: deliveryStatuses } })
-      .populate("userId")
-      .populate("serviceProviderId");
+      .populate("userId", "name email profileImage")
+      .populate("serviceProviderId", "name email profileImage");
   } 
   else if (type === "gear") {
     model = GearOrder;
     deliveryStatuses = ["deliveryRequest", "deliveryRequestDeclined", "delivered"];
     baseQuery = model.find({ orderStatus: { $in: deliveryStatuses } })
-      .populate("clientId")
-      .populate("sellerId")
+      .populate("clientId", "name email profileImage")
+      .populate("sellerId", "name email profileImage")
       .populate("gearMarketplaceId");
   } 
   else {

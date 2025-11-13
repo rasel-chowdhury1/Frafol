@@ -158,7 +158,7 @@ const fileUpload = catchAsync(async (req: Request, res: Response) => {
 
 
 const getAllPendingMessages = catchAsync(async (req: Request, res: Response) => {
-  const messages = await messageService.getPendingMessages();
+  const messages = await messageService.getPendingMessages(req.query);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
