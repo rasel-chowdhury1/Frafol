@@ -422,14 +422,41 @@ sendResponse(res, {
 });
 });
 
-const cancelOrder = catchAsync(async (req: Request, res: Response) => {
-  const { orderId } = req.params;
+const cancelRequest = catchAsync(async (req, res) => {
+  const { orderId } = req.params; // orderId
   const { reason } = req.body;
-  const { userId, role } = req.user;
+  const userId = req.user.userId;
 
-  if (!userId) throw new AppError(401, "Unauthorized");
+  const result = await EventOrderService.cancelRequest(orderId, userId, reason);
 
-  const result = await EventOrderService.cancelOrder(orderId, userId, reason, role);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Cancel request submitted successfully",
+    data: result,
+  });
+});
+
+const declineCancelRequest = catchAsync(async (req, res) => {
+  const { orderId } = req.params; // orderId
+  const { reason } = req.body;
+  const userId = req.user.userId;
+
+  const result = await EventOrderService.declinedCancelRequest(orderId, userId, reason);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Cancel request declined successfully",
+    data: result,
+  });
+});
+
+const approveCancelOrder = catchAsync(async (req, res) => {
+  const { orderId } = req.params; // orderId
+  const userId = req.user.userId;
+
+  const result = await EventOrderService.cancelOrder(orderId, userId);
 
   sendResponse(res, {
     statusCode: 200,
@@ -439,6 +466,66 @@ const cancelOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// const cancelOrder = catchAsync(async (req: Request, res: Response) => {
+//   const { orderId } = req.params;
+//   const { reason } = req.body;
+//   const { userId, role } = req.user;
+
+//   if (!userId) throw new AppError(401, "Unauthorized");
+
+//   const result = await EventOrderService.cancelOrder(orderId, userId, reason, role);
+
+//   sendResponse(res, {
+//     statusCode: 200,
+//     success: true,
+//     message: "Order cancelled successfully",
+//     data: result,
+//   });
+// });
+
+
+const getUpcomingEventsOfSpecificProfessional = catchAsync(async (req: Request, res: Response) => {
+  const { userId: serviceProviderId } = req.user;
+
+  const result = await EventOrderService.getUpcomingEventsOfSpecificProfessional(serviceProviderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Upcoming events fetched successfully",
+    data: result,
+  });
+});
+
+
+const getPendingEventOrders = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.userId; // ✅ Authenticated professional user
+  const result = await EventOrderService.getPendingEventOrders( userId, req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Pending event orders retrieved successfully',
+    meta: result.meta,
+    data: result.result,
+  });
+});
+
+
+
+
+const getTotalStatsOfSpeceficProfessional = catchAsync(async (req: Request, res: Response) => {
+  const { userId: serviceProviderId } = req.user;
+
+  const result = await EventOrderService.getTotalStatsOfSpeceficProfessional(serviceProviderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Professional statistics fetched successfully",
+    data: result,
+  });
+});
 
 export const EventOrderController = {
   createEventOrder,
@@ -457,5 +544,11 @@ export const EventOrderController = {
   requestOrderDelivery,
   acceptDeliveryRequest,
   declineOrderRequest,
-  cancelOrder
+  // cancelOrder,
+  getUpcomingEventsOfSpecificProfessional,
+  getPendingEventOrders,
+  getTotalStatsOfSpeceficProfessional,
+  cancelRequest,
+  declineCancelRequest,
+  approveCancelOrder  
 };

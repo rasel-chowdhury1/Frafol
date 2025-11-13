@@ -41,7 +41,11 @@ userRoutes
     userController.getAdminProfile,
   )
 
-  .get('/all-users', auth("admin"), userController.getAllUsers)
+  .get(
+    '/all-users', 
+    auth("admin"),
+     userController.getAllUsers
+    )
 
   .get(
     '/stats',
@@ -55,9 +59,6 @@ userRoutes
     userController.getPendingPhotographersVideographersBoth
   )
 
-
-
-  
 
 
 // featured profestions routes
@@ -78,6 +79,54 @@ userRoutes
     '/gallery/:id',
     // auth("user", "admin"),
     userController.getUserGalleryById
+  )
+
+  .get(
+    '/specific-professional-overview',
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getOverviewOfSpecificProfessional  
+  )
+
+  .get(
+    '/my-earning',
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getMyEarnings  
+  )
+
+  .get(
+    '/monthly-earning-statistics',
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    userController.getMonthlyEarnings  
+  )
+
+  .get(
+    "/monthly-commission-statistics", 
+    userController.getMonthlyCommission
+  )
+
+  .get(
+    "/orders/stats", 
+    userController.getAdminOrderStats
+  )
+
+  .get(
+    "/admin/dashboard-stats", 
+    auth(USER_ROLE.ADMIN),
+    userController.getAdminDashboardStats
+  )
+
+  .get("/order-stats", 
+    userController.getOrderManagementStats
+  )
+
+  .get(
+    "/orders",
+    userController.getOrders
+  )
+
+  .get(
+    "/delivery-orders",
+    userController.getDeliveryOrders
   )
 
   .get(

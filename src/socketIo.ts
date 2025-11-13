@@ -11,6 +11,11 @@ import Notification from "./app/modules/notifications/notifications.model";
 import colors from 'colors';
 import { callbackFn } from "./app/utils/callbackFn";
 import { sendBookingNotificationEmail } from "./app/utils/eamilNotifiacation";
+import Chat from "./app/modules/chat/chat.model";
+import moment from "moment-timezone";
+import Message from "./app/modules/message/message.model";
+import { ChatService } from "./app/modules/chat/chat.service";
+import { text } from "stream/consumers";
 
 // Define the socket server port
 const socketPort: number = parseInt(process.env.SOCKET_PORT || "9020", 10);
@@ -81,7 +86,19 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
       );
     }
 
-    const userDetails = verifyToken({token, access_secret: config.jwt_access_secret as string});
+    // const userDetails = verifyToken({token, access_secret: config.jwt_access_secret as string});
+
+    let userDetails;
+    try {
+      userDetails = verifyToken({
+        token, 
+        access_secret: config.jwt_access_secret as string
+      });
+    } catch (err) {
+      console.error("Socket JWT verify error:", err);
+      return next(new Error("Authentication error: Invalid token"));
+    }
+
 
 
     if (!userDetails) {
@@ -122,10 +139,136 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
     });
 
       //----------------------online array send for front end------------------------//
-      io.emit('onlineUser', Array.from(connectedUsers));
+      io.emit('onlineUser', Array.from(connectedUsers.keys()));
 
       // ===================== join by user id ================================
       // socket.join(user?._id?.toString());
+
+      // ======= message send ====
+      socket.on(
+        "send-message",
+        async (
+          payload: { text: string; images: string[]; chatId: string },
+          callback
+        ) => {
+          try {
+            const { chatId, text, images } = payload;
+            if (!chatId) {
+              return callbackFn(callback, {
+                success: false,
+                message: "chatId is required",
+              });
+            }
+
+            // ✅ Validate chat exists
+            const chat = await Chat.findById(chatId).select("users");
+            if (!chat) {
+              return callbackFn(callback, {
+                success: false,
+                message: "Chat not found",
+              });
+            }
+
+            // ✅ Filter other users in chat
+            const receivers = chat.users.filter(
+              (u) => u.toString() !== socket.user?._id
+            );
+
+            // ✅ Find online users
+            const receiverSocketIds = receivers
+              .map((u) => connectedUsers.get(u.toString())?.socketID)
+              .filter((id): id is string => Boolean(id));
+
+            // ✅ Format time in timezone
+            const time = moment()
+              .tz("Asia/Dhaka")
+              .format("YYYY-MM-DDTHH:mm:ss.SSS");
+
+            // ✅ Create message first (important!)
+            const newMessage = await Message.create({
+              sender: socket.user?._id,
+              chat: chatId,
+              text,
+              images,
+              time,
+            });
+
+            // ✅ Outgoing payload
+            const messagePayload = {
+              success: true,
+              chatId,
+              sender: {
+                _id: socket.user?._id,
+                name: socket.user?.name,
+                email: socket.user?.email,
+                role: socket.user?.role,
+              },
+              text,
+              images,
+              time,
+              messageId: newMessage._id,
+            };
+
+            // ✅ Emit to sender (local message)
+            socket.emit(`message_received::${chatId}`, messagePayload);
+
+            // ✅ Emit only if receivers exist
+            if (receiverSocketIds.length > 0) {
+              socket.emit("newMessage", messagePayload);
+              io.to(receiverSocketIds).emit("newMessage", messagePayload);
+              io.to(receiverSocketIds).emit(
+                `message_received::${chatId}`,
+                messagePayload
+              );
+            }
+
+            // ✅ Reply callback
+            callbackFn(callback, { success: true, message: messagePayload });
+          } catch (err: any) {
+            console.error("Socket send-message error:", err);
+            callbackFn(callback, {
+              success: false,
+              message: err.message || "Failed to send message",
+            });
+
+            io.emit("io-error", {
+              success: false,
+              message: "Error sending message",
+            });
+          }
+        }
+      );
+
+            //----------------------chat list start------------------------//
+      socket.on('my-chat-list', async ({}, callback) => {
+        try {
+          const chatList = await ChatService.getMyChatList(
+            (socket as any).user._id,
+            {},
+          );
+
+          const userSocket = connectedUsers.get((socket as any).user._id);
+
+          if (userSocket) {
+            io.to(userSocket.socketID).emit('chat-list', chatList);
+            callbackFn(callback, { success: true, message: chatList });
+          }
+
+          callbackFn(callback, {
+            success: false,
+            message: 'not found your socket id.',
+          });
+        } catch (error: any) {
+
+          callbackFn(callback, {
+            success: false,
+            message: error.message,
+          });
+          
+          io.emit('io-error', { success: false, message: error.message });
+        }
+      });
+      //----------------------chat list end------------------------//
 
 
 
@@ -145,7 +288,10 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
           }
         }
 
-        io.emit('onlineUser', Array.from(connectedUsers));
+        console.log('connectedUsers', Array.from(connectedUsers));
+        io.emit('onlineUser', Array.from(connectedUsers.keys()));
+
+
       });
       //-----------------------Disconnect functionlity end ------------------------//
       
@@ -167,7 +313,8 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
             break;
           }
         }
-        io.emit('onlineUser', Array.from(connectedUsers));
+        // io.emit('onlineUser', Array.from(connectedUsers));
+        io.emit('onlineUser', Array.from(connectedUsers.keys()));
       });
       //-----------------------Disconnect functionlity end ------------------------//
     }

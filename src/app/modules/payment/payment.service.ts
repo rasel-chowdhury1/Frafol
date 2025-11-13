@@ -1,7 +1,7 @@
 import AppError from "../../error/AppError";
 import { Payment } from "./payment.model";
 import { createStripePaymentSession, stripe } from "./payment.utils";
-import { IPayment } from "./payment.interface";
+import { GetPaymentsQuery, IPayment } from "./payment.interface";
 import { sentNotificationForPaymentSuccess } from "../../../socketIo";
 import mongoose from "mongoose";
 import { EventOrder } from "../eventOrder/eventOrder.model";
@@ -10,6 +10,7 @@ import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
 import { Workshop } from "../workshop/workshop.model";
 import moment from "moment";
 import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
+import QueryBuilder from "../../builder/QueryBuilder";
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)
@@ -239,8 +240,42 @@ const cancelPayment = async (transactionId: string) => {
   return payment;
 };
 
+
+const getPayments = async (query: any) => {
+  const filter: Record<string, any> = {};
+
+  // Filter by paymentStatus, paymentType, paymentMethod
+  if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
+  if (query.paymentType) filter.paymentType = query.paymentType;
+  if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
+
+  // Filter by date range
+  if (query.startDate || query.endDate) {
+    filter.createdAt = {};
+    if (query.startDate) filter.createdAt.$gte = new Date(query.startDate);
+    if (query.endDate) filter.createdAt.$lte = new Date(query.endDate);
+  }
+
+  // Build query with QueryBuilder
+  const paymentQuery = new QueryBuilder(
+    Payment.find(filter).populate("userId", "name profileImage email").populate("serviceProviderId", "name profileImage email").populate("serviceProviders.serviceProviderId"),
+    query
+  )
+    .search(["transactionId", "userId.name", "serviceProviderId.name"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const payments = await paymentQuery.modelQuery;
+  const meta = await paymentQuery.countTotal();
+
+  return { meta, payments };
+};
+
 export const PaymentService = {
   createPaymentSession,
   confirmPayment,
   cancelPayment,
+  getPayments
 };

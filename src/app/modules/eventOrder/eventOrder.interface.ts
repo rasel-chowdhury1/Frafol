@@ -1,6 +1,8 @@
 import { Document, Model, Types } from "mongoose";
 
-export type OrderStatus = "pending" | "declined" | "accepted" | "inProgress" | "deliveryRequest" | "deliveryRequestDeclined" | "delivered" | "cancelled";
+export type OrderStatus = "pending" | "declined" | "accepted" | "inProgress" | "deliveryRequest" | "deliveryRequestDeclined" | "delivered" | "cancelRequest" | "cancelRequestDeclined" | "cancelled";
+
+export type PaymentStatus = "Unpaid" | "Paid";
 
 export interface IExtensionRequest {
     _id?: Types.ObjectId; // Added this
@@ -19,6 +21,8 @@ export interface IStatusTimestamps {
   deliveryRequestDeclineAt?: Date;
   deliveredAt?: Date;
   declinedAt?: Date;
+  cancelRequestAt?: Date;
+  cancelRequestDeclinedAt?: Date;
   cancelledAt?: Date;
 }
 
@@ -66,11 +70,14 @@ export interface IEventOrder extends Document {
   deliveryRequestDeclinedReason?: string;
   cancelReason?: string;
   cancelledBy?: Types.ObjectId;
+  cancelRequestedBy?: Types.ObjectId;
+  cancelApprovalBy?: Types.ObjectId;
+  cancelApprovalDate?: Date;
   statusTimestamps: IStatusTimestamps;
   statusHistory: IStatusHistory[];
   extensionRequests: IExtensionRequest[];
   description?: string;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
   isDeleted: boolean;
 }
 

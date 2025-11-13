@@ -32,3 +32,16 @@ export interface IPayment {
 }
 
 export interface IPaymentModel extends Model<IPayment> {}
+
+export interface GetPaymentsQuery {
+  search?: string;
+  paymentStatus?: "pending" | "completed" | "failed" | "refound";
+  paymentType?: "event" | "gear" | "workshop";
+  paymentMethod?: "stripe" | "card" | "bank";
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  page?: number;
+  sortBy?: string;
+  order?: "asc" | "desc";
+}

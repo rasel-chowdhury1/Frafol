@@ -1,10 +1,10 @@
 
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { EventOrder } from "./eventOrder.model";
 import { IEventOrder } from "./eventOrder.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
-import { sentNotificationForBookingRequest, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled } from "../../../socketIo";
+import { sentNotificationForOrderCancelled } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -94,6 +94,9 @@ const getMyEventOrders = async (
         case "cancelled":
           baseQuery.status = "cancelled";
           break;
+        case "cancelRequest":
+          baseQuery.status = "cancelRequest";
+          break;
         default:
           throw new AppError(400, `Invalid tab for professional: ${tab}`);
       }
@@ -132,6 +135,9 @@ const getMyEventOrders = async (
         case "cancelled":
           baseQuery.status = "cancelled";
           break;
+        case "cancelRequest":
+          baseQuery.status = "cancelRequest";
+          break;
         default:
           throw new AppError(400, `Invalid tab for user: ${tab}`);
       }
@@ -144,8 +150,8 @@ const getMyEventOrders = async (
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
     EventOrder.find(baseQuery)
-      .populate("userId", "name profileImage email")
-      .populate("serviceProviderId", "name profileImage email")
+      .populate("userId", "name profileImage email phone companyName ico dic ic_dph address")
+      .populate("serviceProviderId", "name profileImage email phone companyName ico dic ic_dph address")
       .populate({
         path: "packageId",
         select: "title price",
@@ -728,62 +734,255 @@ const declineOrderRequest = async (
   return order;
 };
 
-const cancelOrder = async (
-  orderId: string,
-  userId: string,
-  reason: string, 
-  role: string
-) => {
-  // 🔍 Find order
-  const order = await EventOrder.findById(orderId)
-    .populate("packageId", "title") as any;
+// const cancelOrder = async (
+//   orderId: string,
+//   userId: string,
+//   reason: string, 
+//   role: string
+// ) => {
+//   // 🔍 Find order
+//   const order = await EventOrder.findById(orderId)
+//     .populate("packageId", "title") as any;
+
+//   if (!order) throw new AppError(404, "Order not found");
+
+//   // 🛑 Check already cancelled
+//   if (order.status === "cancelled") {
+//     throw new AppError(400, "This order is already cancelled");
+//   }
+
+//   if(role !== "admin"){
+//   // 🧾 Authorization: only the client or assigned service provider can cancel
+//   const isAuthorized =
+//     order.userId.toString() === userId ||
+//     order.serviceProviderId.toString() === userId;
+
+//   if (!isAuthorized) {
+//     throw new AppError(403, "You are not authorized to cancel this order");
+//   }
+// }
+
+//   // 🚫 Update order status
+//   order.status = "cancelled";
+//   order.cancelReason = reason;
+//   order.cancelledBy = new mongoose.Types.ObjectId(userId);
+//   order.statusTimestamps.cancelledAt = new Date();
+//   order.statusHistory.push({
+//     status: "cancelled",
+//     reason,
+//     changedAt: new Date(),
+//   });
+
+//   await order.save();
+
+//   // 🔔 Send notification to the other party
+//   sentNotificationForOrderCancelled({
+//     orderType: order.orderType,
+//     cancelledBy: new mongoose.Types.ObjectId(userId),
+//     receiverId:
+//       order.userId.toString() === userId
+//         ? order.serviceProviderId
+//         : order.userId,
+//     serviceType: order.serviceType,
+//     packageName: order.packageId?.title,
+//   }).catch((err) => console.error("Notification failed:", err));
+
+//   return order;
+// };
+
+const cancelRequest = async (orderId: string, userId: string, reason: string) => {
+
+  const order = await EventOrder.findById(orderId);
 
   if (!order) throw new AppError(404, "Order not found");
 
-  // 🛑 Check already cancelled
-  if (order.status === "cancelled") {
-    throw new AppError(400, "This order is already cancelled");
+  // ✅ Only order user or service provider can request cancellation
+  if (
+    order.userId.toString() !== userId &&
+    order.serviceProviderId.toString() !== userId
+  ) {
+    throw new AppError(403, "You are not allowed to request cancel for this order");
   }
 
-  if(role !== "admin"){
-  // 🧾 Authorization: only the client or assigned service provider can cancel
-  const isAuthorized =
-    order.userId.toString() === userId ||
-    order.serviceProviderId.toString() === userId;
-
-  if (!isAuthorized) {
-    throw new AppError(403, "You are not authorized to cancel this order");
+  if (!["pending", "accepted", "inProgress"].includes(order.status)) {
+    throw new AppError(400, "You cannot request cancel at this stage");
   }
-}
 
-  // 🚫 Update order status
-  order.status = "cancelled";
+  order.status = "cancelRequest";
+  order.cancelRequestedBy = userId as any;
   order.cancelReason = reason;
-  order.cancelledBy = new mongoose.Types.ObjectId(userId);
-  order.statusTimestamps.cancelledAt = new Date();
-  order.statusHistory.push({
-    status: "cancelled",
-    reason,
-    changedAt: new Date(),
-  });
+
+  order.statusTimestamps.cancelRequestAt = new Date();
+  order.statusHistory.push({ status: "cancelRequest", changedAt: new Date(), reason });
 
   await order.save();
-
-  // 🔔 Send notification to the other party
-  sentNotificationForOrderCancelled({
-    orderType: order.orderType,
-    cancelledBy: new mongoose.Types.ObjectId(userId),
-    receiverId:
-      order.userId.toString() === userId
-        ? order.serviceProviderId
-        : order.userId,
-    serviceType: order.serviceType,
-    packageName: order.packageId?.title,
-  }).catch((err) => console.error("Notification failed:", err));
-
   return order;
 };
 
+
+const declinedCancelRequest = async (orderId: string, userId: string, reason: string) => {
+
+  console.log({orderId, userId, reason});
+  const order = await EventOrder.findById(orderId);
+
+  if (!order) throw new AppError(404, "Order not found");
+
+  if (order.status !== "cancelRequest") {
+    throw new AppError(400, "No pending cancel request");
+  }
+
+  // ✅ Opposite user only
+  if (order.cancelRequestedBy?.toString() === userId) {
+    throw new AppError(403, "You cannot decline your own cancel request");
+  }
+
+console.log({order})
+  if (
+    order.userId.toString() !== userId &&
+    order.serviceProviderId.toString() !== userId
+  ) {
+    throw new AppError(403, "You are not allowed to decline cancel for this order");
+  }
+
+  order.status = "inProgress";
+  order.statusTimestamps.cancelRequestDeclinedAt = new Date();
+  order.cancelApprovalDate = new Date();
+  order.statusHistory.push({ status: "cancelRequestDeclined", changedAt: new Date(), reason });
+
+  await order.save();
+  return order;
+};
+
+const cancelOrder = async (orderId: string, userId: string) => {
+  const order = await EventOrder.findById(orderId);
+
+  if (!order) throw new AppError(404, "Order not found");
+
+  if (order.status !== "cancelRequest") {
+    throw new AppError(400, "Cancellation not requested yet");
+  }
+
+  // ✅ Opposite party only
+  if (order.cancelRequestedBy?.toString() === userId) {
+    throw new AppError(403, "You cannot approve your own cancel request");
+  }
+
+  if (
+    order.userId.toString() !== userId &&
+    order.serviceProviderId.toString() !== userId
+  ) {
+    throw new AppError(403, "You are not allowed to cancel this order");
+  }
+
+  order.status = "cancelled";
+  order.statusTimestamps.cancelledAt = new Date();
+  order.cancelApprovalBy = userId as any;
+  order.cancelApprovalDate = new Date();
+
+  order.statusHistory.push({ status: "cancelled", changedAt: new Date(), reason: order.cancelReason });
+
+  await order.save();
+  return order;
+};
+
+
+const getTotalStatsOfSpeceficProfessional = async (serviceProviderId: string) => {
+  if (!Types.ObjectId.isValid(serviceProviderId)) {
+    throw new Error("Invalid serviceProviderId");
+  }
+
+  const now = new Date();
+
+  const data = await EventOrder.aggregate([
+    {
+      $match: {
+        serviceProviderId: new Types.ObjectId(serviceProviderId),
+        isDeleted: false,
+      }
+    },
+    {
+      $facet: {
+        totalCompletedEvents: [
+          { $match: { status: "delivered" } },
+          { $count: "count" }
+        ],
+        totalInProgressEvents: [
+          { $match: { status: "inProgress", date: { $lte: now }  } },
+          { $count: "count" }
+        ],
+        totalUpcomingEvents: [
+          { $match: { status: "inProgress", date: { $gte: now } } },
+          { $count: "count" }
+        ],
+        totalPendingEvents: [
+          { $match: { status: "pending" } },
+          { $count: "count" }
+        ]
+      }
+    },
+    {
+      $project: {
+        totalCompletedEvents: { $ifNull: [{ $arrayElemAt: ["$totalCompletedEvents.count", 0] }, 0] },
+        totalInProgressEvents: { $ifNull: [{ $arrayElemAt: ["$totalInProgressEvents.count", 0] }, 0] },
+        totalUpcomingEvents: { $ifNull: [{ $arrayElemAt: ["$totalUpcomingEvents.count", 0] }, 0] },
+        totalPendingEvents: { $ifNull: [{ $arrayElemAt: ["$totalPendingEvents.count", 0] }, 0] },
+      }
+    }
+  ]);
+
+  return data[0];
+};
+
+const getUpcomingEventsOfSpecificProfessional = async (serviceProviderId: string) => {
+  if (!Types.ObjectId.isValid(serviceProviderId)) {
+    throw new Error("Invalid serviceProviderId");
+  }
+
+  const now = new Date();
+
+  const upcomingEvents = await EventOrder.find({
+    serviceProviderId: new Types.ObjectId(serviceProviderId),
+    status: { $in: ["accepted", "inProgress"] },
+    date: { $gte: now },
+    isDeleted: false,
+  })
+    .populate({
+      path: "userId",
+      select: "name sureName profileImage email phone",
+    })
+    .populate({
+      path: "packageId",
+      select: "title price description",
+    })
+    .sort({ date: 1 }) // sort nearest upcoming first
+    .lean();
+
+  return upcomingEvents;
+};
+
+
+
+
+const getPendingEventOrders = async ( userId: string,query: Record<string, unknown>) => {
+  // ✅ Only fetch pending orders of the specific professional
+  const filter = {
+    professionalId: userId,
+    status: 'pending',
+  };
+
+  // ✅ Apply QueryBuilder utilities for pagination, filtering, sorting, etc.
+  const eventOrderQuery = new QueryBuilder(EventOrder.find(filter), query)
+    .search(['eventName', 'customerName']) // searchable fields
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await eventOrderQuery.modelQuery;
+  const meta = await eventOrderQuery.countTotal();
+
+  return { meta, result };
+};
 
 
 export const EventOrderService = {
@@ -803,7 +1002,12 @@ export const EventOrderService = {
   requestOrderDelivery,
   acceptDeliveryRequest,
   declineOrderRequest,
-  cancelOrder
+  cancelOrder,
+  getUpcomingEventsOfSpecificProfessional,
+  getPendingEventOrders,
+  getTotalStatsOfSpeceficProfessional,
+  cancelRequest,
+  declinedCancelRequest,
 };
 
 

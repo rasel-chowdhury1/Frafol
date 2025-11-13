@@ -51,9 +51,27 @@ router.post(
         )
 
     .patch(
+        "/cancel-request/:orderId",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN), 
+        EventOrderController.cancelRequest
+        )
+
+    .patch(
+        "/decline-cancel-request/:orderId",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN), 
+        EventOrderController.declineCancelRequest
+        )
+        
+    .patch(
+        "/approve-cancel/:orderId",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN), 
+        EventOrderController.approveCancelOrder
+        )
+        
+    .patch(
         "/cancel/:orderId",
         auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN), 
-        EventOrderController.cancelOrder
+        EventOrderController.approveCancelOrder
         )
 
     .patch(
@@ -108,10 +126,38 @@ router.post(
     )
 
     .get(
+        "/pending",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        EventOrderController.getPendingEventOrders
+    )
+
+    
+    .get(
+        "/upcoming",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        EventOrderController.getUpcomingEventsOfSpecificProfessional
+    )
+
+    .get(
+        "/extension-request",
+        auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        EventOrderController.getMyExtensionEventOrders
+    )
+
+
+    .get(
+        "/professional/stats",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        EventOrderController.getTotalStatsOfSpeceficProfessional
+    )
+
+    .get(
         "/:id", 
         auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN), 
         EventOrderController.getEventOrderById
     )
+
+
     .delete(
         "/:id", 
         auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN), 

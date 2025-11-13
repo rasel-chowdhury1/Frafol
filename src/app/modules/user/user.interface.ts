@@ -81,3 +81,17 @@ export interface VerifiedProfessionalPayload {
   userId: string;
   status: 'pending' | 'verified';
 }
+
+
+export interface IOrderStats {
+  totalOrders: number;
+  completedOrders: number;
+  activeOrders: number;
+  cancelledOrders: number;
+}
+export type OrderStats = {
+  totalOrders: number;
+  completedPercentage: number;
+  pendingPercentage: number;
+  cancelledPercentage: number;
+};
