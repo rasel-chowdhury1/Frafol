@@ -29,6 +29,11 @@ router
     )
 
   .get(
+    "/pending",
+    CommunityController.getPendingCommunities
+  )
+
+  .get(
     "/my",
     auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH),
     CommunityController.getMyPosts

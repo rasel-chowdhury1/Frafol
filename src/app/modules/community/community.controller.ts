@@ -91,6 +91,18 @@ const getCommunityDetails = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getPendingCommunities = catchAsync(async (req: Request, res: Response) => {
+  const result = await CommunityService.getPendingCommunities(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Pending communities retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 const getCommentsById = catchAsync(async (req, res) => {
   const { id } = req.params;          // Community ID from URL
   const userId = req.user.userId;
@@ -198,5 +210,6 @@ export const CommunityController = {
   updateCommunity,
   approveCommunity,
   rejectCommunity,
-  deleteCommunity
+  deleteCommunity,
+  getPendingCommunities
 };

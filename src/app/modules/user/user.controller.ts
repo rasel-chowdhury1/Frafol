@@ -5,6 +5,7 @@ import { userService } from './user.service';
 
 import httpStatus from 'http-status';
 import { storeFile, storeFiles } from '../../utils/fileHelper';
+import AppError from '../../error/AppError';
 
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
@@ -16,6 +17,29 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: 'Check email for OTP',
     data:  createUserToken ,
+  });
+});
+
+
+const switchRole = catchAsync(async (req: Request, res: Response) => {
+  const {userId} = req.user; // auth middleware adds req.user
+  const { newRole } = req.body;
+
+  if (!newRole) {
+    throw new AppError(400, "New role is required");
+  }
+
+  const result = await userService.switchUserRole(userId, newRole);
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `Role switched successfully to ${newRole}`,
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    },
   });
 });
 
@@ -287,6 +311,20 @@ const deleteMyAccount = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+const getUserOverview = catchAsync(async (req, res) => {
+  const {userId} = req.user; // or req.params.userId
+
+  const result = await userService.getOverviewOfSpecificUser(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User overview fetched successfully",
+    data: result,
+  });
+});
+
+
 const getOverviewOfSpecificProfessional = catchAsync(async (req: Request, res: Response) => {
   const {userId} = req.user
 
@@ -457,6 +495,7 @@ const getDeliveryOrders = catchAsync(async (req, res) => {
 
 export const userController = {
   createUser,
+  switchRole,
   userCreateVarification,
   getUserById,
   getUserGalleryById,
@@ -475,6 +514,7 @@ export const userController = {
   declineProfessionalUserController,
   getProfessionalUsersByCategory,
   getOverviewOfSpecificProfessional,
+  getUserOverview,
   getMonthlyEarnings,
   getMonthlyCommission,
   getMyEarnings,
@@ -482,5 +522,5 @@ export const userController = {
   getAdminOrderStats,
   getOrderManagementStats,
   getOrders,
-  getDeliveryOrders
+  getDeliveryOrders,
 };

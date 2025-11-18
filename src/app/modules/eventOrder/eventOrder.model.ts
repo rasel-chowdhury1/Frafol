@@ -29,7 +29,8 @@ const StatusTimestampsSchema = new Schema(
     deliveredAt: { type: Date },
     cancelledAt: { type: Date },
     cancelRequestAt: { type: Date },
-    cancelRequestDeclinedAt: { type: Date }
+    cancelRequestDeclinedAt: { type: Date },
+    paymentCompletedAt: {type: Date},
   },
   { _id: false }
 );

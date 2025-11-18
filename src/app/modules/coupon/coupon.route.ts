@@ -10,8 +10,17 @@ router
 // ✅ Get all coupons (with query for filtering/pagination)
    .get("/", CouponController.getAllCoupons)
 
+   .patch(
+      "/status/:id",
+      // auth("admin"), // if you have role-based auth
+      CouponController.updateCouponStatus
+   )
+
 // ✅ Update a coupon by ID
-   .patch("/:id", CouponController.updateCoupon)
+   .patch(
+      "/update/:id", 
+      CouponController.updateCoupon
+   )
 
 // ✅ Delete a coupon by ID
    .delete("/:id", CouponController.deleteCoupon);

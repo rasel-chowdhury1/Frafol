@@ -205,11 +205,65 @@ const getPendingMessages = async (query: Record<string, any>) => {
   return { meta, result };
 };
 
+
+/**
+ * Approve a pending message
+ */
+const approveMessage = async (messageId: string) => {
+  // Find message first to check if it exists and status
+  const existingMessage = await Message.findById(messageId);
+
+  if (!existingMessage) {
+    throw new AppError(httpStatus.NOT_FOUND, "Message not found");
+  }
+
+  if (existingMessage.approvalStatus === "approved") {
+    throw new AppError(httpStatus.BAD_REQUEST, "Message is already approved");
+  }
+
+  // Update and return the updated document
+  const updatedMessage = await Message.findByIdAndUpdate(
+    messageId,
+    { approvalStatus: "approved" },
+    { new: true, runValidators: true } // new:true returns updated doc
+  );
+
+  return updatedMessage;
+};
+
+/**
+ * Reject a pending message
+ */
+const rejectMessage = async (messageId: string) => {
+  const message = await Message.findById(messageId);
+
+  if (!message) {
+    throw new AppError(httpStatus.NOT_FOUND, "Message not found");
+  }
+
+  if (message.approvalStatus === "rejected") {
+    throw new AppError(httpStatus.BAD_REQUEST, "Message is already rejected");
+  }
+
+
+
+  // Update and return the updated document
+  const updatedMessage = await Message.findByIdAndUpdate(
+    messageId,
+    { approvalStatus: "rejected" },
+    { new: true, runValidators: true } // new:true returns updated doc
+  );
+
+  return message;
+};
+
 export const messageService = {
   sendMessage,
   getMessagesForChat,
   updateMessage,
   seenMessage,
   deleteMessage,
-  getPendingMessages
+  getPendingMessages,
+  approveMessage,
+  rejectMessage
 };

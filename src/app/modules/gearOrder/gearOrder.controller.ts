@@ -61,6 +61,22 @@ const createGearOrders = catchAsync(async (req: Request, res: Response) => {
   }
 );
 
+
+const completePaymentGearOrder = catchAsync(async (req, res) => {
+  const { gearOrderId } = req.params;
+
+  const result = await GearOrderService.completePaymentGearOrderById(gearOrderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Gear order payment marked as received",
+    data: result,
+  });
+});
+
+
+
 const getAllGearOrders = catchAsync(async (req: Request, res: Response) => {
   const result = await GearOrderService.getAllGearOrders(req.query);
   sendResponse(res, {
@@ -225,5 +241,6 @@ export const GearOrderController = {
   requestGearMarketplaceDelivery,
   acceptGearDeliveryRequest,
   declineGearDeliveryRequest,
-  cancelGearOrderBySeller
+  cancelGearOrderBySeller,
+  completePaymentGearOrder
 };

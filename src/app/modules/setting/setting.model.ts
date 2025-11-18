@@ -15,7 +15,7 @@ const settingsSchema = new Schema<ISettings>(
     },
     key: {
       type: String,
-      enum: [ "privacyPolicy","aboutUs","termsService","gdpr","howOrderingWorks","howItWorks","frameworkAgreement" ], // enum ensures that only these values are valid
+      enum: [ "privacyPolicy","aboutUs","termsService","gdpr","howOrderingWorks","howItWorks","frameworkAgreement", "searchAlgorithm", "websiteFunctionalityCompatibility" ], // enum ensures that only these values are valid
       required: true,
     },
   },

@@ -10,12 +10,14 @@ export interface TUserCreate {
   password: string;
   profileImage: string;
   role: string;
+  mainRole: string;
   switchRole: string;
   gallery: string[];
   phone: string;
   address?: string;
   town?: string;
   country?: string;
+  zipCode?: string;
   minHourlyRate?: number;
   maxHourlyRate?: number;
   ico?: string;

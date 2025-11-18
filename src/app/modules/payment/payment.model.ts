@@ -8,23 +8,49 @@ const ServiceProviderBreakdownSchema = new Schema<IServiceProviderBreakdown>(
     amount: { type: Number, required: true },
     commission: { type: Number, required: true },
     netAmount: { type: Number, required: true },
+    serviceProviderPaid: { type: Boolean, default: false },
+    serviceProviderPaidAt: { type: Date },
   },
   { _id: false }
 );
 
 const PaymentSchema = new Schema<IPayment>(
   {
-    transactionId: { type: String, required: true, unique: true },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    transactionId: { 
+      type: String, 
+      required: true, unique: true 
+    },
+    userId: { 
+      type: Schema.Types.ObjectId, ref: "User", 
+      required: true 
+    },
     // For event/workshop: single service provider
-    serviceProviderId: { type: Schema.Types.ObjectId, ref: "User", required: false },
+    serviceProviderId: { 
+      type: Schema.Types.ObjectId, ref: "User", 
+      required: false 
+    },
 
     // For gear: multiple sellers
-    serviceProviders: { type: [ServiceProviderBreakdownSchema], default: [] },
-    mainOrderIdForGear: { type: String},
-    amount: { type: Number, required: true },
-    commission: { type: Number, required: true },
-    netAmount: { type: Number, required: true },
+    serviceProviders: {
+
+      type: [ServiceProviderBreakdownSchema], 
+      default: [] 
+    },
+    mainOrderIdForGear: { 
+      type: String
+    },
+    amount: { 
+      type: Number, 
+      required: true 
+    },
+    commission: {
+      type: Number, 
+      required: true 
+    },
+    netAmount: { 
+      type: Number, 
+      required: true 
+    },
 
     paymentStatus: {
       type: String,
@@ -45,9 +71,13 @@ const PaymentSchema = new Schema<IPayment>(
       required: true,
     },
 
+
     eventOrderId: { type: Schema.Types.ObjectId, ref: "EventOrder" },
     gearOrderIds: [{ type: Schema.Types.ObjectId, ref: "GearOrder" }],
     workshopId: { type: Schema.Types.ObjectId, ref: "Workshop" },
+
+    serviceProviderPaid: { type: Boolean, default: false },
+    serviceProviderPaidAt: { type: Date },
   },
   { timestamps: true, versionKey: false }
 );

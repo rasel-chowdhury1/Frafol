@@ -3,7 +3,7 @@ import { Payment } from "./payment.model";
 import { createStripePaymentSession, stripe } from "./payment.utils";
 import { GetPaymentsQuery, IPayment } from "./payment.interface";
 import { sentNotificationForPaymentSuccess } from "../../../socketIo";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { EventOrder } from "../eventOrder/eventOrder.model";
 import { GearOrder } from "../gearOrder/gearOrder.model";
 import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
@@ -51,6 +51,7 @@ const confirmPayment = async (sessionId: string) => {
 
     // 🔹 Find local payment record by sessionId (not paymentIntentId)
     const payment = await Payment.findOne({ transactionId: sessionId }).session(dbSession);
+
     if (!payment) {
       throw new AppError(httpStatus.NOT_FOUND, "Payment record not found for this session");
     }
@@ -273,9 +274,97 @@ const getPayments = async (query: any) => {
   return { meta, payments };
 };
 
+const getMyPaymentsStats = async (userId: string) => {
+  if (!userId) throw new Error("userId is required");
+
+  const stats = await Payment.aggregate([
+    { $match: { userId: new Types.ObjectId(userId) } },
+
+    {
+      $group: {
+        _id: null,
+        totalSpent: { $sum: "$amount" },
+        totalOrders: { $sum: 1 }
+      }
+    }
+  ]);
+
+  return {
+    totalSpent: stats[0]?.totalSpent || 0,
+    totalOrders: stats[0]?.totalOrders || 0,
+  };
+};
+
+const getMyPayments = async (userId: string, query: any) => {
+  if (!userId) throw new Error("userId is required");
+
+  const filter: Record<string, any> = { userId };
+
+  // Optional filters
+  if (query.paymentType) filter.paymentType = query.paymentType;
+  if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
+  if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
+
+  if (query.startDate || query.endDate) {
+    filter.createdAt = {};
+    if (query.startDate) filter.createdAt.$gte = new Date(query.startDate);
+    if (query.endDate) filter.createdAt.$lte = new Date(query.endDate);
+  }
+
+  // Build query with QueryBuilder
+  const qb = new QueryBuilder(
+    Payment.find(filter)
+      .populate("userId", "name profileImage email")
+      .populate("serviceProviderId", "name profileImage email")
+      .populate("serviceProviders.serviceProviderId", "name profileImage email")
+
+      // ✅ FULL NESTED POPULATE for gear orders
+      .populate({
+        path: "gearOrderIds",
+        select: "orderId paymentStatus orderStatus statusTimestamps createdAt",
+        populate: [
+          {
+            path: "sellerId",
+            select: "name email mobileNumber profileImage userType"
+          },
+          {
+            path: "gearMarketplaceId",
+            select: "title price category name description images",
+          }
+        ]
+      })
+
+      // ✅ Populate workshop info (unchanged)
+      .populate("workshopId", "title price location startDate endDate")
+      .populate({
+        path:"eventOrderId", 
+        select: "orderId orderType serviceType date location totalPrice packageId statusTimestamps",
+        populate: [
+          {
+            path: "packageId",
+            select: "title"
+          }
+        ]
+      }),
+    query
+  )
+    .search(["transactionId", "userId.name", "serviceProviderId.name"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const payments = await qb.modelQuery;
+  const meta = await qb.countTotal();
+
+  return { meta, payments };
+};
+
 export const PaymentService = {
   createPaymentSession,
   confirmPayment,
   cancelPayment,
-  getPayments
+  getPayments,
+  getMyPayments,
+  getMyPaymentsStats
 };

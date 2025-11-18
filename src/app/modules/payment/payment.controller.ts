@@ -116,7 +116,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
 
   const result = await PaymentService.createPaymentSession(paymentPayload);
 
-  return sendResponse(res, {
+  sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Stripe checkout session created successfully",
@@ -142,7 +142,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     String(session_id)
   );
 
-  return sendResponse(res, {
+  sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Payment confirmed successfully",
@@ -192,7 +192,7 @@ const confirmStripePayment = async (req: Request, res: Response) => {
 
   const result = await PaymentService.cancelPayment(String(transactionId));
 
-  return sendResponse(res, {
+  sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Payment cancelled successfully",
@@ -214,9 +214,46 @@ const getPayments = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyPayments = catchAsync(async (req: Request, res: Response) => {
+  // Assuming user is attached via auth middleware
+  const {userId} = req.user;
+  if (!userId) {
+    throw new AppError(401, "Unauthorized: User not found");
+  }
+
+  // Pass userId and query to service
+  const payments = await PaymentService.getMyPayments(userId, req.query);
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Payments retrieved successfully",
+    data: payments,
+  });
+});
+
+const getMyPaymentsStats = catchAsync(async (req, res) => {
+  const { userId } = req.user;
+
+  if (!userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User ID not found");
+  }
+
+  const stats = await PaymentService.getMyPaymentsStats(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Payment statistics fetched successfully",
+    data: stats,
+  });
+});
+
 export const PaymentController = {
   createPaymentSession,
   confirmPayment,
   cancelPayment,
-  getPayments
+  getPayments,
+  getMyPayments,
+  getMyPaymentsStats
 }
