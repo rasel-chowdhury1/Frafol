@@ -24,6 +24,7 @@ export interface IStatusTimestamps {
   cancelRequestAt?: Date;
   cancelRequestDeclinedAt?: Date;
   cancelledAt?: Date;
+  paymentCompletedAt?: Date;
 }
 
 export interface IStatusHistory {

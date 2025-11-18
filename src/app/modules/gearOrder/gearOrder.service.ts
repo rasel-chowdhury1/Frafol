@@ -7,6 +7,7 @@ import httpStatus from 'http-status';
 import { createGearStripePaymentSession } from '../payment/payment.utils';
 import QueryBuilder from '../../builder/QueryBuilder';
 import mongoose from 'mongoose';
+import { Payment } from '../payment/payment.model';
 
 const createGearOrder = async (payload: IGearOrder) => {
   const order = await GearOrder.create(payload);
@@ -134,6 +135,60 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
     };
 }
 
+const completePaymentGearOrderById = async (gearOrderId: string) => {
+  if (!gearOrderId) throw new AppError(400, "Gear order ID is required");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1️⃣ Find the Gear Order
+    const order = await GearOrder.findById(gearOrderId).session(session);
+    if (!order) throw new AppError(404, "Gear order not found");
+
+    if (order.paymentStatus === "received") {
+      throw new AppError(400, "Payment already received for this order");
+    }
+
+    // 2️⃣ Update Gear Order payment status
+    order.paymentStatus = "received";
+    order.statusTimestamps.paymentCompletedAt = new Date();
+    await order.save({ session });
+
+    // 3️⃣ Update Payment document for the seller
+    const paymentUpdateResult = await Payment.updateOne(
+      {
+        paymentType: "gear",
+        gearOrderIds: order._id,
+        "serviceProviders.serviceProviderId": order.sellerId,
+        "serviceProviders.serviceProviderPaid": false,
+      },
+      {
+        $set: {
+          "serviceProviders.$.serviceProviderPaid": true,
+          "serviceProviders.$.serviceProviderPaidAt": new Date(),
+        },
+      },
+      { session }
+    );
+
+    if (paymentUpdateResult.matchedCount === 0) {
+      throw new AppError(404, "Payment record for this gear order and service provider not found");
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      message: "Payment completed successfully",
+      gearOrder: order,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
 
 const requestGearMarketplaceDelivery = async (
   orderId: string,
@@ -443,5 +498,6 @@ export const GearOrderService = {
   requestGearMarketplaceDelivery,
   declineDeliveryRequestByClient,
   acceptDeliveryRequestByClient,
-  cancelGearOrderBySeller
+  cancelGearOrderBySeller,
+  completePaymentGearOrderById
 };

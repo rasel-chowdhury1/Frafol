@@ -7,5 +7,5 @@ export interface IMessage {
   seen: boolean;
   sender: Schema.Types.ObjectId; // Reference to the sender (User)
   chat: Schema.Types.ObjectId; // Reference to the chat (Chat)
-  approvalStatus: 'pending' | 'approved';
+  approvalStatus?: "pending" | "approved" | "rejected";
 }

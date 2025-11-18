@@ -273,6 +273,26 @@ const getCommentsById = async (communityId: string, userId: string) => {
 };
 
 
+const getPendingCommunities = async (query: Record<string, any>) => {
+  const communityQuery = new QueryBuilder<ICommunity>(
+    Community.find({ approvalStatus: "pending", isDeleted: false }).populate(
+      "authorId",
+      "name email profileImage role"
+    ),
+    query
+  )
+    .search(["title", "text"]) // allows search by title or text
+    .filter() // allows dynamic filtering
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await communityQuery.modelQuery;
+  const meta = await communityQuery.countTotal();
+
+  return { meta, data: result };
+};
+
 // getCommentsById
 
 const updateCommunity = async (
@@ -333,6 +353,8 @@ const updateCommunity = async (
   return updatedDoc;
 };
 
+
+
 const approvePost = async (id: string) => {
   return await Community.findByIdAndUpdate(
     id,
@@ -382,6 +404,7 @@ const deleteCommunity = async (
 export const CommunityService = {
   createCommunity,
   getAllCommunities,
+  getPendingCommunities,
   getCommunityById,
   getCommentsById,
   getMyPosts,

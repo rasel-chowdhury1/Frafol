@@ -20,6 +20,9 @@ import { CommunityEngagementRoutes } from "../modules/communityEngagementStats/c
 import { ChatRoutes } from "../modules/chat/chat.route";
 import { messageRoutes } from "../modules/message/message.route";
 import { CouponRoutes } from "../modules/coupon/coupon.route";
+import { InsuranceRoutes } from "../modules/insurance/insurance.route";
+import { SubscribeRoutes } from "../modules/subscribe/subscribe.routes";
+import { ContactRoutes } from "../modules/contactUs/contactUs.route";
 
 const router = Router();
 
@@ -109,6 +112,19 @@ const moduleRoutes = [
    path: "/coupon",
    route: CouponRoutes
    },
+   {
+      path: "/insurange",
+      route: InsuranceRoutes
+   },
+   {
+      path: "/subscribe",
+      route: SubscribeRoutes
+   },
+
+   {
+      path: "/contact-us",
+      route: ContactRoutes
+   }
 
 ];
 

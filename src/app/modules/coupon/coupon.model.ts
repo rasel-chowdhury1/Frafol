@@ -7,7 +7,12 @@ const CouponSchema = new Schema<ICoupon>(
         type: String, 
         required: true,
         unique: true,
-        trim: true},
+        trim: true
+    },
+    minimumSpend: {
+        type: Number,
+        required: true
+    },
     amount: { 
         type: Number, 
         required: true 

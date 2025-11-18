@@ -25,6 +25,14 @@ userRoutes
   )
 
 
+  .patch(
+    "/switch-role", 
+    auth(
+      USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN
+    ),
+    userController.switchRole
+  )
+
   .get(
     '/my-profile',
     auth(
@@ -80,6 +88,12 @@ userRoutes
     // auth("user", "admin"),
     userController.getUserGalleryById
   )
+
+  .get(
+  "/overview",
+  auth(USER_ROLE.USER),
+  userController.getUserOverview
+)
 
   .get(
     '/specific-professional-overview',

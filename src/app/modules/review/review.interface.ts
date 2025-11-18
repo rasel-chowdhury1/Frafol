@@ -3,8 +3,10 @@ import { Types } from "mongoose";
 export interface IReview {
   userId: Types.ObjectId;
   serviceProviderId: Types.ObjectId;
+  eventOrderId?: Types.ObjectId;
   rating: number;
   message: string;
+  status: string;
   isDeleted: boolean;
   createdAt?: Date;
   updatedAt?: Date;

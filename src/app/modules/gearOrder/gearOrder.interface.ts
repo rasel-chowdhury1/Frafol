@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 export interface IStatusTimestamps {
   createdAt?: Date;
+  paymentCompletedAt?: Date;
   deliveryRequestAt?: Date;
   deliveryRequestDeclineAt?: Date;
   deliveredAt?: Date;

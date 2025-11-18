@@ -44,7 +44,7 @@ const createUserToken = async (payload: TUserCreate) => {
   
   console.log("before create user => >> ",{payload});
   
-  const { name,sureName,companyName, email, password, role,photographerSpecializations,videographerSpecializations, about, hourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub,ico,dic,ic_dph} =
+  const { name,sureName,companyName, email, password, role,photographerSpecializations,videographerSpecializations, about, zipCode, minHourlyRate, maxHourlyRate,address,town,country,acceptTerms,ramcuvaAgree,newsLetterSub,ico,dic,ic_dph} =
     payload;
   let adminVerified = "pending"
   if (role === "user" || role === "company"){
@@ -94,6 +94,7 @@ const createUserToken = async (payload: TUserCreate) => {
     photographerSpecializations, 
     videographerSpecializations,
     about, 
+    zipCode,
     minHourlyRate,
     maxHourlyRate,
     address,
@@ -161,6 +162,7 @@ const otpVerifyAndCreateUser = async ({
               photographerSpecializations,
               videographerSpecializations,
               about, 
+              zipCode,
               minHourlyRate,
               maxHourlyRate,
               address,
@@ -192,6 +194,7 @@ const otpVerifyAndCreateUser = async ({
 
             // Check if user exists
             const isExist = await User.isUserExist(email as string);
+
             if (isExist) {
               throw new AppError(
                 httpStatus.FORBIDDEN,
@@ -202,6 +205,7 @@ const otpVerifyAndCreateUser = async ({
             // Create user + profile atomically with transaction
             const session = await mongoose.startSession();
             session.startTransaction();
+
             try {
               const user = await User.create(
                 [
@@ -212,9 +216,12 @@ const otpVerifyAndCreateUser = async ({
                     email,
                     password,
                     role,
+                    mainRole: role,
+                    switchRole: role,
                     address,
                     town,
                     country,
+                    zipCode,
                     photographerSpecializations,
                     videographerSpecializations,
                     minHourlyRate,
@@ -271,6 +278,7 @@ const otpVerifyAndCreateUser = async ({
                 companyName: user[0].companyName || "",
                 email: user[0].email,
                 role: user[0].role,
+                mainRole: user[0].mainRole
               };
 
               return createToken({
@@ -285,6 +293,74 @@ const otpVerifyAndCreateUser = async ({
             }
 };
 
+
+const switchUserRole = async (userId: string, newRole: string) => {
+  // 1️⃣ Validate user existence
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  // 2️⃣ Check if newRole is valid
+  const allowedRoles = [
+    "user",
+    "photographer",
+    "videographer",
+    "both",
+    "company",
+  ];
+
+  if (!allowedRoles.includes(newRole)) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid role selected");
+  }
+
+  // 3️⃣ Check if user already has that role
+  if (user.switchRole === newRole) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User already has this role");
+  }
+
+  // 4️⃣ Update switchRole
+  user.switchRole = newRole;
+  await user.save();
+
+  // 5️⃣ Generate new JWT tokens
+  const jwtPayload = {
+    userId: user._id.toString(),
+    name: user.name || "",
+    sureName: user.sureName || "",
+    companyName: user.companyName || "",
+    email: user.email,
+    role: user.role,
+    switchRole: user.switchRole,
+  };
+
+  const accessToken = createToken({
+    payload: jwtPayload,
+    access_secret: config.jwt_access_secret as string,
+    expity_time: config.jwt_access_expires_in as string,
+  });
+
+  const refreshToken = createToken({
+    payload: jwtPayload,
+    access_secret: config.jwt_refresh_secret as string,
+    expity_time: config.jwt_refresh_expires_in as string,
+  });
+
+  return {
+    user: {
+      _id: user._id,
+      name: user.name,
+      sureName: user.sureName,
+      companyName: user.companyName,
+      role: user.role,
+      switchRole: user.switchRole,
+      email: user.email,
+      profileImage: user.profileImage,
+    },
+    accessToken,
+    refreshToken,
+  };
+};
 
 const updateUser = async (userId: string, payload: Partial<TUser>) => {
   const {
@@ -810,7 +886,6 @@ const getUserGalleryById = async (id: string) => {
 const getUserDetailsById = async (userId: string) => {
   // ✅ Fetch user with selected fields and populated profile
   const user = await User.findOne({ _id: userId, isDeleted: false, isBlocked: false })
-    .select("name sureName profileImage role minHourlyRate maxHourlyRate address totalReview averageRating gallery profileId")
     .populate({
       path: "profileId",
       select: "about",
@@ -917,6 +992,128 @@ const blockedUser = async (id: string) => {
 };
 
 
+
+const getOverviewOfSpecificUser = async (userId: string) => {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new AppError(400, "Invalid userId");
+  }
+
+  const userObjectId = new Types.ObjectId(userId);
+
+  // 1️⃣ Fetch user info in parallel with other aggregations
+  const [userInfo, eventStats, gearStats, paymentStats, latestNotifications] = await Promise.all([
+    User.findById(userObjectId).select("name "),
+
+    // Event Orders aggregation
+    EventOrder.aggregate([
+      { $match: { userId: userObjectId, isDeleted: false } },
+      {
+        $group: {
+          _id: null,
+          totalActive: {
+            $sum: {
+              $cond: [{ $in: ["$status", ["inProgress", "deliveryRequest", "cancelRequest"]]}, 1, 0]
+            }
+          },
+          totalPendingConfirmation: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"]}, 1, 0] }
+          },
+          totalCompleted: {
+            $sum: { $cond: [{ $eq: ["$status", "delivered"]}, 1, 0] }
+          },
+          totalPaymentPending: {
+            $sum: { $cond: [{ $eq: ["$status", "accepted"]}, 1, 0] }
+          },
+          totalDeliveryConfirmation: {
+            $sum: { $cond: [{ $eq: ["$status", "deliveryRequest"]}, 1, 0] }
+          },
+          totalCancelRequestConfirmation: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelRequest"]}, 1, 0] }
+          },
+        }
+      }
+    ]),
+
+    // Gear Orders aggregation
+    GearOrder.aggregate([
+      { $match: { clientId: userObjectId, isDeleted: false } },
+      {
+        $group: {
+          _id: null,
+          totalActive: {
+            $sum: {
+              $cond: [{ $in: ["$orderStatus", ["inProgress", "deliveryRequest", "cancelRequest"]]}, 1, 0]
+            }
+          },
+          totalPendingConfirmation: {
+            $sum: { $cond: [{ $eq: ["$orderStatus", "pending"]}, 1, 0] }
+          },
+          totalCompleted: {
+            $sum: { $cond: [{ $eq: ["$orderStatus", "delivered"]}, 1, 0] }
+          },
+          totalPaymentPending: {
+            $sum: { $cond: [{ $eq: ["$orderStatus", "accepted"]}, 1, 0] }
+          },
+          totalDeliveryConfirmation: {
+            $sum: { $cond: [{ $eq: ["$orderStatus", "deliveryRequest"]}, 1, 0] }
+          },
+          totalCancelRequestConfirmation: {
+            $sum: { $cond: [{ $eq: ["$orderStatus", "cancelRequest"]}, 1, 0] }
+          },
+        }
+      }
+    ]),
+
+    // Payment stats
+    Payment.aggregate([
+      { $match: { userId: userObjectId, paymentStatus: "completed" } },
+      { $group: { _id: null, totalSpent: { $sum: "$totalAmount" } } }
+    ]),
+
+    // Latest notifications
+    Notification.find({ receiverId: userObjectId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("userId", "name profileImage")
+      .populate("receiverId", "name profileImage")
+  ]);
+
+  const event = eventStats[0] || {
+    totalActive: 0,
+    totalPendingConfirmation: 0,
+    totalCompleted: 0,
+    totalPaymentPending: 0,
+    totalDeliveryConfirmation: 0,
+    totalCancelRequestConfirmation: 0
+  };
+
+  const gear = gearStats[0] || {
+    totalActive: 0,
+    totalPendingConfirmation: 0,
+    totalCompleted: 0,
+    totalPaymentPending: 0,
+    totalDeliveryConfirmation: 0,
+    totalCancelRequestConfirmation: 0
+  };
+
+  const totalSpent = paymentStats[0]?.totalSpent || 0;
+
+  return {
+    user: userInfo?.name || "",
+    totalActiveOrders: event.totalActive + gear.totalActive,
+    totalPendingConfirmation: event.totalPendingConfirmation + gear.totalPendingConfirmation,
+    totalCompletedOrders: event.totalCompleted + gear.totalCompleted,
+    totalSpent,
+    actionRequired: {
+      totalPaymentPending: event.totalPaymentPending + gear.totalPaymentPending,
+      totalDeliveryConfirmation: event.totalDeliveryConfirmation + gear.totalDeliveryConfirmation,
+      totalCancelRequestConfirmation: event.totalCancelRequestConfirmation + gear.totalCancelRequestConfirmation
+    },
+    latestNotifications
+  };
+};
+
+
   const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
     if (!Types.ObjectId.isValid(serviceProviderId)) {
       throw new Error("Invalid serviceProviderId");
@@ -926,11 +1123,14 @@ const blockedUser = async (id: string) => {
 
     // Run all in parallel for efficiency
     const [
+      userInfo,
       totalPendingGearOrders,
       totalUpcomingEvents,
       totalOverallEarningsAgg,
       totalReviewsReceived,
     ] = await Promise.all([
+      // ✅ Fetch service provider user info
+    User.findById(providerObjectId).select("name"),
       // 🧾 Pending gear orders
       GearOrder.countDocuments({
         sellerId: providerObjectId,
@@ -1001,6 +1201,7 @@ const blockedUser = async (id: string) => {
         : 0;
 
     return {
+      user: userInfo?.name || "",
       totalPendingGearOrders,
       totalUpcomingEvents,
       totalOverallEarnings,
@@ -1018,11 +1219,15 @@ const getMyEarnings = async (
     throw new Error("Invalid serviceProviderId");
   }
 
+  
+
   const filter = {
     serviceProviderId: new Types.ObjectId(serviceProviderId),
     paymentStatus: "completed",
     isDeleted: false,
   };
+
+
 
   
 
@@ -1222,7 +1427,7 @@ const getAdminDashboardStats = async (adminId: string) => {
     totalConfirmedDeliveries, // combined deliveries
   };
 
-  // ✅ Fetch latest 15 notifications for this admin only
+  // ✅ Fetch latest 10 notifications for this admin only
   const latestNotifications = await Notification.find({ receiverId: adminObjectId })
     .sort({ createdAt: -1 })
     .limit(10)
@@ -1379,6 +1584,7 @@ const getDeliveryOrders = async (
 
 export const userService = {
   createUserToken,
+  switchUserRole,
   otpVerifyAndCreateUser,
   getMyProfile,
   getAdminProfile,
@@ -1401,6 +1607,7 @@ export const userService = {
   getProfessionalPhotographerAndVideographer,
   getProfessionalUsersByCategory,
   getOverviewOfSpecificProfessional,
+  getOverviewOfSpecificUser,
   getMonthlyEarningsOfSpecificProfessional,
   getMonthlyCommission,
   getMyEarnings,

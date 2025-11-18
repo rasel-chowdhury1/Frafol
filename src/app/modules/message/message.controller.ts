@@ -168,6 +168,31 @@ const getAllPendingMessages = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
+
+const approveMessage = catchAsync(async (req: Request, res: Response) => {
+  const { messageId } = req.params;
+  const result = await messageService.approveMessage(messageId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Message approved successfully",
+    data: result,
+  });
+});
+
+const rejectMessage = catchAsync(async (req: Request, res: Response) => {
+  const { messageId } = req.params;
+  const result = await messageService.rejectMessage(messageId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Message rejected successfully",
+    data: result,
+  });
+});
+
 export const messageController = {
   sendMessage,
   getMessagesForChat,
@@ -175,5 +200,7 @@ export const messageController = {
   seenMessage,
   deleteMessage,
   fileUpload,
-  getAllPendingMessages
+  getAllPendingMessages,
+  approveMessage,
+  rejectMessage
 };

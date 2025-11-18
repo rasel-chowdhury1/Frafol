@@ -12,9 +12,33 @@ router
         ReviewController.createReview
     )
 
+    .put(
+        "/complete-pending/:reviewId",
+        auth(USER_ROLE.USER, USER_ROLE.ADMIN, USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH), 
+        ReviewController.completePendingReview
+    )
+
     .get(
         "/", 
         ReviewController.getAllReviews
+    )
+
+    .get(
+        "/my",
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        ReviewController.getMyReviews
+    )
+
+    .get(
+        "/my/stats",
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        ReviewController.myReviewStats
+    )
+
+    .get(
+        "/my/pending",
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        ReviewController.getMyPendingReviews
     )
 
     .get(

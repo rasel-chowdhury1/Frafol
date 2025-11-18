@@ -13,6 +13,12 @@ router
     )
     
 
+    .patch(
+        "/complete-payment/:gearOrderId",
+        auth(USER_ROLE.ADMIN),
+        GearOrderController.completePaymentGearOrder
+        )
+
         // Seller requests delivery
         .patch(
         "/request-delivery/:orderId",

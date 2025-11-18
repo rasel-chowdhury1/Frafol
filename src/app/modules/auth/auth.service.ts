@@ -31,6 +31,7 @@ const login = async (payload: TLogin) => {
     sureName: string;
     companyName: string;
     role: string;
+    switchRole: string;
     email: string;
   } = {
     userId: user?._id?.toString() as string,
@@ -39,6 +40,7 @@ const login = async (payload: TLogin) => {
     companyName: user.companyName || "",
     email: user.email,
     role: user?.role,
+    switchRole: user.switchRole,
   };
 
 

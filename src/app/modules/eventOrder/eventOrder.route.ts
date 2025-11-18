@@ -85,6 +85,12 @@ router.post(
             auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER), 
             EventOrderController.declineOrderRequest
             )
+    
+    .patch(
+        "/complete-payment/:eventOrderId",
+        auth( USER_ROLE.ADMIN),
+        EventOrderController.completePaymentEventOrder
+        )
 
     .patch(
         "/:id/status", 
@@ -149,6 +155,12 @@ router.post(
         "/professional/stats",
         auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
         EventOrderController.getTotalStatsOfSpeceficProfessional
+    )
+
+    .get(
+        "/calendar",
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        EventOrderController.getServiceProviderCalendar
     )
 
     .get(

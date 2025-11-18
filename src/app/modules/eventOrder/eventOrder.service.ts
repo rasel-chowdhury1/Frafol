@@ -5,6 +5,8 @@ import { IEventOrder } from "./eventOrder.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
 import { sentNotificationForOrderCancelled } from "../../../socketIo";
+import { Review } from "../review/review.model";
+import { Payment } from "../payment/payment.model";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -23,6 +25,64 @@ const createEventOrder = async (payload: IEventOrder) => {
   // });
 
   return result;
+};
+
+const completePaymentEventOrder = async (eventOrderId: string) => {
+  if (!eventOrderId) {
+    throw new AppError(400, "Event order ID is required");
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1️⃣ Find the event order within the session
+    const eventOrder = await EventOrder.findById(eventOrderId).session(session);
+
+    if (!eventOrder) {
+      throw new AppError(404, "Event order not found");
+    }
+
+    if (eventOrder.paymentStatus === "Paid") {
+      throw new AppError(400, "Payment for this order is already completed");
+    }
+
+    // 2️⃣ Update EventOrder payment status
+    eventOrder.paymentStatus = "Paid";
+    eventOrder.statusTimestamps.paymentCompletedAt = new Date();
+
+    await eventOrder.save({ session });
+
+    // 3️⃣ Update related Payment(s)
+    const paymentUpdateResult = await Payment.updateOne(
+      { eventOrderId: eventOrder._id, paymentStatus: "completed" },
+      {
+        $set: {
+          serviceProviderPaid: true,
+          serviceProviderPaidAt: new Date(),
+        },
+      },
+      { session }
+    );
+
+    // 4️⃣ Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      message: "Payment completed successfully and service provider marked as paid",
+      eventOrder,
+      updatedPayments: paymentUpdateResult.modifiedCount,
+    };
+  } catch (error) {
+    // Abort transaction if any error occurs
+    await session.abortTransaction();
+    session.endSession();
+
+    throw new AppError( 500,
+      error?.message || "Failed to complete payment for event order"
+    );
+  }
 };
 
 
@@ -647,7 +707,35 @@ const acceptDeliveryRequest = async (
   // 📝 Update status
   order.status = "delivered";
   order.statusTimestamps.deliveredAt = new Date();
+
+  
   await order.save();
+// ================================
+// ⭐ CREATE A PENDING REVIEW ENTRY
+// ================================
+try {
+  const existingReview = await Review.findOne({
+    userId: order.userId,
+    serviceProviderId: order.serviceProviderId,
+    eventOrderId: order._id,
+  });
+
+  if (!existingReview) {
+    await Review.create({
+      userId: order.userId,
+      serviceProviderId: order.serviceProviderId,
+      eventOrderId: order._id,
+      rating: 1,                 // no rating yet
+      message: "",               // user will update later
+      status: "pending",         // ⬅ REVIEW IS PENDING
+      isDeleted: false,
+    });
+  }
+} catch (error: any) {
+  console.error("Failed to create pending review:", error);
+  console.error("Failed to create pending review:", error.message);
+  throw new AppError(500, "Unable to create pending review. Please try again later.");
+}
 
   // 🔹 Get package title (if available)
   const packageName =
@@ -985,6 +1073,81 @@ const getPendingEventOrders = async ( userId: string,query: Record<string, unkno
 };
 
 
+const getServiceProviderCalendar = async (
+  serviceProviderId: string,
+  year: number,
+  month: number
+) => {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+
+  const events = await EventOrder.aggregate([
+    {
+      $match: {
+        serviceProviderId: new Types.ObjectId(serviceProviderId),
+        isDeleted: false,
+        date: { $gte: startDate, $lte: endDate },
+      },
+    },
+    {
+      $lookup: {
+        from: "packages",
+        localField: "packageId",
+        foreignField: "_id",
+        as: "package",
+      },
+    },
+    { $unwind: { path: "$package", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        eventName: {
+          $cond: [
+            { $eq: ["$orderType", "direct"] },
+            "$package.title",
+            "Custom Order",
+          ],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        eventName: 1,
+        eventDate: "$date",
+        status: 1,
+        serviceType: 1,
+        time: 1
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: "%Y-%m-%d", date: "$eventDate" },
+        },
+        events: {
+          $push: {
+            eventName: "$eventName",
+            eventDate: "$eventDate",
+            status: "$status",
+            serviceType: "$serviceType",
+            eventTime: "$time"
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        date: "$_id",
+        events: 1,
+        _id: 0,
+      },
+    },
+    { $sort: { date: 1 } },
+  ]);
+
+  return events;
+};
+
 export const EventOrderService = {
   createEventOrder,
   acceptDirectOrder,
@@ -1008,6 +1171,8 @@ export const EventOrderService = {
   getTotalStatsOfSpeceficProfessional,
   cancelRequest,
   declinedCancelRequest,
+  completePaymentEventOrder,
+  getServiceProviderCalendar
 };
 
 

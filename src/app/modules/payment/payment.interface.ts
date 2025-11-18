@@ -9,6 +9,8 @@ export interface IServiceProviderBreakdown {
   amount: number;
   commission: number;
   netAmount: number;
+  serviceProviderPaid?: boolean;
+  serviceProviderPaidAt?: Date;
 }
 
 export interface IPayment {
@@ -27,6 +29,8 @@ export interface IPayment {
   eventOrderId?: Types.ObjectId;
   gearOrderIds?: Types.ObjectId[];
   workshopId?: Types.ObjectId;
+  serviceProviderPaid?: boolean;
+  serviceProviderPaidAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }

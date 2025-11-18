@@ -42,6 +42,16 @@ messageRoutes
     messageController.seenMessage,
   )
 
+.patch(
+    '/approve/:messageId',
+    messageController.approveMessage,
+  )
+
+  .patch(
+    '/reject/:messageId',
+    messageController.rejectMessage,
+  )
+
   .delete(
     '/delete/:msgId', 
     auth('user', 'admin'),

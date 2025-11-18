@@ -150,6 +150,20 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+const completePaymentEventOrder = catchAsync(async (req, res) => {
+  const { eventOrderId } = req.params;
+
+  const result = await EventOrderService.completePaymentEventOrder(eventOrderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Event order payment completed successfully",
+    data: result,
+  });
+});
+
+
 // 📜 Get all event orders (supports pagination, filtering, search)
 const getAllEventOrders = catchAsync(async (req: Request, res: Response) => {
   const result = await EventOrderService.getEventOrders(req.query);
@@ -527,6 +541,39 @@ const getTotalStatsOfSpeceficProfessional = catchAsync(async (req: Request, res:
   });
 });
 
+// GET /api/v1/event-order/calendar
+const getServiceProviderCalendar = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user;
+    const yearQuery = req.query.year as string | undefined;
+    const monthQuery = req.query.month as string | undefined;
+
+    if (!userId) {
+      throw new AppError(400, "Service provider ID is required");
+    }
+
+    const now = new Date();
+
+    // Default to current year/month if not provided
+    const year = yearQuery ? parseInt(yearQuery, 10) : now.getFullYear();
+    const month = monthQuery ? parseInt(monthQuery, 10) : now.getMonth() + 1; // JS months are 0-indexed
+
+    const calendar = await EventOrderService.getServiceProviderCalendar(
+      userId,
+      year,
+      month
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Service provider calendar fetched successfully",
+      data: calendar,
+    });
+  }
+);
+
+
 export const EventOrderController = {
   createEventOrder,
   getAllEventOrders,
@@ -550,5 +597,7 @@ export const EventOrderController = {
   getTotalStatsOfSpeceficProfessional,
   cancelRequest,
   declineCancelRequest,
-  approveCancelOrder  
+  approveCancelOrder,
+  completePaymentEventOrder,
+  getServiceProviderCalendar
 };
