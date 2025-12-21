@@ -26,7 +26,19 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            export PATH=$PATH:/usr/bin:/usr/local/bin:/root/.local/share/fnm/node-versions/v24.12.0/installation/bin
+            # export PATH=$PATH:/usr/bin:/usr/local/bin:/root/.local/share/fnm/node-versions/v24.12.0/installation/bin
+
+            # Initialize fnm Node environment
+            export FNM_DIR="/root/.local/share/fnm"
+            export PATH="$FNM_DIR:$PATH"
+            eval "$(fnm env)"
+
+            # Verify Node, npm, pm2
+            node -v
+            npm -v
+            pm2 -v
+
+            
 
             cd ~/applications/Frafol || exit 1
 
