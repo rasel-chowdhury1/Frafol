@@ -47,10 +47,10 @@ jobs:
 
             npm install
 
-            if pm2 describe Backend > /dev/null 2>&1; then
-                pm2 restart Backend
+            if pm2 describe Frafol-backend > /dev/null 2>&1; then
+                pm2 restart Frafol-backend
             else
-                pm2 start npm --name "Backend" -- run dev
+                pm2 start npm --name "Frafol-backend" -- run dev
             fi
 
             pm2 save
