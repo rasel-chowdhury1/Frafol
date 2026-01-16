@@ -9,7 +9,7 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import { otpServices } from '../otp/otp.service';
 import { generateOptAndExpireTime } from '../otp/otp.utils';
 import { TPurposeType } from '../otp/otp.interface';
-import { otpSendEmail } from '../../utils/eamilNotifiacation';
+import { otpSendEmail, profileVerifiedEmail } from '../../utils/eamilNotifiacation';
 import { createToken, verifyToken } from '../../utils/tokenManage';
 import { IProfile } from '../profile/profile.interface';
 import Profile from '../profile/profile.model';
@@ -381,12 +381,12 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
   if (!user) throw new AppError(httpStatus.NOT_FOUND, "User not found");
 
   // 2️⃣ Handle profile fields
-  if (about || bankName || accountNumber || routingNumber) {
+  if (about || bankName || accountNumber) {
     let profile;
     if (user.profileId) {
       profile = await Profile.findByIdAndUpdate(
         user.profileId,
-        { about, bankName, accountNumber, routingNumber },
+        { about, bankName, accountNumber },
         { new: true }
       );
     } else {
@@ -418,7 +418,45 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     throw new AppError(httpStatus.BAD_REQUEST, "User updating failed");
   }
 
-  return updatedUser;
+    const jwtPayload: {
+      userId: string;
+      name: string;
+      sureName: string;
+      companyName: string;
+      email: string;
+      profileImage: string;
+      role: string;
+      switchRole: string;
+    } = {
+      userId: updatedUser?._id?.toString() as string,
+      name: updatedUser.name || "",
+      sureName: updatedUser.sureName || "",
+      companyName: updatedUser.companyName || "",
+      email: updatedUser.email,
+      profileImage: updatedUser.profileImage || "",
+      role: updatedUser?.role,
+      switchRole: updatedUser.switchRole,
+    };
+  
+  
+    const accessToken = createToken({
+      payload: jwtPayload,
+      access_secret: config.jwt_access_secret as string,
+      expity_time: config.jwt_access_expires_in as string,
+    });
+  
+    const refreshToken = createToken({
+      payload: jwtPayload,
+      access_secret: config.jwt_refresh_secret as string,
+      expity_time: config.jwt_refresh_expires_in as string,
+    });
+  
+    return {
+      user: updatedUser,
+      accessToken,
+      refreshToken,
+    };
+
 };
 
 const updateGallery = async (
@@ -471,17 +509,35 @@ const updateGallery = async (
   return updatedBusiness;
 };
 
-const verifyProfessionalUserById = async (userId: string, status?: string) => {
 
+const verifyProfessionalUserById = async (
+  userId: string,
+  status?: string
+) => {
+  const updatedStatus = status ? status : 'verified';
 
   const user = await User.findByIdAndUpdate(
     userId,
-    { adminVerified: status ? status : "verified" },
-    { new: true, runValidators: true } // ensure validation runs
-  ).select('-password'); // exclude password
+    { adminVerified: updatedStatus },
+    { new: true, runValidators: true }
+  ).select('-password');
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User verification update failed');
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'User verification update failed'
+    );
+  }
+
+  // 🔥 Fire-and-forget email (non-blocking)
+  if (updatedStatus === 'verified') {
+    profileVerifiedEmail({
+      sentTo: user.email,
+      subject: 'Good News! Your Frafol Account Is Now Verified',
+      name: user.name || 'User',
+    }).catch((error) => {
+      console.error('Profile verified email failed:', error);
+    });
   }
 
   return user;
@@ -759,6 +815,8 @@ const getAllUserQuery = async (
   } else if (type === 'user') {
     filter.role = { $in: [USER_ROLE.USER, USER_ROLE.COMPANY] };
   }
+
+  filter.adminVerified = 'verified';
   // if type is undefined or invalid, no role filter is applied (all users included)
 
   // Build query with QueryBuilder
@@ -768,6 +826,12 @@ const getAllUserQuery = async (
     .sort()
     .paginate()
     .fields();
+
+    // 🔹 populate profile and get only "about"
+  userQuery.modelQuery = userQuery.modelQuery.populate({
+    path: 'profileId',
+    select: 'about',
+  });
 
   const result = await userQuery.modelQuery;
   const meta = await userQuery.countTotal();
@@ -816,6 +880,12 @@ const getPendingPhotographersVideographersBoth = async (
     .sort()
     .paginate()
     .fields();
+
+    // 🔹 populate profile and get only "about"
+  userQuery.modelQuery = userQuery.modelQuery.populate({
+    path: 'profileId',
+    select: 'about',
+  });
 
   const result = await userQuery.modelQuery;
   const meta = await userQuery.countTotal();

@@ -39,6 +39,7 @@ export interface IStatusHistory {
 
 export interface IEventOrder extends Document {
   orderId: string;
+  title?: string;
   userId: Types.ObjectId;
   serviceProviderId: Types.ObjectId;
   date: Date;

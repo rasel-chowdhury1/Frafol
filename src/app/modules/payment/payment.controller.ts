@@ -27,7 +27,9 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
 
   switch (paymentType) {
     case "event": {
+
       const { eventOrderId } = req.body;
+      
       if (!eventOrderId) throw new AppError(400, "eventOrderId is required for event payment");
 
       const order = await EventOrder.findById(eventOrderId);

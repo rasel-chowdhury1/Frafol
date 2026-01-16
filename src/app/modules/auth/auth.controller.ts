@@ -26,7 +26,9 @@ const login = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
     statusCode: httpStatus.UNAUTHORIZED,
     success: false,
-    message: 'Your account is not yet verified. Please allow a moment for the verification process to complete',
+    message: `Your registration is complete, but your profile is not yet verified. 
+Please wait for the verification process to finish before logging in. 
+You will receive a confirmation email once your profile is approved.`,
     data: null,
   });
   }

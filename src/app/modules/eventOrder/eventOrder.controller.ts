@@ -18,6 +18,8 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(400, "orderType is required (direct/custom)");
   }
 
+
+  console.log("body data =>> ", req.body);
   // ==============================
   // 🎯 DIRECT ORDER LOGIC
   // ==============================
@@ -79,11 +81,11 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
     }
 
     // validate serviceType enum
-    const validServiceTypes = ["photography", "videography"];
+    const validServiceTypes = ["photography", "videography", "both"];
     if (!validServiceTypes.includes(serviceType)) {
       throw new AppError(
         400,
-        "Invalid serviceType — must be photography or videography"
+        "Invalid serviceType — must be photography, videography or both"
       );
     }
 
@@ -96,10 +98,10 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
         );
       }
     } else {
-      if (!req.body.name || !req.body.sureName) {
+      if (!req.body.name ) {
         throw new AppError(
           400,
-          "name and sureName are required when not registered as company"
+          "name are required when not registered as company"
         );
       }
     }
@@ -480,6 +482,22 @@ const approveCancelOrder = catchAsync(async (req, res) => {
   });
 });
 
+const cancelEventOrderByAdmin = catchAsync(async (req, res) => {
+  const { orderId } = req.params; // orderId
+  const { reason } = req.body;
+  const userId = req.user.userId;
+
+  const result = await EventOrderService.cancelEventOrderByAdmin(orderId, userId, reason);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Order cancelled successfully",
+    data: result,
+  })
+
+})
+
 // const cancelOrder = catchAsync(async (req: Request, res: Response) => {
 //   const { orderId } = req.params;
 //   const { reason } = req.body;
@@ -541,6 +559,20 @@ const getTotalStatsOfSpeceficProfessional = catchAsync(async (req: Request, res:
   });
 });
 
+const getTotalStatsOfSpeceficUser = catchAsync(async (req: Request, res: Response) => {
+  const { userId: serviceProviderId } = req.user;
+
+  const result = await EventOrderService.getTotalStatsOfSpecificUser(serviceProviderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User statistics fetched successfully",
+    data: result,
+  });
+
+});
+
 // GET /api/v1/event-order/calendar
 const getServiceProviderCalendar = catchAsync(
   async (req: Request, res: Response) => {
@@ -595,7 +627,9 @@ export const EventOrderController = {
   getUpcomingEventsOfSpecificProfessional,
   getPendingEventOrders,
   getTotalStatsOfSpeceficProfessional,
+  getTotalStatsOfSpeceficUser,
   cancelRequest,
+  cancelEventOrderByAdmin,
   declineCancelRequest,
   approveCancelOrder,
   completePaymentEventOrder,

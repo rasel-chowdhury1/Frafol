@@ -23,6 +23,7 @@ export interface IGearOrder {
   mobileNumber: string;
   email: string;
   loginAsCompany: boolean;
+  companyName?: string;
    ico?: string;
   dic?: string;
   ic_dph?: string;
@@ -50,6 +51,7 @@ export interface ICreateGearOrderPayload {
   mobileNumber: string;
   email: string;
   loginAsCompany?: boolean;
+  companyName?: string;
   ico?: string;
   dic?: string;
   ic_dph?: string;

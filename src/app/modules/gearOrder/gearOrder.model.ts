@@ -75,6 +75,10 @@ const gearOrderSchema = new Schema<IGearOrder>(
       type: Boolean,
       default: false
     },
+    companyName: {
+        type: String,
+        default: ""
+    },
     ico: {
         type: String,
         default: ""

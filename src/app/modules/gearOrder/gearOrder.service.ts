@@ -25,6 +25,7 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
     mobileNumber,
     email,
     loginAsCompany = false,
+    companyName = "",
     ico = "",
     dic = "",
     ic_dph = "",
@@ -82,6 +83,7 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
       mobileNumber,
       email,
       loginAsCompany,
+      companyName,
       ico,
       dic,
       ic_dph,
@@ -334,7 +336,7 @@ const cancelGearOrderBySeller = async (
 const getAllGearOrders = async (query: Record<string, unknown>) => {
 
     // 🎯 Base query (non-deleted only)
-  const baseQuery: any = { isDeleted: false };
+  const baseQuery: any = { isDeleted: false, status: { $ne: "delivered" } };
 
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(

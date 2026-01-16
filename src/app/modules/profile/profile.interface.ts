@@ -8,7 +8,6 @@ export interface IProfile {
     ramcuvaAgree?: boolean
     bankName?: string,
     accountNumber?: string,
-    routingNumber?: string
     createdAt?: Date;
     updatedAt?: Date;
   }

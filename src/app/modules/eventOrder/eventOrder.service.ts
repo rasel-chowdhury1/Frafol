@@ -87,7 +87,7 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
 
 
 const getEventOrders = async (query: Record<string, unknown>) => {
-  const eventOrderQuery = new QueryBuilder(EventOrder.find({ isDeleted: false }), query)
+  const eventOrderQuery = new QueryBuilder(EventOrder.find({ isDeleted: false, status: { $ne: "delivered" } }), query)
     .filter() // apply filters (userId, serviceProviderId, orderType, etc.)
     .search(["orderId", "location", "town", "country"]) // allow searching by these fields
     .sort()
@@ -97,6 +97,7 @@ const getEventOrders = async (query: Record<string, unknown>) => {
   const result = await eventOrderQuery.modelQuery
     .populate("userId", "name sureName profileImage role switchRole")
     .populate("serviceProviderId", "name sureName profileImage role switchRole")
+    .populate("packageId", "title description price vatAmount mainPrice")
     .exec();
 
   const meta = await eventOrderQuery.countTotal();
@@ -214,7 +215,7 @@ const getMyEventOrders = async (
       .populate("serviceProviderId", "name profileImage email phone companyName ico dic ic_dph address")
       .populate({
         path: "packageId",
-        select: "title price",
+        select: "title price description",
         // match: { $expr: { $eq: ["$orderType", "direct"] } },
       }),
     queryParams
@@ -563,10 +564,10 @@ const acceptCustomOrder = async (
   const { price, priceWithServiceFee, totalPrice, vatAmount, deliveryDate, description } = payload;
 
   // Validation for required pricing fields
-  if (!price || !vatAmount || !totalPrice  || !deliveryDate) {
+  if (!price || !totalPrice  || !deliveryDate) {
     throw new AppError(
       400,
-      "price, vatAmount, totalPrice, and deliveryDate are required"
+      "price,  totalPrice, and deliveryDate are required"
     );
   }
 
@@ -974,6 +975,25 @@ const cancelOrder = async (orderId: string, userId: string) => {
 };
 
 
+const cancelEventOrderByAdmin = async (orderId: string, userId: string, reason: string) => {
+  const order = await EventOrder.findById(orderId);
+
+  if (!order) throw new AppError(404, "Order not found");
+
+  order.status = "cancelled";
+  order.statusTimestamps.cancelledAt = new Date();
+  order.cancelApprovalBy = userId as any;
+  order.cancelApprovalDate = new Date();
+
+
+  order.statusHistory.push({ status: "cancelled", changedAt: new Date(), reason });
+
+  await order.save();
+  return order;
+};
+
+
+
 const getTotalStatsOfSpeceficProfessional = async (serviceProviderId: string) => {
   if (!Types.ObjectId.isValid(serviceProviderId)) {
     throw new Error("Invalid serviceProviderId");
@@ -1020,6 +1040,64 @@ const getTotalStatsOfSpeceficProfessional = async (serviceProviderId: string) =>
 
   return data[0];
 };
+
+
+
+
+const getTotalStatsOfSpecificUser = async (userId: string) => {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid userId");
+  }
+
+  const data = await EventOrder.aggregate([
+    {
+      $match: {
+        userId: new Types.ObjectId(userId),
+        isDeleted: false,
+      },
+    },
+    {
+      $facet: {
+        totalCurrentOrders: [
+          { $match: { status: "inProgress" } },
+          { $count: "count" },
+        ],
+        totalToConfirm: [
+          { $match: { status: "deliveryRequest" } },
+          { $count: "count" },
+        ],
+        totalDelivered: [
+          { $match: { status: "delivered" } },
+          { $count: "count" },
+        ],
+        totalPendingEvents: [
+          { $match: { status: "pending" } },
+          { $count: "count" },
+        ],
+      },
+    },
+    {
+      $project: {
+        totalCurrentOrders: {
+          $ifNull: [{ $arrayElemAt: ["$totalCurrentOrders.count", 0] }, 0],
+        },
+        totalToConfirm: {
+          $ifNull: [{ $arrayElemAt: ["$totalToConfirm.count", 0] }, 0],
+        },
+        totalDelivered: {
+          $ifNull: [{ $arrayElemAt: ["$totalDelivered.count", 0] }, 0],
+        },
+        totalPendingEvents: {
+          $ifNull: [{ $arrayElemAt: ["$totalPendingEvents.count", 0] }, 0],
+        },
+      },
+    },
+  ]);
+
+  return data[0];
+};
+
+
 
 const getUpcomingEventsOfSpecificProfessional = async (serviceProviderId: string) => {
   if (!Types.ObjectId.isValid(serviceProviderId)) {
@@ -1152,6 +1230,7 @@ export const EventOrderService = {
   createEventOrder,
   acceptDirectOrder,
   acceptCustomOrder,
+  cancelEventOrderByAdmin,
   getEventOrders,
   getMyEventOrders,
   getMyExtensionEventOrders,
@@ -1169,6 +1248,7 @@ export const EventOrderService = {
   getUpcomingEventsOfSpecificProfessional,
   getPendingEventOrders,
   getTotalStatsOfSpeceficProfessional,
+  getTotalStatsOfSpecificUser,
   cancelRequest,
   declinedCancelRequest,
   completePaymentEventOrder,

@@ -75,6 +75,12 @@ router.post(
         )
 
     .patch(
+        "/admin/cancel/:orderId",
+        auth(USER_ROLE.ADMIN), 
+        EventOrderController.cancelEventOrderByAdmin
+    )
+
+    .patch(
         "/accept-delivery/:orderId",
         auth(USER_ROLE.USER), 
         EventOrderController.acceptDeliveryRequest
@@ -155,6 +161,12 @@ router.post(
         "/professional/stats",
         auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
         EventOrderController.getTotalStatsOfSpeceficProfessional
+    )
+
+    .get(
+        "/user/stats",
+        auth(USER_ROLE.USER),
+        EventOrderController.getTotalStatsOfSpeceficUser
     )
 
     .get(

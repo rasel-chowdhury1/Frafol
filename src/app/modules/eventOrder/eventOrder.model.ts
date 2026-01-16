@@ -41,6 +41,7 @@ const StatusTimestampsSchema = new Schema(
 const EventOrderSchema = new Schema<IEventOrder>(
   {
     orderId: { type: String, required: true, unique: true },
+    title: {type: String, default: ""},
 
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     serviceProviderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -53,7 +54,7 @@ const EventOrderSchema = new Schema<IEventOrder>(
 
     serviceType: {
       type: String,
-      enum: ["photography", "videography"],
+      enum: ["photography", "videography", "both"],
       required: true,
     },
 

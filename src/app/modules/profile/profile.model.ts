@@ -24,10 +24,7 @@ const ProfileSchema = new Schema<IProfile>(
       type: String,
       default: ""   
   },
-  routingNumber: {
-      type: String,
-      default: ""
-  }},
+},
   {
     timestamps: true,
   }
