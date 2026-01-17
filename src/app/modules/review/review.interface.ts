@@ -7,6 +7,7 @@ export interface IReview {
   rating: number;
   message: string;
   status: string;
+  isAnonymous: boolean;
   isDeleted: boolean;
   createdAt?: Date;
   updatedAt?: Date;

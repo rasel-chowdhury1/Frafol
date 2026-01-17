@@ -1,4 +1,6 @@
+import { Types } from "mongoose";
 import { CommunityEngagementStats } from "./communityEngagementStats.model";
+import AppError from "../../error/AppError";
 
 
 const likeCommunity = async (communityId: string, userId: string) => {
@@ -17,12 +19,27 @@ const unlikeCommunity = async (communityId: string, userId: string) => {
   );
 };
 
-const addComment = async (communityId: string, userId: string, text: string) => {
-  return await CommunityEngagementStats.findOneAndUpdate(
+const addCommentOrReply = async (communityId: string, userId: string, text: string, commentId?: string) => {
+
+  let result;
+  if(commentId){
+    result = await CommunityEngagementStats.findOneAndUpdate(
+      { communityId, "comments._id": commentId },
+      { $push: { "comments.$.replies": { user: userId, text } } },
+      { upsert: true, new: true }
+    );
+  }
+  else{
+     result = await CommunityEngagementStats.findOneAndUpdate(
     { communityId },
     { $push: { comments: { user: userId, text } } },
     { upsert: true, new: true }
   );
+
+  console.log("result ==>>> ", result);
+
+  return result;
+}
 };
 
 const addReply = async (
@@ -31,18 +48,33 @@ const addReply = async (
   userId: string,
   text: string
 ) => {
+  const result = await CommunityEngagementStats.findOneAndUpdate(
+    {
+      communityId: new Types.ObjectId(communityId),
+      "comments._id": new Types.ObjectId(commentId),
+    },
+    {
+      $push: {
+        "comments.$.replies": {
+          user: new Types.ObjectId(userId),
+          text,
+          createdAt: new Date(),
+        },
+      },
+    },
+    {
+      new: true,
+    }
+  );
 
-  console.log({communityId,commentId,userId,text});
-  // const result = await CommunityEngagementStats.findOneAndUpdate(
-  //   { communityId, "comments._id": commentId },
-  //   { $push: { "comments.$.replies": { user: userId, text } } },
-  //   { new: true }
-  // );
+  if (!result) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Community or comment not found"
+    );
+  }
 
-  const result2 = await CommunityEngagementStats.findOne({communityId, "comments._id": commentId})
-
-  console.log("result data =>>>>>> ", result2);
-  return result2 ;
+  return result;
 };
 
 const addViewer = async (communityId: string, userId: string) => {
@@ -56,7 +88,7 @@ const addViewer = async (communityId: string, userId: string) => {
 export const CommunityEngagementService = {
   likeCommunity,
   unlikeCommunity,
-  addComment,
+  addCommentOrReply,
   addReply,
   addViewer,
 };

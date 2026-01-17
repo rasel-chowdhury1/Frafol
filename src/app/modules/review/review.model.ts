@@ -22,7 +22,6 @@ const reviewSchema = new Schema<IReview>(
     rating: { 
       type: Number, 
       required: true, 
-      min: 1, max: 5 
     },
     message: { 
       type: String, 
@@ -31,6 +30,10 @@ const reviewSchema = new Schema<IReview>(
     status: {
       type: String,
       enum: ["pending", "done"]
+    },
+    isAnonymous: { 
+      type: Boolean, 
+      default: false 
     },
     isDeleted: { 
       type: Boolean, 

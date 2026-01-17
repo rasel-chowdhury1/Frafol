@@ -8,6 +8,8 @@ import AppError from "../../error/AppError";
 import status from "http-status";
 
 const createReview = async (payload: IReview) => {
+
+  console.log("review payload===>> ", payload);
   // 1. Create the review
   const review = await Review.create(payload);
 
@@ -33,7 +35,7 @@ const createReview = async (payload: IReview) => {
 const completePendingReview = async (
   reviewId: string,
   userId: string,
-  payload: { rating: number; message: string }
+  payload: { rating: number; message: string, isAnonymous: boolean }
 ) => {
   // 1️⃣ Find the review
   const review = await Review.findById(reviewId);
@@ -66,6 +68,7 @@ const completePendingReview = async (
   review.rating = payload.rating;
   review.message = payload.message;
   review.status = "done";
+  review.isAnonymous = payload.isAnonymous;
   await review.save();
 
   // 6️⃣ Update service provider stats using incremental logic
@@ -99,7 +102,7 @@ const completePendingReview = async (
 const updateReview = async (
   reviewId: string,
   userId: string,
-  payload: { rating?: number; message?: string }
+  payload: { rating?: number; message?: string, isAnonymous?: boolean }
 ) => {
 
 
@@ -125,6 +128,7 @@ const updateReview = async (
   // 4️⃣ Update review fields if provided
   if (payload.rating !== undefined) review.rating = payload.rating;
   if (payload.message !== undefined) review.message = payload.message;
+  if (payload.isAnonymous !== undefined) review.isAnonymous = payload.isAnonymous;
 
   await review.save();
 

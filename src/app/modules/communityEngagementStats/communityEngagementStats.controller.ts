@@ -24,10 +24,11 @@ const unlikeCommunity = catchAsync(async (req: Request, res: Response) => {
 });
 
 const addComment = catchAsync(async (req: Request, res: Response) => {
-  const result = await CommunityEngagementService.addComment(
+  const result = await CommunityEngagementService.addCommentOrReply(
     req.params.id,
     req.user.userId,
-    req.body.text
+    req.body.text,
+    req.body.commentId
   );
   sendResponse(res, {
     statusCode: 200,
