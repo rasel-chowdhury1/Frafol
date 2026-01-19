@@ -10,6 +10,11 @@ router
 // ✅ Get all coupons (with query for filtering/pagination)
    .get("/", CouponController.getAllCoupons)
 
+   .get(
+      '/validate',
+       CouponController.checkCouponCode
+   )
+
    .patch(
       "/status/:id",
       // auth("admin"), // if you have role-based auth

@@ -23,6 +23,33 @@ const getCoupons = async (query: Record<string, unknown>) => {
   };
 };
 
+const getSingleCoupon = async (id: string) => {
+  return await Coupon.findById(id);
+};
+
+const isCouponCodeValid = async (code: string) => {
+  const coupon = await Coupon.findOne({
+    code: code.trim(),
+    isActive: true,
+  });
+
+  if (!coupon) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Invalid or inactive coupon code');
+  }
+
+  // Check expiry
+  if (coupon.expiryDate && coupon.expiryDate < new Date()) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Coupon has expired');
+  }
+
+  // Check usage limit
+  if (coupon.usedCount >= coupon.limit) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Coupon usage limit exceeded');
+  }
+
+  return coupon;
+};
+
 
 const toggleCouponStatus = async (couponId: string, status: boolean) => {
   const coupon = await Coupon.findById(couponId);
@@ -60,7 +87,10 @@ const deleteCoupon = async (id: string) => {
 export const couponService = {
   createCoupon,
   getCoupons,
+  getSingleCoupon,
+  isCouponCodeValid,
   updateCoupon,
+
   deleteCoupon,
   toggleCouponStatus
 };

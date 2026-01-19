@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 import { connectedUsers } from '../../../socketIo';
 import AppError from '../../error/AppError';
 import Message from '../message/message.model';
-import { User } from '../user/user.models';
-import { IChat} from './chat.interface';
+import { User } from '../user/user.model';
+import { IChat } from './chat.interface';
 import Chat from './chat.model';
 import httpStatus from 'http-status';
 import { Types } from 'mongoose';
@@ -30,21 +30,18 @@ const addNewChat = async (
     throw new Error('Another user not found');
   }
 
-const existingChat = await Chat.findOne({
-      users: { $all: data.users, $size: 2 }, // Ensure both users exist in the chat
-    });
+  const existingChat = await Chat.findOne({
+    users: { $all: data.users, $size: 2 }, // Ensure both users exist in the chat
+  });
 
-
-    if (existingChat) {
-      return;
-    }
+  if (existingChat) {
+    return;
+  }
 
   // Create the chat in the database
   const result = await Chat.create(data);
   return result;
 };
-
-
 
 // =========== Get my chat list start ===========
 // const getMyChatList = async (userId: string, query: any) => {
@@ -67,8 +64,6 @@ const existingChat = await Chat.findOne({
 //     if (!chatItem.users.length) continue;
 
 //     const chatId = chatItem?._id;
-
-  
 
 //     let users;
 //     // Check if a search query exists and filter users
@@ -125,20 +120,15 @@ const existingChat = await Chat.findOne({
 //   return data;
 // };
 
-
-
 const getMyChatList = async (userId: string, query: any) => {
-  
   // Build the query object to filter the chats
   const filterQuery: any = { users: { $all: [new Types.ObjectId(userId)] } };
 
-
   const chats = await Chat.find(filterQuery).populate({
-    path: "users",
-    select: "name sureName profileImage email _id",
+    path: 'users',
+    select: 'name sureName profileImage email _id',
     match: { _id: { $ne: userId } },
   });
-
 
   // ✅ Instead of throwing error, just return empty array
   if (!chats || chats.length === 0) {
@@ -156,7 +146,7 @@ const getMyChatList = async (userId: string, query: any) => {
     // optional search filter for chat user name
     if (query.search) {
       const matched = chatItem.users.filter((user) =>
-        (user as any).name?.toLowerCase().includes(query.search.toLowerCase())
+        (user as any).name?.toLowerCase().includes(query.search.toLowerCase()),
       );
       if (!matched.length) continue;
     }
@@ -164,7 +154,7 @@ const getMyChatList = async (userId: string, query: any) => {
     // Find the latest message (no populate)
     const message = await Message.findOne({ chat: chatId })
       .sort({ updatedAt: -1 })
-      .select("text sender updatedAt");
+      .select('text sender updatedAt');
 
     // Count unread messages for this user
     const unreadMessageCount = await Message.countDocuments({
@@ -183,18 +173,20 @@ const getMyChatList = async (userId: string, query: any) => {
     });
   }
 
-
   console.log('data', data);
   // Sort chats by last message time (descending)
   data.sort((a, b) => {
-    const dateA = a.lastMessageCreatedAt ? new Date(a.lastMessageCreatedAt).getTime() : 0;
-    const dateB = b.lastMessageCreatedAt ? new Date(b.lastMessageCreatedAt).getTime() : 0;
+    const dateA = a.lastMessageCreatedAt
+      ? new Date(a.lastMessageCreatedAt).getTime()
+      : 0;
+    const dateB = b.lastMessageCreatedAt
+      ? new Date(b.lastMessageCreatedAt).getTime()
+      : 0;
     return dateB - dateA;
   });
 
   return data;
 };
-
 
 // =========== Get my chat list end ===========
 

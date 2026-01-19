@@ -1,8 +1,7 @@
 import config from '../config';
 import { USER_ROLE } from '../modules/user/user.constants';
-import { User } from '../modules/user/user.models';
+import { User } from '../modules/user/user.model';
 import { setAdminData } from './adminStrore';
-
 
 const AdminUser = {
   name: 'Admin',
@@ -10,7 +9,7 @@ const AdminUser = {
   password: config.admin_password,
   phone: config.admin_phone,
   role: USER_ROLE.ADMIN,
-  isDeleted: false
+  isDeleted: false,
 };
 
 const createDefaultAdmin = async () => {

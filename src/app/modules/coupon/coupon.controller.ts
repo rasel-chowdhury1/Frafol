@@ -44,6 +44,43 @@ const getAllCoupons = catchAsync(async (req, res) => {
 
 });
 
+const getSingleCoupon  = catchAsync(async (req, res) => {
+
+  const result = await couponService.getSingleCoupon(req.params.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Coupon retrieved successfully",
+    data: result,
+  });
+})
+
+const checkCouponCode = catchAsync(async (req, res) => {
+  const { code } = req.query;
+
+  if (!code) {
+    return sendResponse(res, {
+      statusCode: httpStatus.BAD_REQUEST,
+      success: false,
+      message: 'Coupon code is required',
+      data: null,
+    });
+  }
+
+  const result = await couponService.isCouponCodeValid(String(code));
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Coupon code is valid',
+    data: result,
+  });
+  
+});
+
+
+
 
 const updateCoupon = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -73,7 +110,9 @@ const deleteCoupon = catchAsync(async (req, res) => {
 export const CouponController = {
   createCoupon,
   getAllCoupons,
+  getSingleCoupon,
+  checkCouponCode,
   updateCoupon,
   deleteCoupon,
-  updateCouponStatus
+  updateCouponStatus,
 };

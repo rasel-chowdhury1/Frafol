@@ -1,16 +1,18 @@
-import AppError from "../../error/AppError";
-import { Payment } from "./payment.model";
-import { createStripePaymentSession, stripe } from "./payment.utils";
-import { GetPaymentsQuery, IPayment } from "./payment.interface";
-import { sentNotificationForPaymentSuccess } from "../../../socketIo";
-import mongoose, { Types } from "mongoose";
-import { EventOrder } from "../eventOrder/eventOrder.model";
-import { GearOrder } from "../gearOrder/gearOrder.model";
-import { GearMarketplace } from "../gearMarketplace/gearMarketplace.model";
-import { Workshop } from "../workshop/workshop.model";
-import moment from "moment";
-import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
-import QueryBuilder from "../../builder/QueryBuilder";
+import AppError from '../../error/AppError';
+import { Payment } from './payment.model';
+import { createStripePaymentSession, stripe } from './payment.utils';
+import { GetPaymentsQuery, IPayment } from './payment.interface';
+import { sentNotificationForPaymentSuccess } from '../../../socketIo';
+import mongoose, { Types } from 'mongoose';
+import { EventOrder } from '../eventOrder/eventOrder.model';
+import { GearOrder } from '../gearOrder/gearOrder.model';
+import { GearMarketplace } from '../gearMarketplace/gearMarketplace.model';
+import { Workshop } from '../workshop/workshop.model';
+import moment from 'moment';
+import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.model';
+import QueryBuilder from '../../builder/QueryBuilder';
+import { MySubscription } from '../mySubscription/mySubscription.model';
+import { User } from '../user/user.model';
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)
@@ -21,12 +23,15 @@ const createPaymentSession = async (payload: {
   amount: number;
   commission: number;
   netAmount: number;
-  paymentMethod: "stripe" | "card" | "bank";
-  paymentType: "event" | "gear" | "workshop";
+  paymentMethod: 'stripe' | 'card' | 'bank';
+  paymentType: 'event' | 'gear' | 'workshop' | 'subscription';
   eventOrderId?: string;
   workshopId?: string;
   gearOrderId?: string;
+  subscriptionDays?: number;
 }) => {
+
+  console.log("== payload =>>>>> ",{ payload });
   return await createStripePaymentSession(payload);
 };
 
@@ -40,44 +45,66 @@ const confirmPayment = async (sessionId: string) => {
   try {
     // 🔹 Retrieve Stripe Checkout Session
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+ 
     const paymentIntentId = session.payment_intent as string | null;
 
     if (!paymentIntentId) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Payment intent not found in Stripe session");
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        'Payment intent not found in Stripe session',
+      );
     }
 
     // 🔹 Retrieve PaymentIntent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
+
+
+    if (!paymentIntent) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        'Payment intent not found in Stripe',
+      );
+    }
+
     // 🔹 Find local payment record by sessionId (not paymentIntentId)
-    const payment = await Payment.findOne({ transactionId: sessionId }).session(dbSession);
+    const payment = await Payment.findOne({ transactionId: sessionId }).session(
+      dbSession,
+    );
+
+
+
 
     if (!payment) {
-      throw new AppError(httpStatus.NOT_FOUND, "Payment record not found for this session");
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        'Payment record not found for this session',
+      );
     }
 
     // 🔹 Handle Payment Status
-    if (paymentIntent.status === "succeeded") {
-      payment.paymentStatus = "completed";
+    if (paymentIntent.status === 'succeeded') {
+      payment.paymentStatus = 'completed';
       await payment.save({ session: dbSession });
 
       // ======================================================
       // ✅ EVENT Payment Handling
       // ======================================================
-      if (payment.paymentType === "event" && payment.eventOrderId) {
+      if (payment.paymentType === 'event' && payment.eventOrderId) {
         const updatedOrder = await EventOrder.findByIdAndUpdate(
           payment.eventOrderId,
           {
-            status: "inProgress",
-            "statusTimestamps.inProgressAt": new Date(),
+            status: 'inProgress',
+            'statusTimestamps.inProgressAt': new Date(),
             $push: {
               statusHistory: {
-                status: "inProgress",
+                status: 'inProgress',
                 changedAt: new Date(),
               },
             },
           },
-          { new: true, session: dbSession }
+          { new: true, session: dbSession },
         );
 
         if (updatedOrder) {
@@ -89,29 +116,31 @@ const confirmPayment = async (sessionId: string) => {
           //   packageName: updatedOrder.packageName || undefined,
           // });
 
-          console.log("✅ Payment succeeded & event order moved to 'inProgress'", {
-            orderId: updatedOrder._id,
-            paymentId: payment._id,
-          });
+          console.log(
+            "✅ Payment succeeded & event order moved to 'inProgress'",
+            {
+              orderId: updatedOrder._id,
+              paymentId: payment._id,
+            },
+          );
         }
       }
 
       // ======================================================
       // ✅ GEAR Payment Handling
       // ======================================================
-      else if (payment.paymentType === "gear" && payment.gearOrderIds?.length) {
+      else if (payment.paymentType === 'gear' && payment.gearOrderIds?.length) {
         // Update all gear orders’ paymentStatus
         await GearOrder.updateMany(
           { _id: { $in: payment.gearOrderIds } },
-          {  orderStatus: "inProgress", paymentId: payment._id },
-          { session: dbSession }
+          { orderStatus: 'inProgress', paymentId: payment._id },
+          { session: dbSession },
         );
-
 
         // 2️⃣ Collect all related GearMarketplace IDs
         const relatedOrders = await GearOrder.find(
           { _id: { $in: payment.gearOrderIds } },
-          { gearMarketplaceId: 1 }
+          { gearMarketplaceId: 1 },
         ).session(dbSession);
 
         const gearIds = relatedOrders.map((o) => o.gearMarketplaceId);
@@ -119,30 +148,30 @@ const confirmPayment = async (sessionId: string) => {
         // 3️⃣ Mark all related gear items as Sold Out
         await GearMarketplace.updateMany(
           { _id: { $in: gearIds } },
-          { status: "Sold Out" },
-          { session: dbSession }
+          { status: 'Sold Out' },
+          { session: dbSession },
         );
 
-        console.log("✅ Payment succeeded & all gear orders marked as 'received'", {
-          gearOrderCount: payment.gearOrderIds.length,
-          paymentId: payment._id,
-        });
-      }
-
-      else if(payment.paymentType === "workshop" && payment.workshopId){
-        
-
-       // 1️⃣ Generate custom order ID
-        const today = moment().format("YYYYMMDD");
-        const prefix = "WORKSHOP";
+        console.log(
+          "✅ Payment succeeded & all gear orders marked as 'received'",
+          {
+            gearOrderCount: payment.gearOrderIds.length,
+            paymentId: payment._id,
+          },
+        );
+      } 
+      else if (payment.paymentType === 'workshop' && payment.workshopId) {
+        // 1️⃣ Generate custom order ID
+        const today = moment().format('YYYYMMDD');
+        const prefix = 'WORKSHOP';
         const orderCount = await WorkshopParticipant.countDocuments({
           createdAt: {
-            $gte: moment().startOf("day").toDate(),
-            $lte: moment().endOf("day").toDate(),
+            $gte: moment().startOf('day').toDate(),
+            $lte: moment().endOf('day').toDate(),
           },
         });
 
-        const sequence = String(orderCount + 1).padStart(4, "0");
+        const sequence = String(orderCount + 1).padStart(4, '0');
         const customOrderId = `${prefix}-${today}-${sequence}`;
 
         // 2️⃣ Create Workshop Participant entry
@@ -153,26 +182,84 @@ const confirmPayment = async (sessionId: string) => {
               clientId: payment.userId,
               instructorId: payment.serviceProviderId,
               workshopId: payment.workshopId,
-              paymentStatus: "completed",
+              paymentStatus: 'completed',
               instructorPayment: {
-                status: "pending",
+                status: 'pending',
                 amount: payment.netAmount, // from your Payment model
                 paidAt: null,
               },
             },
           ],
-          { session: dbSession }
+          { session: dbSession },
+        );
+      } 
+      else if (payment.paymentType === 'subscription' && payment.subscriptionDays) {
+
+
+      const today = new Date();
+
+      const existingSub = await MySubscription.findOne({
+        userId: payment.userId,
+        isActive: true,
+      }).session(dbSession);
+
+      let startDate = today;
+      let expireDate = new Date(today);
+
+      if (existingSub) {
+        // Extend existing subscription
+        startDate = existingSub.expireDate;
+        expireDate = new Date(existingSub.expireDate);
+        expireDate.setDate(
+          expireDate.getDate() + (payment.subscriptionDays || 0),
         );
 
-
-
-
-        
+        existingSub.isActive = false;
+        await existingSub.save({ session: dbSession });
+      } else {
+        // New subscription from today
+        expireDate.setDate(
+          expireDate.getDate() + (payment.subscriptionDays || 0),
+        );
       }
-    } else {
-      payment.paymentStatus = "failed";
+
+      // Create new subscription record
+      const result =await MySubscription.create(
+        [
+          {
+            userId: payment.userId,
+            paymentId: payment._id,
+            howManyDays: payment.subscriptionDays || 0,
+            startDate,
+            expireDate,
+            isActive: true,
+          },
+        ],
+        { session: dbSession },
+      );
+
+      // ✅ Update user hasActiveSubscription = true
+      await User.findByIdAndUpdate(
+        payment.userId,
+        { 
+          subscriptionId: result[0]._id,
+          hasActiveSubscription: true,
+          subscriptionExpiryDate: expireDate,
+          subscriptionDays: payment.subscriptionDays
+         },
+        { session: dbSession },
+      );
+
+      console.log('✅ Subscription activated successfully', {
+        userId: payment.userId,
+        days: payment.subscriptionDays,
+        expireDate,
+      });
+    } 
+    else {
+      payment.paymentStatus = 'failed';
       await payment.save({ session: dbSession });
-      console.log("❌ Payment failed for session:", sessionId);
+      console.log('❌ Payment failed for session:', sessionId);
     }
 
     // ✅ Commit all DB changes
@@ -180,15 +267,16 @@ const confirmPayment = async (sessionId: string) => {
     dbSession.endSession();
 
     return payment;
-  } catch (error) {
+  } 
+}
+  catch (error) {
     // ❌ Rollback all DB operations on failure
     await dbSession.abortTransaction();
     dbSession.endSession();
-    console.error("❌ Transaction rolled back due to error:", error);
+    console.error('❌ Transaction rolled back due to error:', error);
     throw error;
   }
 };
-
 
 // const confirmStripePayment = async (req: Request, res: Response) => {
 //   try {
@@ -233,14 +321,13 @@ const confirmPayment = async (sessionId: string) => {
 const cancelPayment = async (transactionId: string) => {
   const payment = await Payment.findOne({ transactionId });
 
-  if (!payment) throw new AppError(404, "Payment not found");
+  if (!payment) throw new AppError(404, 'Payment not found');
 
-  payment.paymentStatus = "pending"; // keep it pending or custom logic
+  payment.paymentStatus = 'pending'; // keep it pending or custom logic
   await payment.save();
 
   return payment;
 };
-
 
 const getPayments = async (query: any) => {
   const filter: Record<string, any> = {};
@@ -259,10 +346,13 @@ const getPayments = async (query: any) => {
 
   // Build query with QueryBuilder
   const paymentQuery = new QueryBuilder(
-    Payment.find(filter).populate("userId", "name profileImage email").populate("serviceProviderId", "name profileImage email").populate("serviceProviders.serviceProviderId"),
-    query
+    Payment.find(filter)
+      .populate('userId', 'name profileImage email')
+      .populate('serviceProviderId', 'name profileImage email')
+      .populate('serviceProviders.serviceProviderId'),
+    query,
   )
-    .search(["transactionId", "userId.name", "serviceProviderId.name"])
+    .search(['transactionId', 'userId.name', 'serviceProviderId.name'])
     .filter()
     .sort()
     .paginate()
@@ -275,7 +365,7 @@ const getPayments = async (query: any) => {
 };
 
 const getMyPaymentsStats = async (userId: string) => {
-  if (!userId) throw new Error("userId is required");
+  if (!userId) throw new Error('userId is required');
 
   const stats = await Payment.aggregate([
     { $match: { userId: new Types.ObjectId(userId) } },
@@ -283,10 +373,10 @@ const getMyPaymentsStats = async (userId: string) => {
     {
       $group: {
         _id: null,
-        totalSpent: { $sum: "$amount" },
-        totalOrders: { $sum: 1 }
-      }
-    }
+        totalSpent: { $sum: '$amount' },
+        totalOrders: { $sum: 1 },
+      },
+    },
   ]);
 
   return {
@@ -296,7 +386,7 @@ const getMyPaymentsStats = async (userId: string) => {
 };
 
 const getMyPayments = async (userId: string, query: any) => {
-  if (!userId) throw new Error("userId is required");
+  if (!userId) throw new Error('userId is required');
 
   const filter: Record<string, any> = { userId };
 
@@ -314,41 +404,42 @@ const getMyPayments = async (userId: string, query: any) => {
   // Build query with QueryBuilder
   const qb = new QueryBuilder(
     Payment.find(filter)
-      .populate("userId", "name profileImage email")
-      .populate("serviceProviderId", "name profileImage email")
-      .populate("serviceProviders.serviceProviderId", "name profileImage email")
+      .populate('userId', 'name profileImage email')
+      .populate('serviceProviderId', 'name profileImage email')
+      .populate('serviceProviders.serviceProviderId', 'name profileImage email')
 
       // ✅ FULL NESTED POPULATE for gear orders
       .populate({
-        path: "gearOrderIds",
-        select: "orderId paymentStatus orderStatus statusTimestamps createdAt",
+        path: 'gearOrderIds',
+        select: 'orderId paymentStatus orderStatus statusTimestamps createdAt',
         populate: [
           {
-            path: "sellerId",
-            select: "name email mobileNumber profileImage userType"
+            path: 'sellerId',
+            select: 'name email mobileNumber profileImage userType',
           },
           {
-            path: "gearMarketplaceId",
-            select: "title price category name description images",
-          }
-        ]
+            path: 'gearMarketplaceId',
+            select: 'title price category name description images',
+          },
+        ],
       })
 
       // ✅ Populate workshop info (unchanged)
-      .populate("workshopId", "title price location startDate endDate")
+      .populate('workshopId', 'title price location startDate endDate')
       .populate({
-        path:"eventOrderId", 
-        select: "orderId orderType serviceType date location totalPrice packageId statusTimestamps",
+        path: 'eventOrderId',
+        select:
+          'orderId orderType serviceType date location totalPrice packageId statusTimestamps',
         populate: [
           {
-            path: "packageId",
-            select: "title"
-          }
-        ]
+            path: 'packageId',
+            select: 'title',
+          },
+        ],
       }),
-    query
+    query,
   )
-    .search(["transactionId", "userId.name", "serviceProviderId.name"])
+    .search(['transactionId', 'userId.name', 'serviceProviderId.name'])
     .filter()
     .sort()
     .paginate()
@@ -366,5 +457,5 @@ export const PaymentService = {
   cancelPayment,
   getPayments,
   getMyPayments,
-  getMyPaymentsStats
+  getMyPaymentsStats,
 };

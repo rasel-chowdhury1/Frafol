@@ -172,6 +172,21 @@ const getMyProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+const getMySubscriptionStatus = catchAsync(async (req: Request, res: Response) => {
+  
+  const {userId} = req.user;
+
+  const result = await userService.getMySubscriptionStatus(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Subscription status retrieved successfully',
+    data: result,
+  });
+});
+
 const getAdminProfile = catchAsync(async (req: Request, res: Response) => {
   const result = await userService.getAdminProfile(req?.user?.userId);
   sendResponse(res, {
@@ -277,7 +292,7 @@ const setUnAvailability = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.userId;
 
 
-  const dates: String[] = req.body.unAvailability;
+  const dates = req.body.unAvailability as string[];
 
   const updatedUser =  await userService.updateUnAvailability(userId, dates);
 
@@ -505,6 +520,7 @@ export const userController = {
   updateUserGallery,
   setUnAvailability,
   blockedUser,
+  getMySubscriptionStatus,
   deleteMyAccount,
   getAllUsers,
   getUserRoleStats,

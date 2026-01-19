@@ -7,16 +7,14 @@ import { createToken, verifyToken } from '../../utils/tokenManage';
 import { otpServices } from '../otp/otp.service';
 import { generateOptAndExpireTime } from '../otp/otp.utils';
 import { TUser } from '../user/user.interface';
-import { User } from '../user/user.models';
+import { User } from '../user/user.model';
 import { OTPVerifyAndCreateUserProps } from '../user/user.service';
 import { TLogin } from './auth.interface';
-
 
 // Login
 const login = async (payload: TLogin) => {
   const user = await User.isUserActive(payload?.email);
-  
-  
+
   if (!user) {
     throw new AppError(httpStatus.BAD_REQUEST, 'User not found');
   }
@@ -33,16 +31,19 @@ const login = async (payload: TLogin) => {
     role: string;
     switchRole: string;
     email: string;
+    hasActiveSubscription: boolean;
+    subscriptionDays: number;
   } = {
     userId: user?._id?.toString() as string,
-    name: user.name || "",
-    sureName: user.sureName || "",
-    companyName: user.companyName || "",
+    name: user.name || '',
+    sureName: user.sureName || '',
+    companyName: user.companyName || '',
     email: user.email,
     role: user?.role,
     switchRole: user.switchRole,
+    hasActiveSubscription: user.hasActiveSubscription,
+    subscriptionDays: user.subscriptionDays,
   };
-
 
   const accessToken = createToken({
     payload: jwtPayload,
@@ -71,7 +72,10 @@ const forgotPasswordByEmail = async (email: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'User not found');
   }
 
-  const { isExist, isExpireOtp } = await otpServices.checkOtpByEmail(email, "forget-password" );
+  const { isExist, isExpireOtp } = await otpServices.checkOtpByEmail(
+    email,
+    'forget-password',
+  );
 
   const { otp, expiredAt } = generateOptAndExpireTime();
 
@@ -84,14 +88,13 @@ const forgotPasswordByEmail = async (email: string) => {
       status: 'pending',
     };
 
-    await otpServices.updateOtpByEmail(email,"forget-password", otpUpdateData);
-  }
-  else{
+    await otpServices.updateOtpByEmail(email, 'forget-password', otpUpdateData);
+  } else {
     await otpServices.createOtp({
-      name: "Customer",
+      name: 'Customer',
       sentTo: email,
       receiverType: 'email',
-      purpose: "forget-password",
+      purpose: 'forget-password',
       otp,
       expiredAt,
     });
@@ -141,14 +144,14 @@ const forgotPasswordOtpMatch = async ({
 
   const { email } = decodeData;
 
-  const isOtpMatch = await otpServices.otpMatch(email,"forget-password", otp);
+  const isOtpMatch = await otpServices.otpMatch(email, 'forget-password', otp);
 
   if (!isOtpMatch) {
     throw new AppError(httpStatus.BAD_REQUEST, 'OTP did not match');
   }
 
   process.nextTick(async () => {
-    await otpServices.updateOtpByEmail(email,"forget-password", {
+    await otpServices.updateOtpByEmail(email, 'forget-password', {
       status: 'verified',
     });
   });
@@ -288,13 +291,13 @@ const refreshToken = async (token: string) => {
     name: string;
     sureName: string;
     companyName: string;
-    email: string
+    email: string;
     role: string;
   } = {
     userId: activeUser?._id?.toString() as string,
-    name: activeUser?.name || "",
-    sureName: activeUser.sureName || "",
-    companyName: activeUser.companyName || "",
+    name: activeUser?.name || '',
+    sureName: activeUser.sureName || '',
+    companyName: activeUser.companyName || '',
     email: activeUser.email,
     role: activeUser?.role,
   };

@@ -32,6 +32,10 @@ export interface TUserCreate {
   
   adminVerified: string;
   unAvailability: Date[];
+  subscriptionId: ObjectId | null;
+  hasActiveSubscription: boolean;
+  subscriptionExpiryDate: Date | null;
+  subscriptionDays: number;
   about: string;
   bankName: string;
   accountNumber: string;

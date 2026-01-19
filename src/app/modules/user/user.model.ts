@@ -129,6 +129,24 @@ const userSchema = new Schema<TUser>(
       type: [String],
       default: [],
     },
+    subscriptionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Subscription",
+      default: null
+    },
+    hasActiveSubscription: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    subscriptionExpiryDate: {
+      type: Date,
+      default: null
+    },
+    subscriptionDays: {
+      type: Number,
+      default: 0
+    },
     isBlocked: {
       type: Boolean,
       default: false,

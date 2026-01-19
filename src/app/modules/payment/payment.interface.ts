@@ -2,7 +2,7 @@ import { Model, Types } from "mongoose";
 
 export type PaymentStatus = "pending" | "completed" | "failed";
 export type PaymentMethod = "stripe" | "card" | "bank";
-export type PaymentType = "event" | "gear" | "workshop";
+export type PaymentType = "event" | "gear" | "workshop" | "subscription";
 
 export interface IServiceProviderBreakdown {
   serviceProviderId: Types.ObjectId;
@@ -26,6 +26,7 @@ export interface IPayment {
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
   paymentType: PaymentType;
+  subscriptionDays?: number;
   eventOrderId?: Types.ObjectId;
   gearOrderIds?: Types.ObjectId[];
   workshopId?: Types.ObjectId;

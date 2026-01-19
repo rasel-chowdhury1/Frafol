@@ -84,6 +84,11 @@ userRoutes
   )
 
   .get(
+    '/me/subscription',
+    auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.COMPANY, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+    userController.getMySubscriptionStatus
+  )
+  .get(
     '/gallery/:id',
     // auth("user", "admin"),
     userController.getUserGalleryById

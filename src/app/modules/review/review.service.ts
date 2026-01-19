@@ -1,15 +1,14 @@
-import { Review } from "./review.model";
-import { GetReviewsQuery, IReview, IUpdateReview } from "./review.interface";
-import { User } from "../user/user.models";
-import mongoose from "mongoose";
-import QueryBuilder from "../../builder/QueryBuilder";
-import { EventOrder } from "../eventOrder/eventOrder.model";
-import AppError from "../../error/AppError";
-import status from "http-status";
+import { Review } from './review.model';
+import { GetReviewsQuery, IReview, IUpdateReview } from './review.interface';
+import { User } from '../user/user.model';
+import mongoose from 'mongoose';
+import QueryBuilder from '../../builder/QueryBuilder';
+import { EventOrder } from '../eventOrder/eventOrder.model';
+import AppError from '../../error/AppError';
+import status from 'http-status';
 
 const createReview = async (payload: IReview) => {
-
-  console.log("review payload===>> ", payload);
+  console.log('review payload===>> ', payload);
   // 1. Create the review
   const review = await Review.create(payload);
 
@@ -17,13 +16,13 @@ const createReview = async (payload: IReview) => {
   const serviceProvider = await User.findById(payload.serviceProviderId);
 
   if (serviceProvider) {
-
     // Increment total reviews
     serviceProvider.totalReview += 1;
 
     // Calculate new average rating
     serviceProvider.averageRating =
-      (serviceProvider.averageRating * (serviceProvider.totalReview - 1) + payload.rating) /
+      (serviceProvider.averageRating * (serviceProvider.totalReview - 1) +
+        payload.rating) /
       serviceProvider.totalReview;
 
     await serviceProvider.save();
@@ -35,39 +34,39 @@ const createReview = async (payload: IReview) => {
 const completePendingReview = async (
   reviewId: string,
   userId: string,
-  payload: { rating: number; message: string, isAnonymous: boolean }
+  payload: { rating: number; message: string; isAnonymous: boolean },
 ) => {
   // 1️⃣ Find the review
   const review = await Review.findById(reviewId);
 
   if (!review) {
-    throw new AppError(404, "Review not found");
+    throw new AppError(404, 'Review not found');
   }
 
   // 2️⃣ Check if the current user is the owner of the review
   if (review.userId.toString() !== userId) {
-    throw new AppError(403, "You are not authorized to update this review");
+    throw new AppError(403, 'You are not authorized to update this review');
   }
 
   // 3️⃣ Check if the corresponding event order exists
   const eventOrder = await EventOrder.findById(review.eventOrderId);
 
   if (!eventOrder) {
-    throw new AppError(404, "Event order not found");
+    throw new AppError(404, 'Event order not found');
   }
 
   // 4️⃣ Only allow review completion if order is delivered
-  if (eventOrder.status !== "delivered") {
+  if (eventOrder.status !== 'delivered') {
     throw new AppError(
       400,
-      "You can complete the review only after the order is delivered"
+      'You can complete the review only after the order is delivered',
     );
   }
 
   // 5️⃣ Update review
   review.rating = payload.rating;
   review.message = payload.message;
-  review.status = "done";
+  review.status = 'done';
   review.isAnonymous = payload.isAnonymous;
   await review.save();
 
@@ -76,59 +75,54 @@ const completePendingReview = async (
 
   if (serviceProvider) {
     // Recalculate average rating
-      const allReviews = await Review.find({
-        serviceProviderId: serviceProvider._id,
-        status: "done",
-        isDeleted: { $ne: true },
-      });
+    const allReviews = await Review.find({
+      serviceProviderId: serviceProvider._id,
+      status: 'done',
+      isDeleted: { $ne: true },
+    });
 
-      const totalReviews = allReviews.length;
-      const avgRating =
-        totalReviews > 0
-          ? allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
-          : 0;
+    const totalReviews = allReviews.length;
+    const avgRating =
+      totalReviews > 0
+        ? allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+        : 0;
 
-      serviceProvider.totalReview = totalReviews;
-      serviceProvider.averageRating = avgRating;
+    serviceProvider.totalReview = totalReviews;
+    serviceProvider.averageRating = avgRating;
 
-      await serviceProvider.save();
-    
+    await serviceProvider.save();
   }
 
   return review;
 };
 
-
 const updateReview = async (
   reviewId: string,
   userId: string,
-  payload: { rating?: number; message?: string, isAnonymous?: boolean }
+  payload: { rating?: number; message?: string; isAnonymous?: boolean },
 ) => {
-
-
   // 1️⃣ Find the review
   const review = await Review.findById(reviewId);
 
-
-
   if (!review) {
-    throw new AppError(404, "Review not found");
+    throw new AppError(404, 'Review not found');
   }
 
   // 2️⃣ Check if the current user is the owner of the review
   if (review.userId.toString() !== userId) {
-    throw new AppError(403, "You are not authorized to update this review");
+    throw new AppError(403, 'You are not authorized to update this review');
   }
 
   // 3️⃣ Only allow updates if the review status is "done"
-  if (review.status !== "done") {
-    throw new AppError(400, "Only completed reviews can be updated");
+  if (review.status !== 'done') {
+    throw new AppError(400, 'Only completed reviews can be updated');
   }
 
   // 4️⃣ Update review fields if provided
   if (payload.rating !== undefined) review.rating = payload.rating;
   if (payload.message !== undefined) review.message = payload.message;
-  if (payload.isAnonymous !== undefined) review.isAnonymous = payload.isAnonymous;
+  if (payload.isAnonymous !== undefined)
+    review.isAnonymous = payload.isAnonymous;
 
   await review.save();
 
@@ -140,7 +134,7 @@ const updateReview = async (
       // Recalculate average rating
       const allReviews = await Review.find({
         serviceProviderId: serviceProvider._id,
-        status: "done",
+        status: 'done',
         isDeleted: { $ne: true },
       });
 
@@ -160,12 +154,9 @@ const updateReview = async (
   return review;
 };
 
-
-
-
 const getMyReviewStats = async (userId: string) => {
   if (!userId) {
-    throw new AppError(400, "User ID is required");
+    throw new AppError(400, 'User ID is required');
   }
 
   const objectId = new mongoose.Types.ObjectId(userId); // ✅ convert string to ObjectId
@@ -176,33 +167,30 @@ const getMyReviewStats = async (userId: string) => {
       $group: {
         _id: null,
         totalReviews: {
-          $sum: { $cond: [{ $eq: ["$status", "done"] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] },
         },
         pendingReviews: {
-          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
-        }
-      }
-    }
+          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
+        },
+      },
+    },
   ]);
 
   return {
     totalReviews: stats[0]?.totalReviews || 0,
-    pendingReviews: stats[0]?.pendingReviews || 0
+    pendingReviews: stats[0]?.pendingReviews || 0,
   };
 };
 
 const getAllReviews = async () => {
-  return await Review.find({isDeleted: false});
+  return await Review.find({ isDeleted: false });
 };
 
-const getMyReviews = async (
-  userId: string,
-  query: Record<string, unknown>
-) => {
+const getMyReviews = async (userId: string, query: Record<string, unknown>) => {
   // Base filter: reviews for this service provider
   const filter = {
     userId,
-    status: "done",
+    status: 'done',
     isDeleted: { $ne: true },
   };
 
@@ -210,24 +198,25 @@ const getMyReviews = async (
   const reviewQuery = new QueryBuilder(
     Review.find(filter)
       .populate({
-        path: "userId",
-        select: "name sureName email profileImage",
+        path: 'userId',
+        select: 'name sureName email profileImage',
       })
       .populate({
-        path: "serviceProviderId",
-        select: "name sureName profileImage",
+        path: 'serviceProviderId',
+        select: 'name sureName profileImage',
       })
       .populate({
-        path: "eventOrderId",
-        select: "orderId orderType serviceType date location totalPrice packageId statusTimestamps",
+        path: 'eventOrderId',
+        select:
+          'orderId orderType serviceType date location totalPrice packageId statusTimestamps',
         populate: {
-          path: "packageId",
-          select: "title",
+          path: 'packageId',
+          select: 'title',
         },
       }),
-    query
+    query,
   )
-    .search(["message"]) // admin/professional can search by review message
+    .search(['message']) // admin/professional can search by review message
     .filter()
     .sort()
     .paginate()
@@ -241,12 +230,12 @@ const getMyReviews = async (
 
 const getMyPendingReviews = async (
   userId: string,
-  query: Record<string, unknown>
+  query: Record<string, unknown>,
 ) => {
   // Filter only pending reviews of this user
   const filter = {
     userId,
-    status: "pending",
+    status: 'pending',
     isDeleted: { $ne: true },
   };
 
@@ -254,24 +243,25 @@ const getMyPendingReviews = async (
   const reviewQuery = new QueryBuilder(
     Review.find(filter)
       .populate({
-        path: "userId",
-        select: "name sureName email profileImage",
+        path: 'userId',
+        select: 'name sureName email profileImage',
       })
       .populate({
-        path: "serviceProviderId",
-        select: "name sureName profileImage",
+        path: 'serviceProviderId',
+        select: 'name sureName profileImage',
       })
       .populate({
-        path: "eventOrderId",
-        select: "orderId orderType serviceType date location totalPrice packageId statusTimestamps",
+        path: 'eventOrderId',
+        select:
+          'orderId orderType serviceType date location totalPrice packageId statusTimestamps',
         populate: {
-          path: "packageId",
-          select: "title",
+          path: 'packageId',
+          select: 'title',
         },
       }),
-    query
+    query,
   )
-    .search(["message"])
+    .search(['message'])
     .filter()
     .sort()
     .paginate()
@@ -285,20 +275,20 @@ const getMyPendingReviews = async (
 
 const getReviewsByServiceProvider = async (
   serviceProviderId: string,
-  query?: GetReviewsQuery // optional
+  query?: GetReviewsQuery, // optional
 ) => {
-
-
-
   if (!serviceProviderId) {
-    throw new AppError(400, "User ID is required");
+    throw new AppError(400, 'User ID is required');
   }
 
   const objectId = new mongoose.Types.ObjectId(serviceProviderId); // ✅ convert string to ObjectId
 
-  
   // 1️⃣ Base filter
-  const baseFilter: any = { serviceProviderId: objectId, status: "done", isDeleted: false };
+  const baseFilter: any = {
+    serviceProviderId: objectId,
+    status: 'done',
+    isDeleted: false,
+  };
 
   // 2️⃣ Safely destructure with default
   const { rating, ...restQuery } = query || {};
@@ -312,19 +302,18 @@ const getReviewsByServiceProvider = async (
 
   // 4️⃣ Initialize QueryBuilder
   const reviewQuery = new QueryBuilder(
-    Review.find(baseFilter).populate("userId", "name email profileImage"),
-    restQuery || {}
+    Review.find(baseFilter).populate('userId', 'name email profileImage'),
+    restQuery || {},
   )
-    .paginate()    
+    .paginate()
     .fields(); // optionally add .search(["message"])
 
   // 5️⃣ Handle sorting safely
-  const sortOption = query?.sort || "newest";
+  const sortOption = query?.sort || 'newest';
 
-
-  if (sortOption === "newest") {
+  if (sortOption === 'newest') {
     reviewQuery.modelQuery = reviewQuery.modelQuery.sort({ createdAt: -1 });
-  } else if (sortOption === "oldest") {
+  } else if (sortOption === 'oldest') {
     reviewQuery.modelQuery = reviewQuery.modelQuery.sort({ createdAt: 1 });
   } else {
     reviewQuery.modelQuery = reviewQuery.modelQuery.sort({ createdAt: -1 }); // default
@@ -341,20 +330,18 @@ const getReviewById = async (id: string) => {
   return await Review.findById(id);
 };
 
-
 const deleteReview = async (id: string, userId: string) => {
   const review = await Review.findOne({ _id: id, userId });
 
   if (!review) {
-    throw new Error("You are not authorized to delete this review or it does not exist.");
+    throw new Error(
+      'You are not authorized to delete this review or it does not exist.',
+    );
   }
 
   review.isDeleted = true;
   return await review.save();
 };
-
-
-
 
 export const ReviewService = {
   createReview,

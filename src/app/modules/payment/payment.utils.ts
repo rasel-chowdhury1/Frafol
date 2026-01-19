@@ -28,11 +28,12 @@ export const createStripePaymentSession = async (payload: {
   amount: number;
   commission: number;
   netAmount: number;
-  paymentMethod: "stripe" | "card" | "bank";
-  paymentType: "event" | "gear" | "workshop";
+  paymentMethod: "stripe" | "card" | "bank" ;
+  paymentType: "event" | "gear" | "workshop" | "subscription";
   eventOrderId?: any;
   workshopId?: any;
   gearOrderId?: any;
+  subscriptionDays?: number;
 }) => {
   
   const {
@@ -45,10 +46,13 @@ export const createStripePaymentSession = async (payload: {
     paymentType,
     eventOrderId,
     workshopId,
+    subscriptionDays
   } = payload;
 
   // ✅ Validate required fields
-  if (!userId || !serviceProviderId || !amount || !paymentMethod || !paymentType) {
+
+
+  if ( !userId || !amount || !paymentMethod || !paymentType) {
     throw new AppError(400, "Missing required payment details");
   }
 
@@ -99,6 +103,14 @@ export const createStripePaymentSession = async (payload: {
     finalServiceProviderId = workshop.authorId; // instructor
   }
 
+
+  let description = `${paymentType} booking payment`;
+
+  if (paymentType === "subscription") {
+    description = `Subscription for ${subscriptionDays} days`;
+  }
+
+
     // ✅ Create Stripe Checkout Session
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -109,7 +121,7 @@ export const createStripePaymentSession = async (payload: {
           currency: "eur",
           product_data: {
             name: `${paymentType.toUpperCase()} Payment`,
-            description: `${paymentType} booking payment`,
+            description: description,
           },
           unit_amount: Math.round(amount * 100), // convert to cents
         },
@@ -135,9 +147,19 @@ export const createStripePaymentSession = async (payload: {
     paymentType,
     eventOrderId,
     workshopId,
+    subscriptionDays
   };
 
-  const paymentRecord = await Payment.create(newPayment);
+  let paymentRecord;
+  try {
+    paymentRecord = await Payment.create(newPayment);
+  }
+  catch (error) {
+    console.log("=== error =>>>> ",error)
+    return
+  }
+
+
 
 
   // ✅ Return the checkout URL and details

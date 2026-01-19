@@ -5,8 +5,7 @@ import AppError from '../error/AppError';
 import catchAsync from '../utils/catchAsync';
 import { verifyToken } from '../utils/tokenManage';
 import config from '../config';
-import { User } from '../modules/user/user.models';
-
+import { User } from '../modules/user/user.model';
 
 const auth = (...userRoles: string[]) => {
   return catchAsync(async (req, res, next) => {
@@ -14,7 +13,10 @@ const auth = (...userRoles: string[]) => {
 
     // 1️⃣ Missing Token → 401 Unauthorized
     if (!token) {
-      throw new AppError(httpStatus.UNAUTHORIZED, 'Authorization token is missing');
+      throw new AppError(
+        httpStatus.UNAUTHORIZED,
+        'Authorization token is missing',
+      );
     }
 
     // 2️⃣ Invalid or Expired Token → 403 Forbidden
@@ -39,7 +41,10 @@ const auth = (...userRoles: string[]) => {
 
     // 4️⃣ Role Not Authorized → 403 Forbidden
     if (userRoles.length && !userRoles.includes(role)) {
-      throw new AppError(httpStatus.FORBIDDEN, 'Access denied. Insufficient privileges');
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Access denied. Insufficient privileges',
+      );
     }
 
     // ✅ Authorized → Proceed

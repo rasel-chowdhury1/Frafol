@@ -62,15 +62,15 @@ const PaymentSchema = new Schema<IPayment>(
       type: String,
       enum: ["stripe", "card", "bank"],
       required: true,
-
     },
 
     paymentType: {
       type: String,
-      enum: ["event", "gear", "workshop"],
+      enum: ["event", "gear", "workshop", "subscription"],
       required: true,
     },
-
+    
+    subscriptionDays: { type: Number, required: false },
 
     eventOrderId: { type: Schema.Types.ObjectId, ref: "EventOrder" },
     gearOrderIds: [{ type: Schema.Types.ObjectId, ref: "GearOrder" }],

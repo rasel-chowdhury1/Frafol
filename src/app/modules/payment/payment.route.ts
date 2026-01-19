@@ -9,7 +9,7 @@ const router = express.Router();
 //  Create new Stripe payment session
 router.post(
     "/create-session", 
-    auth(USER_ROLE.USER),
+    auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
     PaymentController.createPaymentSession
 )
 

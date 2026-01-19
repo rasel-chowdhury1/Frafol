@@ -22,7 +22,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   let amount = 0;
   let commission = 0;
   let netAmount = 0;
-  let serviceProviderId = "";
+  let serviceProviderId: string | undefined = undefined;
   let orderReferenceId: string | undefined = undefined; // Generic variable to store the correct order ID
 
   switch (paymentType) {
@@ -99,6 +99,31 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     //   break;
     // }
 
+    case "subscription": {
+
+
+      console.log("Subscription body data ==>>> ", req.body)
+      const { amount: reqAmount, days } = req.body;
+
+      if (!reqAmount || !days) {
+        throw new AppError(
+          400,
+          "amount and days are required for subscription payment"
+        );
+      }
+
+      amount = Number(reqAmount);
+      commission = 0;
+      netAmount = amount;
+
+
+      // Optional reference info
+      orderReferenceId = `subscription_${days}_days`;
+
+      break;
+    }
+
+
     default:
       throw new AppError(400, "Invalid paymentType");
   }
@@ -114,6 +139,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     eventOrderId: paymentType === "event" ? orderReferenceId : undefined,
     workshopId: paymentType === "workshop" ? orderReferenceId : undefined,
     gearOrderId: paymentType === "gear" ? orderReferenceId : undefined,
+    subscriptionDays: paymentType === "subscription" ? Number(req.body.days) : undefined,
   };
 
   const result = await PaymentService.createPaymentSession(paymentPayload);
@@ -124,6 +150,8 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     message: "Stripe checkout session created successfully",
     data: result,
   });
+
+
 });
 
 
@@ -144,11 +172,17 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     String(session_id)
   );
 
+  
+  // Redirect to frontend success page
+  return res.redirect(
+    `http://10.10.10.38:3000/success`
+  );
+
   sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Payment confirmed successfully",
-    data: "result",
+    data: result,
   });
 });
 
