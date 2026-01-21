@@ -34,7 +34,7 @@ const isCouponCodeValid = async (code: string) => {
   });
 
   if (!coupon) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Invalid or inactive coupon code');
+    throw new AppError(httpStatus.NOT_FOUND, 'Invalid coupon code');
   }
 
   // Check expiry

@@ -36,9 +36,11 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
       const order = await EventOrder.findById(eventOrderId);
       if (!order) throw new AppError(404, "Event order not found");
 
+
       serviceProviderId = order.serviceProviderId.toString();
+
       amount = order.totalPrice ?? 0;
-      commission = Math.max((order.priceWithServiceFee ?? 0) - amount, 0);
+      commission = Math.max((order.priceWithServiceFee ?? 0) - (order?.price ?? 0) , 0);
       netAmount = Math.max((order.totalPrice ?? 0) - commission, 0);
       orderReferenceId = eventOrderId;
       break;
@@ -62,6 +64,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
         if (!isExistWorkshop) {
           throw new AppError(httpStatus.NOT_FOUND, "Workshop not found or not approved");
         }
+
 
         // 🔹 Assign service provider (instructor)
         serviceProviderId = isExistWorkshop.authorId.toString();
@@ -103,7 +106,6 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     case "subscription": {
 
 
-      console.log("Subscription body data ==>>> ", req.body)
       const { amount: reqAmount, days } = req.body;
 
       if (!reqAmount || !days) {
@@ -150,10 +152,16 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
         throw new AppError(400, "Coupon usage limit exceeded");
       }
 
+      if(coupon.minimumSpend > amount) {
+        throw new AppError(400, "Coupon minimum spend not met");
+      }
+
       // Discount cannot exceed commission
       couponDiscount = Math.min(coupon.amount, originalCommission);
 
       commission = originalCommission - couponDiscount;
+
+      amount -= couponDiscount;
 
       // Increment usage
       await Coupon.findByIdAndUpdate(coupon._id, {

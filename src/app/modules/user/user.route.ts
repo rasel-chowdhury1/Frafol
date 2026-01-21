@@ -164,6 +164,14 @@ userRoutes
     userController.updateMyProfile,
   )
 
+    .patch(
+    '/upload-new-video',
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    upload.single('image'),
+    parseData(),
+    userController.updateUserGallery,
+  )
+
   .patch(
     '/upload-new-photo',
     auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),

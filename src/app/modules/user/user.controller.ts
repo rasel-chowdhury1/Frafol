@@ -259,6 +259,22 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
+
+    if (req?.file) {
+    // console.log("req file =>>>> ",req.file)
+    req.body.introVideo = storeFile('profile', req?.file?.filename);
+  }
+
+  const result = await userService.uploadIntroVideo(req?.user?.userId, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Video uploaded successfully',
+    data: result,
+  });
+})
+
 const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.userId; // Logged-in user
   
@@ -287,6 +303,7 @@ const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
     data: updatedUser,
   });
 });
+
 
 const setUnAvailability = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.userId;

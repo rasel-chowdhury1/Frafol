@@ -60,6 +60,10 @@ const userSchema = new Schema<TUser>(
       type: String,
       default: '',
     },
+    bannerImages: {
+      type: [String],
+      default: [],
+    },
     gallery: {
       type: [String],
       default: [],  

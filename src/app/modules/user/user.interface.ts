@@ -14,6 +14,7 @@ export interface TUserCreate {
   switchRole: string;
   thumbnailImage? : string;
   introVideo ?: string;
+  bannerImages?: string[];
   gallery: string[];
   phone: string;
   address?: string;
