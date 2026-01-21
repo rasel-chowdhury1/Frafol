@@ -9,13 +9,14 @@ import { Payment } from "./payment.model";
 import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
 import { Workshop } from "../workshop/workshop.model";
 import httpStatus from "http-status";
+import { Coupon } from "../coupon/coupon.model";
 /**
  * 🔹 Create Stripe Payment Session
  */
 const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   
   const userId = (req as any)?.user?.userId;
-  const { paymentType } = req.body;
+  const { paymentType, couponCode } = req.body;
 
   if (!paymentType) throw new AppError(400, "paymentType is required");
 
@@ -128,12 +129,49 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
       throw new AppError(400, "Invalid paymentType");
   }
 
+      /* ===============================
+        COUPON LOGIC (AFTER CALC)
+    ================================*/
+    const originalCommission = commission;
+    let couponDiscount = 0;
+
+    if (couponCode && originalCommission > 0) {
+      const coupon = await Coupon.findOne({
+        code: couponCode,
+        isActive: true,
+        expiryDate: { $gte: new Date() },
+      });
+
+      if (!coupon) {
+        throw new AppError(400, "Invalid or expired coupon");
+      }
+
+      if (coupon.usedCount >= coupon.limit) {
+        throw new AppError(400, "Coupon usage limit exceeded");
+      }
+
+      // Discount cannot exceed commission
+      couponDiscount = Math.min(coupon.amount, originalCommission);
+
+      commission = originalCommission - couponDiscount;
+
+      // Increment usage
+      await Coupon.findByIdAndUpdate(coupon._id, {
+        $inc: { usedCount: 1 },
+      });
+
+    }
+
+
   const paymentPayload = {
     userId,
     serviceProviderId,
     amount,
+    originalCommission,
     commission,
     netAmount,
+    couponCode: couponCode || undefined,
+    couponDiscount,
     paymentMethod: "stripe" as const,
     paymentType,
     eventOrderId: paymentType === "event" ? orderReferenceId : undefined,
@@ -142,7 +180,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     subscriptionDays: paymentType === "subscription" ? Number(req.body.days) : undefined,
   };
 
-  const result = await PaymentService.createPaymentSession(paymentPayload);
+  const result = await PaymentService.createPaymentSession(paymentPayload as any);
 
   sendResponse(res, {
     statusCode: 200,

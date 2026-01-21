@@ -68,6 +68,10 @@ class QueryBuilder<T> {
       }
     }
 
+    if(this.query.hasActiveSubscription){
+      queryObj['hasActiveSubscription'] = true
+    }
+
     // Handle condition filter
     if (this.query.condition) {
       queryObj['condition'] = this.query.condition;

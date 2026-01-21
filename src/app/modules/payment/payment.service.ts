@@ -21,8 +21,11 @@ const createPaymentSession = async (payload: {
   userId: string;
   serviceProviderId: string;
   amount: number;
+  originalCommission: number;
   commission: number;
   netAmount: number;
+  couponCode?: string;
+  couponDiscount: number;
   paymentMethod: 'stripe' | 'card' | 'bank';
   paymentType: 'event' | 'gear' | 'workshop' | 'subscription';
   eventOrderId?: string;

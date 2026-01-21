@@ -26,8 +26,11 @@ export const createStripePaymentSession = async (payload: {
   userId: any;
   serviceProviderId: any;
   amount: number;
+  originalCommission: number;
   commission: number;
   netAmount: number;
+  couponCode?: string;
+  couponDiscount: number;
   paymentMethod: "stripe" | "card" | "bank" ;
   paymentType: "event" | "gear" | "workshop" | "subscription";
   eventOrderId?: any;
@@ -40,8 +43,11 @@ export const createStripePaymentSession = async (payload: {
     userId,
     serviceProviderId,
     amount,
+    originalCommission,
     commission,
     netAmount,
+    couponCode,
+    couponDiscount,
     paymentMethod,
     paymentType,
     eventOrderId,
@@ -140,8 +146,11 @@ export const createStripePaymentSession = async (payload: {
     userId,
     serviceProviderId,
     amount,
+    originalCommission,
     commission,
     netAmount,
+    couponCode,
+    couponDiscount,
     paymentStatus: "pending",
     paymentMethod,
     paymentType,

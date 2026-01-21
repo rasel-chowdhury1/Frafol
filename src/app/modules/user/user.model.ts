@@ -52,9 +52,18 @@ const userSchema = new Schema<TUser>(
       enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH,USER_ROLE.COMPANY, USER_ROLE.ADMIN],
       default: 'user',
     },
+    thumbnailImage: {
+      type: String,
+      default: '',
+    },
+    introVideo: {
+      type: String,
+      default: '',
+    },
     gallery: {
       type: [String],
-      default: [],  },
+      default: [],  
+    },
     phone: {
       type: String,
       default: ""

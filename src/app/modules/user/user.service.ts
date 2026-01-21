@@ -647,7 +647,7 @@ const getProfessionalPhotographerAndVideographer = async (
   const result = await userQuery.modelQuery
     .sort({ averageRating: -1 })
     .select(
-      'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview',
+      'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview hasActiveSubscription',
     );
 
   // ✅ Fetch meta information
@@ -745,7 +745,7 @@ const getProfessionalUsersByCategory = async (
 
   // Build initial query
   let baseQuery = User.find(baseFilter).select(
-    'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview photographerSpecializations videographerSpecializations',
+    'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview photographerSpecializations videographerSpecializations hasActiveSubscription',
   );
 
   console.log({ baseFilter, baseQuery, query });

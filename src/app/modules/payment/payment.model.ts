@@ -43,6 +43,20 @@ const PaymentSchema = new Schema<IPayment>(
       type: Number, 
       required: true 
     },
+    // Commission BEFORE coupon
+    originalCommission: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    // Coupon discount amount (cut from commission)
+    couponDiscount: {
+      type: Number,
+      default: 0,
+    },
+
+    // Final commission AFTER coupon
     commission: {
       type: Number, 
       required: true 
@@ -50,6 +64,10 @@ const PaymentSchema = new Schema<IPayment>(
     netAmount: { 
       type: Number, 
       required: true 
+    },
+    couponCode: {
+      type: String,
+      trim: true,
     },
 
     paymentStatus: {

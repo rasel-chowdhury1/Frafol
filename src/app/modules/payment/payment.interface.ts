@@ -21,8 +21,11 @@ export interface IPayment {
   serviceProviders?: IServiceProviderBreakdown[];
   mainOrderIdForGear?: string;
   amount: number;
+  originalCommission: number;
+  couponDiscount: number;
   commission: number;
   netAmount: number;
+  couponCode?: string;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
   paymentType: PaymentType;
