@@ -57,7 +57,7 @@ const getSingleCoupon  = catchAsync(async (req, res) => {
 })
 
 const checkCouponCode = catchAsync(async (req, res) => {
-  const { code } = req.query;
+  const { code } = req.body;
 
   if (!code) {
     return sendResponse(res, {

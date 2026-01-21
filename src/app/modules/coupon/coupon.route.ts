@@ -7,13 +7,13 @@ const router = express.Router();
 router
    .post("/", CouponController.createCoupon)
 
-// ✅ Get all coupons (with query for filtering/pagination)
-   .get("/", CouponController.getAllCoupons)
-
-   .get(
+   .post(
       '/validate',
        CouponController.checkCouponCode
    )
+// ✅ Get all coupons (with query for filtering/pagination)
+   .get("/", CouponController.getAllCoupons)
+
 
    .patch(
       "/status/:id",

@@ -55,6 +55,7 @@ const toggleCouponStatus = async (couponId: string, status: boolean) => {
   const coupon = await Coupon.findById(couponId);
 
   if (!coupon) {
+    
     throw new AppError(httpStatus.NOT_FOUND, "Coupon not found");
   }
 
