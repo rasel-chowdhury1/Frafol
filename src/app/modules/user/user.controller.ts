@@ -262,15 +262,18 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
 
     if (req?.file) {
-    // console.log("req file =>>>> ",req.file)
-    req.body.introVideo = storeFile('profile', req?.file?.filename);
+    console.log("req file =>>>> ",req.file)
+    req.body.introVideo = storeFile('video', req?.file?.filename);
   }
 
-  const result = await userService.uploadIntroVideo(req?.user?.userId, req.body);
+  console.log("req user data =>>>>> ",req.user);
+  console.log("req body data =>>>>> ",req.body);
+
+  const result = await userService.updateIntroVideo(req?.user?.userId, req.body.introVideo);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Video uploaded successfully',
+    message: 'Intro video uploaded successfully',
     data: result,
   });
 })
@@ -292,7 +295,6 @@ const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
     }
   }
 
-  console.log("Update Data:", updateData);
 
   const updatedUser = await userService.updateGallery(userId, updateData);
 
@@ -300,6 +302,44 @@ const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "User gallery updated successfully",
+    data: updatedUser,
+  });
+});
+
+
+
+const updateBannerImages = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.userId; // Logged-in user
+
+  const updateData: {
+    bannerImages?: string[];
+    deleteGallery?: string[];
+  } = {};
+
+  // Get deleteGallery from body if exists
+  if (req.body.deleteGallery) {
+    updateData.deleteGallery = Array.isArray(req.body.deleteGallery)
+      ? req.body.deleteGallery
+      : [req.body.deleteGallery];
+  }
+
+  // Handle file uploads
+  if (req.files && Object.keys(req.files).length > 0) {
+    const files = req.files as { [fieldName: string]: Express.Multer.File[] };
+    const uploadedFiles = storeFiles('profile', files);
+
+    // ✅ bannerImages upload
+    if (uploadedFiles.gallery?.length) {
+      updateData.bannerImages = uploadedFiles.gallery;
+    }
+  }
+
+  const updatedUser = await userService.updateBannerImages(userId, updateData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User banner images updated successfully',
     data: updatedUser,
   });
 });
@@ -534,7 +574,9 @@ export const userController = {
   getMyProfile,
   getAdminProfile,
   updateMyProfile,
+  uploadIntroVideo,
   updateUserGallery,
+  updateBannerImages,
   setUnAvailability,
   blockedUser,
   getMySubscriptionStatus,

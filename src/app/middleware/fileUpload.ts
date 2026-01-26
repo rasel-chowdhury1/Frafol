@@ -4,6 +4,7 @@ import multer from 'multer';
 
 // Create a generic file upload function that accepts a directory
 const fileUpload = (uploadDirectory: string) => {
+
   // Ensure the directory exists or create it
   if (!fs.existsSync(uploadDirectory)) {
     fs.mkdirSync(uploadDirectory, { recursive: true });
@@ -12,8 +13,6 @@ const fileUpload = (uploadDirectory: string) => {
   const storage = multer.diskStorage({
     destination: function (req: Request, file, cb) {
       // Set destination based on the provided upload directory
-      // console.log(file);
-      // console.log(req);
       if (file.fieldname === 'introVideo' || file.fieldname === 'video') {
         cb(null, './public/uploads/video');
       } else {
@@ -36,7 +35,7 @@ const fileUpload = (uploadDirectory: string) => {
   });
   const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit for files
+    limits: { fileSize: 10000 * 1024 * 1024 }, // 200 MB limit for files
     fileFilter: (req: Request, file, cb) => {
       // Check file type for video or document
       const allowedMimeTypes = [

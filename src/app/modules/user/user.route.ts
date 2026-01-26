@@ -167,9 +167,9 @@ userRoutes
     .patch(
     '/upload-new-video',
     auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
-    upload.single('image'),
+    upload.single('video'),
     parseData(),
-    userController.updateUserGallery,
+    userController.uploadIntroVideo,
   )
 
   .patch(
@@ -180,6 +180,16 @@ userRoutes
     ]),
     parseData(),
     userController.updateUserGallery,
+  )
+
+    .patch(
+    '/upload-new-banner',
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    upload.fields([
+      { name: 'gallery', maxCount: 10 }
+    ]),
+    parseData(),
+    userController.updateBannerImages,
   )
 
 

@@ -542,6 +542,89 @@ const updateGallery = async (
   return updatedBusiness;
 };
 
+
+const updateBannerImages = async (
+  userId: string,
+  updateData: { bannerImages?: string[]; deleteGallery?: string[] },
+) => {
+
+  // Fetch existing user
+  const existingUser = await User.findById(userId);
+  if (!existingUser) {
+    throw new Error('User not found');
+  }
+
+
+  let updatedBannerImages = existingUser.bannerImages || [];
+
+
+
+  // 🗑️ Remove images
+  if (updateData.deleteGallery?.length) {
+    updateData.deleteGallery.forEach((imgPath) => {
+      const fullPath = path.join(process.cwd(), 'public', imgPath);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    });
+
+    updatedBannerImages = updatedBannerImages.filter(
+      (img) => !updateData.deleteGallery?.includes(img),
+    );
+  }
+
+
+
+  // ➕ Add new images
+  if (updateData.bannerImages?.length) {
+    updatedBannerImages = [
+      ...updatedBannerImages,
+      ...updateData.bannerImages,
+    ];
+  }
+
+  
+
+  // ✅ Save to bannerImages field
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { bannerImages: updatedBannerImages },
+    { new: true },
+  );
+
+  return updatedUser;
+};
+
+const updateIntroVideo = async (
+  userId: string,
+  updateData: string,
+) => {
+
+  // Fetch the current business first
+  const existingUser = await User.findById(userId);
+  if (!existingUser) {
+    throw new Error('User not found');
+  }
+
+
+  if(existingUser.introVideo){
+    const oldFilePath = path.join(process.cwd(), 'public', existingUser.introVideo); // include public folder
+    if (fs.existsSync(oldFilePath)) {
+      fs.unlinkSync(oldFilePath);
+      console.log(`Deleted previous profile image: ${oldFilePath}`);
+    }
+  }
+
+
+  const updatedBusiness = await User.findByIdAndUpdate(
+    userId,
+    { introVideo: updateData },
+    { new: true },
+  );
+
+  return updatedBusiness;
+};
+
 const verifyProfessionalUserById = async (userId: string, status?: string) => {
   const updatedStatus = status ? status : 'verified';
 
@@ -1770,6 +1853,8 @@ export const userService = {
   getUserByEmail,
   updateUser,
   updateGallery,
+  updateBannerImages,
+  updateIntroVideo,
   updateUnAvailability,
   verifyProfessionalUserById,
   declineProfessionalUserById,
