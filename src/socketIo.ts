@@ -202,10 +202,11 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
 
             // ✅ Emit to sender (local message)
             socket.emit(`message_received::${chatId}`, messagePayload);
-
+              socket.emit('newMessage', messagePayload);
             // ✅ Emit only if receivers exist
             if (receiverSocketIds.length > 0) {
-              socket.emit('newMessage', messagePayload);
+
+              console.log("messagePayload =>>>>> ",messagePayload)
               io.to(receiverSocketIds).emit('newMessage', messagePayload);
               io.to(receiverSocketIds).emit(
                 `message_received::${chatId}`,
@@ -213,7 +214,20 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
               );
             }
 
+            // // 🔔 FIRE-AND-FORGET NOTIFICATIONS (NO WAIT)
+              // for (const receiverId of receivers) {
+              //   sendNotificationForNewMessage({
+              //     senderId: new mongoose.Types.ObjectId(socket.user?._id),
+              //     receiverId: new mongoose.Types.ObjectId(receiverId.toString()),
+              //     messageText: text || '📷 Sent an image',
+              //   }).catch((err) => {
+              //     console.error('Notification failed:', err);
+              //   });
+              // }
+
+
             // ✅ Reply callback
+
             callbackFn(callback, { success: true, message: messagePayload });
           } catch (err: any) {
             console.error('Socket send-message error:', err);
@@ -772,4 +786,56 @@ export const sentNotificationForOrderCancelled = async ({
   }
 
   console.log('📩 Order cancelled notification sent:', payload);
+};
+
+
+export const sendNotificationForNewMessage = async ({
+  senderId,
+  receiverId,
+  messageText,
+}: {
+  senderId: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  messageText: string;
+}) => {
+  // 🔹 Fetch sender & receiver
+  const sender = await User.findById(senderId).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!sender || !receiver) {
+    throw new AppError(404, 'User not found for message notification');
+  }
+
+  // 🔹 Notification text
+  const text = `New message from ${sender.name}: ${messageText}`;
+
+  const notificationPayload = {
+    userId: senderId, // sender
+    receiverId: receiverId, // receiver
+    userMsg: {
+      image: sender.profileImage || '',
+      text,
+      photos: [],
+    },
+    type: 'newMessage',
+  };
+
+  // 🔔 Emit socket notification + save DB
+  emitNotification(notificationPayload).catch((err) =>
+    console.error('Socket notification failed:', err),
+  );
+
+  // ✉️ Send email
+  if (receiver.email) {
+    sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: '📩 You have a new message',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) =>
+      console.error('Email notification failed:', err),
+    );
+  }
+
+  console.log('📩 Sent new message notification:', notificationPayload);
 };

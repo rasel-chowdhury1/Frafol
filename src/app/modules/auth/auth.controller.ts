@@ -21,7 +21,6 @@ const login = catchAsync(async (req: Request, res: Response) => {
     cookieOptions.sameSite = 'none';
   }
 
-  console.log({result})
   if(result.user.adminVerified === "pending"){
     sendResponse(res, {
     statusCode: httpStatus.UNAUTHORIZED,

@@ -565,6 +565,19 @@ const getDeliveryOrders = catchAsync(async (req, res) => {
   });
 });
 
+
+const getLatestGalleryImages = catchAsync(async (_req, res) => {
+  const images = await userService.getRandomGalleryImages();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Random gallery images fetched successfully',
+    data: images,
+  });
+});
+
+
 export const userController = {
   createUser,
   switchRole,
@@ -598,4 +611,5 @@ export const userController = {
   getOrderManagementStats,
   getOrders,
   getDeliveryOrders,
+  getLatestGalleryImages
 };

@@ -86,11 +86,9 @@ export const getUserPackageAndReviewStats = async (authorId: string) => {
     .sort({ createdAt: -1 }); // 👈 latest first
 
 
-    console.log("service provider Id =>>> ", authorId)
   // 2️⃣ Get all reviews received by this user serviceProviderId
   const reviews = await Review.find({ serviceProviderId: authorId, isDeleted: false });
 
-  console.log("reviews =>> ", reviews)
 
   const totalReviews = reviews.length;
 

@@ -4,9 +4,9 @@ import { EventOrder } from "./eventOrder.model";
 import { IEventOrder } from "./eventOrder.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
-import { sentNotificationForOrderCancelled } from "../../../socketIo";
 import { Review } from "../review/review.model";
 import { Payment } from "../payment/payment.model";
+import { sentNotificationForBookingRequest, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForOrderAccepted, sentNotificationForOrderDeclined } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -14,15 +14,15 @@ const createEventOrder = async (payload: IEventOrder) => {
   const result = await EventOrder.create(payload);
 
   // 🚀 Send notification asynchronously (non-blocking)
-  // sentNotificationForBookingRequest({
-  //   userId: payload.userId,
-  //   receiverId: payload.serviceProviderId,
-  //   orderType: payload.orderType, // 'direct' | 'custom'
-  //   packageName: payload?.packageName, // only for direct order
-  //   serviceType: payload?.serviceType, // only for custom order
-  // }).catch((err) => {
-  //   console.error("Failed to send booking notification:", err.message);
-  // });
+  sentNotificationForBookingRequest({
+    userId: payload.userId,
+    receiverId: payload.serviceProviderId,
+    orderType: payload.orderType, // 'direct' | 'custom'
+    packageName: payload?.packageName, // only for direct order
+    serviceType: payload?.serviceType, // only for custom order
+  }).catch((err) => {
+    console.error("Failed to send booking notification:", err.message);
+  });
 
   return result;
 };
@@ -80,7 +80,7 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
     session.endSession();
 
     throw new AppError( 500,
-      error?.message || "Failed to complete payment for event order"
+      (error as any)?.message || "Failed to complete payment for event order"
     );
   }
 };
@@ -542,13 +542,13 @@ const acceptDirectOrder = async (orderId: string, serviceProviderId: string) => 
       : undefined;
 
   // 🚀 Send notification asynchronously (non-blocking)
-  // sentNotificationForOrderAccepted({
-  //   orderType: "direct",
-  //   userId: existingOrder.serviceProviderId,
-  //   receiverId: existingOrder.userId,
-  //   serviceType: existingOrder.serviceType,
-  //   packageName,
-  // }).catch((err) => console.error("Failed to send direct accept notification:", err));
+  sentNotificationForOrderAccepted({
+    orderType: "direct",
+    userId: existingOrder.serviceProviderId,
+    receiverId: existingOrder.userId,
+    serviceType: existingOrder.serviceType,
+    packageName,
+  }).catch((err) => console.error("Failed to send direct accept notification:", err));
 
 
   return existingOrder;
@@ -616,13 +616,13 @@ const acceptCustomOrder = async (
       : undefined;
 
   // 🚀 Send notification asynchronously
-  // sentNotificationForOrderAccepted({
-  //   orderType: "custom",
-  //   userId: existingOrder.serviceProviderId,
-  //   receiverId: existingOrder.userId,
-  //   serviceType: existingOrder.serviceType,
-  //   packageName
-  // }).catch((err) => console.error("Failed to send custom accept notification:", err));
+  sentNotificationForOrderAccepted({
+    orderType: "custom",
+    userId: existingOrder.serviceProviderId,
+    receiverId: existingOrder.userId,
+    serviceType: existingOrder.serviceType,
+    packageName
+  }).catch((err) => console.error("Failed to send custom accept notification:", err));
 
 
   return existingOrder;
@@ -667,15 +667,15 @@ const requestOrderDelivery = async (
       : undefined;
 
   // 🔹 Send notification to client
-  //  sentNotificationForDeliveryRequest({
-  //   userId: order.serviceProviderId, // sender = service provider
-  //   receiverId: order.userId, // receiver = client
-  //   orderType: order.orderType,
-  //   serviceType: order.serviceType,
-  //   packageName
-  // }).catch((err) =>
-  //   console.error("Failed to send delivery request notification:", err)
-  // );;
+   sentNotificationForDeliveryRequest({
+    userId: order.serviceProviderId, // sender = service provider
+    receiverId: order.userId, // receiver = client
+    orderType: order.orderType,
+    serviceType: order.serviceType,
+    packageName
+  }).catch((err) =>
+    console.error("Failed to send delivery request notification:", err)
+  );;
 
   console.log("📦 Delivery request sent successfully:", {
     orderId: order._id,
@@ -745,15 +745,15 @@ try {
       : undefined;
 
   // 🚀 Send notification asynchronously
-  // sentNotificationForDeliveryAccepted({
-  //   orderType: order.orderType,
-  //   userId: order.userId,
-  //   receiverId: order.serviceProviderId,
-  //   serviceType: order.serviceType,
-  //   packageName,
-  // }).catch((err) =>
-  //   console.error("Failed to send delivery accepted notification:", err)
-  // );
+  sentNotificationForDeliveryAccepted({
+    orderType: order.orderType,
+    userId: order.userId,
+    receiverId: order.serviceProviderId,
+    serviceType: order.serviceType,
+    packageName,
+  }).catch((err) =>
+    console.error("Failed to send delivery accepted notification:", err)
+  );
 
   return order;
 };
@@ -812,13 +812,13 @@ const declineOrderRequest = async (
   await order.save();
 
   // Optionally, notify the service provider (uncomment to enable)
-  // sentNotificationForOrderDeclined({
-  //   orderType: order.orderType,
-  //   userId: new mongoose.Types.ObjectId(clientId), // sender = client
-  //   receiverId: new mongoose.Types.ObjectId(order.serviceProviderId), // receiver = service provider
-  //   serviceType: order.serviceType,
-  //   packageName: order.packageId ? order.packageId.title : undefined,
-  // }).catch((err) => console.error("Notification failed:", err));
+  sentNotificationForOrderDeclined({
+    orderType: order.orderType,
+    userId: new mongoose.Types.ObjectId(clientId), // sender = client
+    receiverId: new mongoose.Types.ObjectId(order.serviceProviderId), // receiver = service provider
+    serviceType: order.serviceType,
+    packageName: order.packageId ? order.packageId.title : undefined,
+  }).catch((err) => console.error("Notification failed:", err));
 
   return order;
 };

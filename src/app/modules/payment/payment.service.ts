@@ -111,13 +111,13 @@ const confirmPayment = async (sessionId: string) => {
         );
 
         if (updatedOrder) {
-          // await sentNotificationForPaymentSuccess({
-          //   orderType: updatedOrder.orderType as "direct" | "custom",
-          //   userId: new mongoose.Types.ObjectId(payment.userId),
-          //   receiverId: new mongoose.Types.ObjectId(payment.serviceProviderId),
-          //   serviceType: updatedOrder.serviceType,
-          //   packageName: updatedOrder.packageName || undefined,
-          // });
+          await sentNotificationForPaymentSuccess({
+            orderType: updatedOrder.orderType as "direct" | "custom",
+            userId: new mongoose.Types.ObjectId(payment.userId),
+            receiverId: new mongoose.Types.ObjectId(payment.serviceProviderId),
+            serviceType: updatedOrder.serviceType,
+            packageName: updatedOrder.packageName || undefined,
+          });
 
           console.log(
             "✅ Payment succeeded & event order moved to 'inProgress'",

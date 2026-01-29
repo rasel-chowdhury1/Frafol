@@ -518,7 +518,7 @@ const updateGallery = async (
     });
 
     // Remove deleted images from gallery array
-    newGallery = newGallery.filter(
+    newGallery = (newGallery as string[]).filter(
       (img) => !updateData.deleteGallery?.includes(img),
     );
   }
@@ -698,46 +698,372 @@ const updateUnAvailability = async (userId: string, dates: string[]) => {
 
 // ............................rest
 
+// const getProfessionalPhotographerAndVideographer = async (
+//   query: Record<string, unknown>,
+// ) => {
+//   const { role, ...rest } = query;
+
+
+
+//   // ✅ Determine applicable roles in a single expression
+//   const roles: UserRole[] = role
+//     ? [role as UserRole, USER_ROLE.BOTH]
+//     : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+//   // ✅ Base condition (reusable and consistent)
+//   const baseCondition = {
+//     role: { $in: roles },
+//     isDeleted: false,
+//     isBlocked: false,
+//   };
+
+
+//   // ✅ Initialize QueryBuilder
+//   const userQuery = new QueryBuilder(User.find(baseCondition), rest)
+//     .search(['name', 'sureName', 'town', 'country'])
+//     .filter()
+//     .sort()
+//     .paginate()
+//     .fields();
+
+//   // ✅ Fetch results (sorted by rating by default)
+//   const result = await userQuery.modelQuery
+//     .sort({ averageRating: -1 })
+//     .select(
+//       'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview hasActiveSubscription introVideo bannerImages gallery',
+//     );
+
+
+
+//   // ✅ Fetch meta information
+//   const meta = await userQuery.countTotal();
+
+//   return { meta, result };
+// };
+
+
+
 const getProfessionalPhotographerAndVideographer = async (
   query: Record<string, unknown>,
 ) => {
-  const { role, ...rest } = query;
+  const { role, hasActiveSubscription, searchTerm, page = 1, limit = 10 } = query;
 
+  const currentPage = Number(page);
+  const perPage = Number(limit);
+  const skip = (currentPage - 1) * perPage;
 
-
-  // ✅ Determine applicable roles in a single expression
-  const roles: UserRole[] = role
-    ? [role as UserRole, USER_ROLE.BOTH]
+  // 🎯 Role selection
+  const roles = role
+    ? [role as string, USER_ROLE.BOTH]
     : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
 
-  // ✅ Base condition (reusable and consistent)
-  const baseCondition = {
+    // 🔥 Base match condition
+  const matchCondition: any = {
     role: { $in: roles },
     isDeleted: false,
     isBlocked: false,
   };
 
+  // ✅ Subscription-only filter
+  if (hasActiveSubscription === 'true') {
+    matchCondition.hasActiveSubscription = true;
+  }
 
-  // ✅ Initialize QueryBuilder
-  const userQuery = new QueryBuilder(User.find(baseCondition), rest)
-    .search(['name', 'sureName', 'town', 'country'])
-    .filter()
-    .sort()
-    .paginate()
-    .fields();
 
-  // ✅ Fetch results (sorted by rating by default)
-  const result = await userQuery.modelQuery
-    .sort({ averageRating: -1 })
-    .select(
-      'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview hasActiveSubscription',
-    );
+    // ✅ Search filter
+  if (searchTerm) {
+    matchCondition.$or = [
+      { name: { $regex: searchTerm, $options: 'i' } },
+      { sureName: { $regex: searchTerm, $options: 'i' } },
+      { town: { $regex: searchTerm, $options: 'i' } },
+      { country: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
 
-  // ✅ Fetch meta information
-  const meta = await userQuery.countTotal();
+  const pipeline = [
+    // 1️⃣ Basic filtering
+    {
+      $match: matchCondition,
+    },
+
+    // 2️⃣ Fiverr-style score calculation
+    {
+      $addFields: {
+        baseScore: {
+          $add: [
+            // ⭐ Rating (70%)
+            { $multiply: ['$averageRating', 0.7] },
+
+            // 🧾 Experience (20%) – log scale
+            {
+              $multiply: [
+                { $log10: { $add: ['$totalReview', 1] } },
+                0.2,
+              ],
+            },
+          ],
+        },
+      },
+    },
+
+    // 3️⃣ Subscription gets STRONG priority
+    {
+      $addFields: {
+        finalScore: {
+          $add: [
+            '$baseScore',
+            {
+              $cond: [
+                { $eq: ['$hasActiveSubscription', true] },
+                1.0, // 🔥 strong boost for subscription
+                0,
+              ],
+            },
+          ],
+        },
+      },
+    },
+
+    // 4️⃣ Penalize very low rating (even if subscribed)
+    {
+      $addFields: {
+        finalScore: {
+          $cond: [
+            { $lt: ['$averageRating', 3] },
+            { $multiply: ['$finalScore', 0.4] },
+            '$finalScore',
+          ],
+        },
+      },
+    },
+
+    // 5️⃣ Final sorting
+    {
+      $sort: {
+        hasActiveSubscription: -1, // ✅ subscription first (hard rule)
+        finalScore: -1,            // ✅ quality + experience
+        totalReview: -1,
+        averageRating: -1,
+      },
+    },
+
+    // 6️⃣ Pagination
+    { $skip: skip },
+    { $limit: perPage },
+
+    // 7️⃣ Response fields
+    {
+      $project: {
+        name: 1,
+        sureName: 1,
+        role: 1,
+        profileImage: 1,
+        town: 1,
+        address: 1,
+        country: 1,
+        minHourlyRate: 1,
+        maxHourlyRate: 1,
+        averageRating: 1,
+        totalReview: 1,
+        hasActiveSubscription: 1,
+        introVideo: 1,
+        bannerImages: 1,
+        gallery: 1,
+        finalScore: 1, // 🔍 debug (remove later)
+      },
+    },
+  ];
+
+  // 🔥 Execute query
+  const result = await User.aggregate(pipeline);
+
+  // 📊 Meta data
+  const total = await User.countDocuments({
+    role: { $in: roles },
+    isDeleted: false,
+    isBlocked: false,
+  });
+
+  const meta = {
+    page: currentPage,
+    limit: perPage,
+    total,
+    totalPage: Math.ceil(total / perPage),
+  };
 
   return { meta, result };
 };
+
+
+const getProfessionalUsersByCategory = async (
+  query: Record<string, unknown>,
+) => {
+  const {
+    role,
+    categoryType,
+    page = 1,
+    limit = 10,
+    hasActiveSubscription,
+    searchTerm,
+  } = query;
+
+  const currentPage = Number(page);
+  const perPage = Number(limit);
+  const skip = (currentPage - 1) * perPage;
+
+  // 🎯 Role logic
+  const roles = role
+    ? [role as string, USER_ROLE.BOTH]
+    : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+
+  // 🔥 Base match condition
+  const matchCondition: any = {
+    role: { $in: roles },
+    isDeleted: false,
+    isBlocked: false,
+  };
+
+  // ✅ Subscription filter (optional)
+  if (hasActiveSubscription === 'true') {
+    matchCondition.hasActiveSubscription = true;
+  }
+
+  // ✅ Category filter
+  if (categoryType) {
+    const regex = new RegExp(categoryType as string, 'i');
+
+    if (role === USER_ROLE.PHOTOGRAPHER) {
+      matchCondition.photographerSpecializations = {
+        $elemMatch: { $regex: regex },
+      };
+    } else if (role === USER_ROLE.VIDEOGRAPHER) {
+      matchCondition.videographerSpecializations = {
+        $elemMatch: { $regex: regex },
+      };
+    } else {
+      matchCondition.$or = [
+        { photographerSpecializations: { $elemMatch: { $regex: regex } } },
+        { videographerSpecializations: { $elemMatch: { $regex: regex } } },
+      ];
+    }
+  }
+
+  // ✅ Search filter (important)
+  if (searchTerm) {
+    matchCondition.$or = [
+      { name: { $regex: searchTerm, $options: 'i' } },
+      { sureName: { $regex: searchTerm, $options: 'i' } },
+      { town: { $regex: searchTerm, $options: 'i' } },
+      { country: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
+
+  // 🔥 Aggregation Pipeline (same as professionals list)
+  const pipeline = [
+    { $match: matchCondition },
+
+    // ⭐ Base score
+    {
+      $addFields: {
+        baseScore: {
+          $add: [
+            { $multiply: ['$averageRating', 0.7] },
+            {
+              $multiply: [
+                { $log10: { $add: ['$totalReview', 1] } },
+                0.2,
+              ],
+            },
+          ],
+        },
+      },
+    },
+
+    // 💎 Subscription boost
+    {
+      $addFields: {
+        finalScore: {
+          $add: [
+            '$baseScore',
+            {
+              $cond: [
+                { $eq: ['$hasActiveSubscription', true] },
+                1.0,
+                0,
+              ],
+            },
+          ],
+        },
+      },
+    },
+
+    // 🚨 Low rating penalty
+    {
+      $addFields: {
+        finalScore: {
+          $cond: [
+            { $lt: ['$averageRating', 3] },
+            { $multiply: ['$finalScore', 0.4] },
+            '$finalScore',
+          ],
+        },
+      },
+    },
+
+    // 🥇 Sorting
+    {
+      $sort: {
+        hasActiveSubscription: -1,
+        finalScore: -1,
+        totalReview: -1,
+        averageRating: -1,
+      },
+    },
+
+    // 📄 Pagination
+    { $skip: skip },
+    { $limit: perPage },
+
+    // 🎯 Fields
+    {
+      $project: {
+        name: 1,
+        sureName: 1,
+        role: 1,
+        profileImage: 1,
+        town: 1,
+        address: 1,
+        country: 1,
+        minHourlyRate: 1,
+        maxHourlyRate: 1,
+        averageRating: 1,
+        totalReview: 1,
+        photographerSpecializations: 1,
+        videographerSpecializations: 1,
+        hasActiveSubscription: 1,
+        introVideo: 1,
+        bannerImages: 1,
+        gallery: 1,
+      },
+    },
+  ];
+
+  const result = await User.aggregate(pipeline);
+
+  const total = await User.countDocuments(matchCondition);
+
+  const meta = {
+    page: currentPage,
+    limit: perPage,
+    total,
+    totalPage: Math.ceil(total / perPage),
+  };
+
+  return { meta, result };
+};
+
+
+
 
 // const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
 
@@ -783,70 +1109,70 @@ const getProfessionalPhotographerAndVideographer = async (
 //   };
 // };
 
-const getProfessionalUsersByCategory = async (
-  query: Record<string, unknown>,
-) => {
-  console.log('query data=>>. ', query);
-  const { role, categoryType, ...rest } = query;
+// const getProfessionalUsersByCategory = async (
+//   query: Record<string, unknown>,
+// ) => {
+//   console.log('query data=>>. ', query);
+//   const { role, categoryType, ...rest } = query;
 
-  // Determine roles to filter
-  const roles = role
-    ? [role, USER_ROLE.BOTH]
-    : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
+//   // Determine roles to filter
+//   const roles = role
+//     ? [role, USER_ROLE.BOTH]
+//     : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
 
-  console.log({ roles });
+//   console.log({ roles });
 
-  // Base query
-  let baseFilter: any = {
-    role: { $in: roles },
-    isDeleted: false,
-    isBlocked: false,
-  };
+//   // Base query
+//   let baseFilter: any = {
+//     role: { $in: roles },
+//     isDeleted: false,
+//     isBlocked: false,
+//   };
 
-  console.log('cateogory type==>>> ', categoryType);
-  // Apply categoryType filter depending on role
-  if (categoryType) {
-    const regex = new RegExp(categoryType as string, 'i');
+//   console.log('cateogory type==>>> ', categoryType);
+//   // Apply categoryType filter depending on role
+//   if (categoryType) {
+//     const regex = new RegExp(categoryType as string, 'i');
 
-    console.log({ regex });
+//     console.log({ regex });
 
-    if (role === USER_ROLE.PHOTOGRAPHER) {
-      baseFilter.photographerSpecializations = {
-        $elemMatch: { $regex: regex },
-      };
-    } else if (role === USER_ROLE.VIDEOGRAPHER) {
-      baseFilter.videographerSpecializations = {
-        $elemMatch: { $regex: regex },
-      };
-    } else if (role === USER_ROLE.BOTH) {
-      baseFilter.$or = [
-        { photographerSpecializations: { $elemMatch: { $regex: regex } } },
-        { videographerSpecializations: { $elemMatch: { $regex: regex } } },
-      ];
-    }
-  }
+//     if (role === USER_ROLE.PHOTOGRAPHER) {
+//       baseFilter.photographerSpecializations = {
+//         $elemMatch: { $regex: regex },
+//       };
+//     } else if (role === USER_ROLE.VIDEOGRAPHER) {
+//       baseFilter.videographerSpecializations = {
+//         $elemMatch: { $regex: regex },
+//       };
+//     } else if (role === USER_ROLE.BOTH) {
+//       baseFilter.$or = [
+//         { photographerSpecializations: { $elemMatch: { $regex: regex } } },
+//         { videographerSpecializations: { $elemMatch: { $regex: regex } } },
+//       ];
+//     }
+//   }
 
-  // Build initial query
-  let baseQuery = User.find(baseFilter).select(
-    'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview photographerSpecializations videographerSpecializations hasActiveSubscription',
-  );
+//   // Build initial query
+//   let baseQuery = User.find(baseFilter).select(
+//     'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview photographerSpecializations videographerSpecializations hasActiveSubscription',
+//   );
 
-  console.log({ baseFilter, baseQuery, query });
+//   console.log({ baseFilter, baseQuery, query });
 
-  // Use QueryBuilder
-  const userQuery = new QueryBuilder(baseQuery, rest)
-    .search(['name', 'sureName']) // searchable fields
-    .filter() // other filters
-    .sort()
-    .paginate()
-    .fields();
+//   // Use QueryBuilder
+//   const userQuery = new QueryBuilder(baseQuery, rest)
+//     .search(['name', 'sureName']) // searchable fields
+//     .filter() // other filters
+//     .sort()
+//     .paginate()
+//     .fields();
 
-  // Execute query
-  const result = await userQuery.modelQuery;
-  const meta = await userQuery.countTotal();
+//   // Execute query
+//   const result = await userQuery.modelQuery;
+//   const meta = await userQuery.countTotal();
 
-  return { meta, result };
-};
+//   return { meta, result };
+// };
 
 const getProfessionalVideographers = async (query: PaginateQuery) => {
   const roles = [USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
@@ -1841,6 +2167,75 @@ const getDeliveryOrders = async (
   return { meta, orders };
 };
 
+
+
+const imageExtensions = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.bmp', '.svg', '.avif', '.tiff', '.heic', '.ico'
+];
+
+const shuffleArray = <T>(arr: T[]) => {
+  return arr.sort(() => Math.random() - 0.5);
+};
+
+const getRandomGalleryImages = async () => {
+  const roles = [
+    USER_ROLE.PHOTOGRAPHER,
+    USER_ROLE.VIDEOGRAPHER,
+    USER_ROLE.BOTH,
+  ];
+
+  const totalUsers = await User.countDocuments({ role: { $in: roles }, gallery: { $exists: true, $not: { $size: 0 } }, isDeleted: false, isBlocked: false  });
+
+
+
+  let imagesPerUser = 1;
+
+  if (totalUsers === 2) imagesPerUser = 6;
+  else if (totalUsers === 3) imagesPerUser = 4;
+  else if (totalUsers === 4) imagesPerUser = 3;
+  else if (totalUsers >= 5 ) imagesPerUser = 2;
+  else imagesPerUser = 1;
+
+  const usersToPick = totalUsers > 12 ? 12 : totalUsers;
+
+  const users = await User.find({ role: { $in: roles }, gallery: { $exists: true, $not: { $size: 0 } }, isDeleted: false, isBlocked: false })
+    .sort({ averageRating: -1, totalReview: -1 })
+    .select('gallery name')
+    .lean();
+
+  const shuffledUsers = users.sort(() => Math.random() - 0.5);
+  const selectedUsers = shuffledUsers.slice(0, usersToPick);
+
+  const images: Array<{ userId: string; name: string; image: string }> = [];
+
+  const isImage = (file: string) => {
+    const ext = file.toLowerCase().slice(file.lastIndexOf('.'));
+    return imageExtensions.includes(ext);
+  };
+
+  for (const user of selectedUsers) {
+    // Filter only image files first
+    const galleryImages = (user.gallery || []).filter(isImage);
+
+    // Shuffle only image gallery
+    const shuffledGallery = galleryImages.sort(() => Math.random() - 0.5);
+
+    // Push required number of random images
+    for (let i = 0; i < imagesPerUser && i < shuffledGallery.length; i++) {
+      images.push({
+        userId: user._id.toString(),
+        name: user.name || '',
+        image: shuffledGallery[i],
+      });
+    }
+
+  }
+
+  // <-- shuffle final result across users
+  return shuffleArray(images).slice(0, 12);
+};
+
 export const userService = {
   createUserToken,
   switchUserRole,
@@ -1878,4 +2273,5 @@ export const userService = {
   getOrderManagementStats,
   getOrders,
   getDeliveryOrders,
+  getRandomGalleryImages
 };

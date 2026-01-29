@@ -2,10 +2,16 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { ReportService } from "./report.service";
+import { storeFile } from "../../utils/fileHelper";
 
 const createReport = catchAsync(async (req: Request, res: Response) => {
   req.body.userId = req.user.userId; 
   
+    if (req?.file) {
+    // console.log("req file =>>>> ",req.file)
+    req.body.image = storeFile('report', req?.file?.filename);
+  }
+
   const result = await ReportService.createReport(req.body);
 
   sendResponse(res, {

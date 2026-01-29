@@ -23,6 +23,8 @@ import { CouponRoutes } from "../modules/coupon/coupon.route";
 import { InsuranceRoutes } from "../modules/insurance/insurance.route";
 import { SubscribeRoutes } from "../modules/subscribe/subscribe.routes";
 import { ContactRoutes } from "../modules/contactUs/contactUs.route";
+import path from "path";
+import { SubscriptionRoutes } from "../modules/subscription/subscription.route";
 
 const router = Router();
 
@@ -119,6 +121,10 @@ const moduleRoutes = [
    {
       path: "/subscribe",
       route: SubscribeRoutes
+   },
+   {
+      path: "/subscription",
+      route: SubscriptionRoutes
    },
 
    {

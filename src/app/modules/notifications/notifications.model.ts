@@ -41,7 +41,9 @@ const NotificationSchema = new Schema<INotification>(
         'PackageAdded',
         'GearAdded',
         'AdminNotice',
-        'added'
+        'added',
+        "newMessage",
+        
       ],
       required: true,
     },

@@ -15,6 +15,20 @@ const createFeedback = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+const verifyFeedbackById = catchAsync(async (req: Request, res: Response) => {
+
+  const {status} = req.body
+  const result = await FeedbackService.verifyFeedbackById(req.params.id, status);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Feedback updated successfully",
+    data: result,
+  });
+})
+
 const getAllFeedbacks = catchAsync(async (req: Request, res: Response) => {
   const result = await FeedbackService.getAllFeedbacks(req.query);
 
@@ -22,6 +36,17 @@ const getAllFeedbacks = catchAsync(async (req: Request, res: Response) => {
     statusCode: 200,
     success: true,
     message: "Feedbacks retrieved successfully",
+    data: result,
+  });
+});
+
+const getAllFeedbacksByAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await FeedbackService.getAllFeedbacksByAdmin(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "All feedbacks retrieved successfully",
     data: result,
   });
 });
@@ -49,7 +74,8 @@ const updateFeedback = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteFeedback = catchAsync(async (req: Request, res: Response) => {
-  const result = await FeedbackService.deleteFeedback(req.params.id, req.user.userId);
+  
+  const result = await FeedbackService.deleteFeedback(req.params.id);
 
   sendResponse(res, {
     statusCode: 200,
@@ -62,7 +88,9 @@ const deleteFeedback = catchAsync(async (req: Request, res: Response) => {
 export const FeedbackController = {
   createFeedback,
   getAllFeedbacks,
+  getAllFeedbacksByAdmin,
   getFeedbackById,
   updateFeedback,
+  verifyFeedbackById,
   deleteFeedback,
 };

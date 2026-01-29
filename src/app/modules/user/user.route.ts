@@ -95,6 +95,11 @@ userRoutes
   )
 
   .get(
+    "/random-gallery-images", 
+    userController.getLatestGalleryImages
+  )
+
+  .get(
   "/overview",
   auth(USER_ROLE.USER),
   userController.getUserOverview

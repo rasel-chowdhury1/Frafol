@@ -2,6 +2,10 @@ import { Router } from "express";
 import { ReportController } from "./report.controller";
 import auth from "../../middleware/auth";
 import { USER_ROLE } from "../user/user.constants";
+import fileUpload from "../../middleware/fileUpload";
+import parseData from "../../middleware/parseData";
+const upload = fileUpload('./public/uploads/report');
+
 
 const router = Router();
 
@@ -15,6 +19,8 @@ router.post(
     USER_ROLE.BOTH,
     USER_ROLE.ADMIN
   ),
+  upload.single('image'),
+  parseData(),
   ReportController.createReport
 );
 

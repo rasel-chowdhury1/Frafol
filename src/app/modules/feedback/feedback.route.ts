@@ -19,6 +19,12 @@ router
     )
 
     .get(
+       "/admin",
+       auth(USER_ROLE.ADMIN),
+       FeedbackController.getAllFeedbacksByAdmin
+    )
+
+    .get(
     "/:id",
     auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
     FeedbackController.getFeedbackById
@@ -29,6 +35,15 @@ router
     auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
     FeedbackController.updateFeedback
     )
+
+
+    .patch(
+        "/verify/:id",
+        auth(USER_ROLE.ADMIN),
+        FeedbackController.verifyFeedbackById
+    )
+
+    
 
     .delete(
     "/:id",

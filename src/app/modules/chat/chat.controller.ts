@@ -59,12 +59,10 @@ const addNewChat = catchAsync(async (req: Request, res: Response) => {
 
 const getMyChatList = catchAsync(async (req: Request, res: Response) => {
 
-  console.log("hitteed this =>>>> ", req.query,req.user)
   const { userId } = req.user;
 
   const result = await ChatService.getMyChatList(userId, req.query);
 
-  console.log("result =>>>> ", result)
   
   sendResponse(res, {
     statusCode: 200,
