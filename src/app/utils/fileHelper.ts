@@ -44,7 +44,5 @@ export const storeFiles = (
     });
   });
 
-  console.log("storeFiles result: ===>>>> ", result);
-
   return result;
 };

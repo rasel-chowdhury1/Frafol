@@ -23,6 +23,17 @@ const workshopSchema = new Schema<IWorkshop>(
       default: "pending",
     },
     declineReason: { type: String },
+    streetAddress: { type: String },
+    town: { type: String },
+    country: { type: String },
+
+    // ✅ Company Info (for custom orders)
+    isRegisterAsCompany: { type: Boolean, default: false },
+    companyName: { type: String },
+    ICO: { type: String },
+    DIC: { type: String },
+    IC_DPH: { type: String },
+    name: { type: String },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }

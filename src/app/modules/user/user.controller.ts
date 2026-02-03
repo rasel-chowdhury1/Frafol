@@ -243,7 +243,6 @@ const getProfessionalUsersByCategory = catchAsync(async (req: Request, res: Resp
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   
 
-  // console.log("udpate profile body data =>>>>> ",req.body)
   if (req?.file) {
     // console.log("req file =>>>> ",req.file)
     req.body.profileImage = storeFile('profile', req?.file?.filename);
@@ -261,21 +260,22 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 
 const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
 
-    if (req?.file) {
-    console.log("req file =>>>> ",req.file)
+
+  if (req?.file) {
     req.body.introVideo = storeFile('video', req?.file?.filename);
   }
 
-  console.log("req user data =>>>>> ",req.user);
-  console.log("req body data =>>>>> ",req.body);
+
 
   const result = await userService.updateIntroVideo(req?.user?.userId, req.body.introVideo);
+  
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Intro video uploaded successfully',
     data: result,
   });
+
 })
 
 const updateUserGallery = catchAsync(async (req: Request, res: Response) => {

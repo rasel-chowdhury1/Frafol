@@ -169,7 +169,7 @@ userRoutes
     userController.updateMyProfile,
   )
 
-    .patch(
+    .post(
     '/upload-new-video',
     auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
     upload.single('video'),

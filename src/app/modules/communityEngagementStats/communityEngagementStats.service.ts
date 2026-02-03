@@ -36,7 +36,7 @@ const addCommentOrReply = async (communityId: string, userId: string, text: stri
     { upsert: true, new: true }
   );
 
-  console.log("result ==>>> ", result);
+
 
   return result;
 }

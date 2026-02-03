@@ -6,7 +6,7 @@ import AppError from './app/error/AppError';
 import { verifyToken } from './app/utils/tokenManage';
 import config from './app/config';
 import { User } from './app/modules/user/user.model';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
@@ -112,21 +112,33 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
     next();
   });
 
-  io.on('connection', (socket: Socket) => {
+  io.on('connection', async (socket: Socket) => {
     // =================== try catch 1 start ================
     try {
       // Automatically register the connected user to avoid missing the "userConnected" event.
       if (socket.user && socket.user._id) {
         connectedUsers.set(socket.user._id.toString(), { socketID: socket.id });
-        console.log(
-          `Registered user ${socket.user._id.toString()} with socket ID: ${socket.id}`,
-        );
+
+        const unreadNotificationCount = await Notification.countDocuments({
+          receiverId: socket.user._id,
+          isRead: false,
+        });
+
+        socket.emit(`notification`, {
+              statusCode: 200,
+              success: true,
+              unreadCount: unreadNotificationCount >= 0 ? unreadNotificationCount : 0,
+              timestamp: new Date()
+            });
+
+
       }
+
+
 
       // (Optional) In addition to auto-registering, you can still listen for a "userConnected" event if needed.
       socket.on('userConnected', ({ userId }: { userId: string }) => {
         connectedUsers.set(userId, { socketID: socket.id });
-        console.log(`User ${userId} connected with socket ID: ${socket.id}`);
       });
 
       //----------------------online array send for front end------------------------//
@@ -135,6 +147,29 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
       // ===================== join by user id ================================
       // socket.join(user?._id?.toString());
 
+        socket.on("readNotification", () => {
+
+          if(!socket.user || !socket.user._id) return;
+
+          const objectId = new Types.ObjectId(socket.user._id);
+
+          // 1️⃣ Fire-and-forget: mark as read asynchronously
+          Notification.updateMany(
+            { receiverId: objectId, isRead: false },
+            { $set: { isRead: true } }
+          ).catch(err => {
+            console.error("Error updating notifications:", err);
+          });
+
+          // 2️⃣ Immediately emit unread count (0)
+          socket.emit(`notification`, {
+              statusCode: 200,
+              success: true,
+              unreadCount: 0,
+              timestamp: new Date()
+            });
+        });
+      
       // ======= message send ====
       socket.on(
         'send-message',
@@ -178,6 +213,7 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
             // ✅ Create message first (important!)
             const newMessage = await Message.create({
               sender: socket.user?._id,
+              receiver: receivers[0],
               chat: chatId,
               text,
               images,
@@ -206,7 +242,6 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
             // ✅ Emit only if receivers exist
             if (receiverSocketIds.length > 0) {
 
-              console.log("messagePayload =>>>>> ",messagePayload)
               io.to(receiverSocketIds).emit('newMessage', messagePayload);
               io.to(receiverSocketIds).emit(
                 `message_received::${chatId}`,
@@ -215,15 +250,17 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
             }
 
             // // 🔔 FIRE-AND-FORGET NOTIFICATIONS (NO WAIT)
-              // for (const receiverId of receivers) {
-              //   sendNotificationForNewMessage({
-              //     senderId: new mongoose.Types.ObjectId(socket.user?._id),
-              //     receiverId: new mongoose.Types.ObjectId(receiverId.toString()),
-              //     messageText: text || '📷 Sent an image',
-              //   }).catch((err) => {
-              //     console.error('Notification failed:', err);
-              //   });
-              // }
+              for (const receiverId of receivers) {
+                sendNotificationForNewMessage({
+                  senderId: new mongoose.Types.ObjectId(socket.user?._id),
+                  receiverId: new mongoose.Types.ObjectId(receiverId.toString()),
+                  messageText: text || '📷 Sent an image',
+                }).catch((err) => {
+                  console.error('Notification failed:', err);
+                });
+              }
+
+            emitMessage(receivers[0].toString());
 
 
             // ✅ Reply callback
@@ -288,7 +325,6 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
           }
         }
 
-        console.log('connectedUsers', Array.from(connectedUsers));
         io.emit('onlineUser', Array.from(connectedUsers.keys()));
       });
       //-----------------------Disconnect functionlity end ------------------------//
@@ -349,10 +385,11 @@ export const emitNotification = async ({
   if (userMsg && userSocket) {
     io.to(userSocket.socketID).emit(`notification`, {
       // userId,
-      // message: userMsg,
+      message: userMsg,
       statusCode: 200,
       success: true,
       unreadCount: unreadCount >= 0 ? unreadCount + 1 : 1,
+      timestamp: new Date()
     });
   }
 
@@ -369,6 +406,32 @@ export const emitNotification = async ({
   // Save notification to the database
   await Notification.create(newNotification);
 };
+
+export const emitMessage = async(userId: string) =>{
+      if (!io) {
+    throw new Error('Socket.IO is not initialized');
+  }
+
+  // Get the socket ID of the specific user
+  const userSocket = connectedUsers.get(userId.toString());
+
+    // Fetch unread notifications count for the receiver before creating the new notification
+  const unreadCount = await Message.countDocuments({
+    receiver: userId,
+    seen: true, // Filter by unread notifications
+  });
+
+  // Notify the specific user
+  if ( userSocket) {
+    io.to(userSocket.socketID).emit(`message_count`, {
+      // userId,
+      // message: userMsg,
+      statusCode: 200,
+      success: true,
+      unreadCount: unreadCount >= 0 ? unreadCount + 1 : 1,
+    });
+  }
+}
 
 export const sentNotificationForBookingRequest = async ({
   userId,
@@ -447,11 +510,6 @@ export const sentNotificationForBookingRequest = async ({
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
-  console.log('📩 Booking notification sent:', {
-    receiver: receiverId.toString(),
-    type,
-    text,
-  });
 };
 
 export const sentNotificationForOrderAccepted = async ({
@@ -516,10 +574,7 @@ export const sentNotificationForOrderAccepted = async ({
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
-  console.log(
-    '📩 Sent order accept notification with payment info:',
-    notificationPayload,
-  );
+
 };
 
 export const sentNotificationForPaymentSuccess = async ({
@@ -583,10 +638,6 @@ export const sentNotificationForPaymentSuccess = async ({
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
-  console.log(
-    '📩 Sent payment success / order in progress notification:',
-    notificationPayload,
-  );
 };
 
 export const sentNotificationForDeliveryRequest = async ({
@@ -635,7 +686,6 @@ export const sentNotificationForDeliveryRequest = async ({
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
-  console.log('📩 Sent delivery request notification:', notificationPayload);
 };
 
 export const sentNotificationForDeliveryAccepted = async ({
@@ -686,7 +736,6 @@ export const sentNotificationForDeliveryAccepted = async ({
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
-  console.log('📩 Sent delivery accepted notification:', notificationPayload);
 };
 
 export const sentNotificationForOrderDeclined = async ({
@@ -735,7 +784,6 @@ export const sentNotificationForOrderDeclined = async ({
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
-  console.log('📩 Sent order declined notification:', notificationPayload);
 };
 
 export const sentNotificationForOrderCancelled = async ({
@@ -785,7 +833,6 @@ export const sentNotificationForOrderCancelled = async ({
     }).catch((err) => console.error('Email failed:', err));
   }
 
-  console.log('📩 Order cancelled notification sent:', payload);
 };
 
 
@@ -837,5 +884,4 @@ export const sendNotificationForNewMessage = async ({
     );
   }
 
-  console.log('📩 Sent new message notification:', notificationPayload);
 };

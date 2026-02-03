@@ -32,9 +32,16 @@ const createPaymentSession = async (payload: {
   workshopId?: string;
   gearOrderId?: string;
   subscriptionDays?: number;
+  streetAddress?: string ;
+  town?: string, 
+  country?: string , 
+  isRegisterAsCompany?: boolean, 
+  companyName?: string, 
+  ICO?: string, 
+  DIC?: string, 
+  IC_DPH?: string
 }) => {
 
-  console.log("== payload =>>>>> ",{ payload });
   return await createStripePaymentSession(payload);
 };
 
@@ -45,9 +52,11 @@ const confirmPayment = async (sessionId: string) => {
   const dbSession = await mongoose.startSession();
   dbSession.startTransaction();
 
+
   try {
     // 🔹 Retrieve Stripe Checkout Session
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+
 
  
     const paymentIntentId = session.payment_intent as string | null;
@@ -75,6 +84,8 @@ const confirmPayment = async (sessionId: string) => {
     const payment = await Payment.findOne({ transactionId: sessionId }).session(
       dbSession,
     );
+
+    console.log("payment data =>>>>> ", payment)
 
 
 
@@ -164,6 +175,9 @@ const confirmPayment = async (sessionId: string) => {
         );
       } 
       else if (payment.paymentType === 'workshop' && payment.workshopId) {
+
+
+        console.log("==payment  workshop  =>>>>>> ", payment)
         // 1️⃣ Generate custom order ID
         const today = moment().format('YYYYMMDD');
         const prefix = 'WORKSHOP';
@@ -191,6 +205,15 @@ const confirmPayment = async (sessionId: string) => {
                 amount: payment.netAmount, // from your Payment model
                 paidAt: null,
               },
+              name: payment.name,
+              streetAddress: payment.streetAddress, 
+              town: payment.town, 
+              country: payment.country, 
+              isRegisterAsCompany: payment.isRegisterAsCompany, 
+              companyName: payment.companyName, 
+              ICO: payment.ICO, 
+              DIC: payment.DIC, 
+              IC_DPH: payment.IC_DPH
             },
           ],
           { session: dbSession },

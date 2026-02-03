@@ -14,6 +14,15 @@ export interface IWorkshopParticipant {
     amount: number;
     paidAt?: Date | null;
   };
+  streetAddress?: string;
+  town?: string;
+  country?: string;
+  isRegisterAsCompany?: boolean;
+  companyName?: string;
+  ICO?: string;
+  DIC?: string;
+  IC_DPH?: string;
+  name?: string;
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

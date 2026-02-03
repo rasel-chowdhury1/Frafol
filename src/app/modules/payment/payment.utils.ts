@@ -37,6 +37,15 @@ export const createStripePaymentSession = async (payload: {
   workshopId?: any;
   gearOrderId?: any;
   subscriptionDays?: number;
+  name?: string;
+  streetAddress?: string ;
+  town?: string, 
+  country?: string , 
+  isRegisterAsCompany?: boolean, 
+  companyName?: string, 
+  ICO?: string, 
+  DIC?: string, 
+  IC_DPH?: string
 }) => {
   
   const {
@@ -52,7 +61,16 @@ export const createStripePaymentSession = async (payload: {
     paymentType,
     eventOrderId,
     workshopId,
-    subscriptionDays
+    subscriptionDays,
+    name,
+    streetAddress, 
+    town, 
+    country, 
+    isRegisterAsCompany, 
+    companyName, 
+    ICO, 
+    DIC, 
+    IC_DPH
   } = payload;
 
   // ✅ Validate required fields
@@ -94,6 +112,7 @@ export const createStripePaymentSession = async (payload: {
     // Check if workshop expired
     const now = new Date();
     const workshopDateTime = new Date(workshop.date);
+    
     if (workshop.time) {
       const [hours, minutes] = workshop.time.split(":").map(Number);
       workshopDateTime.setHours(hours, minutes, 0, 0);
@@ -102,6 +121,7 @@ export const createStripePaymentSession = async (payload: {
 
     // Check participant limit
     const participantsCount = await WorkshopParticipant.countDocuments({ workshopId });
+    
     if (workshop.maxParticipant > 0 && participantsCount >= workshop.maxParticipant) {
       throw new AppError(400, "Workshop participant limit reached");
     }
@@ -156,10 +176,13 @@ export const createStripePaymentSession = async (payload: {
     paymentType,
     eventOrderId,
     workshopId,
-    subscriptionDays
+    subscriptionDays,
+    name,
+    streetAddress, town, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH
   };
 
   let paymentRecord;
+  
   try {
     paymentRecord = await Payment.create(newPayment);
   }

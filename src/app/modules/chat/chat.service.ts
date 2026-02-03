@@ -138,7 +138,6 @@ const getMyChatList = async (userId: string, query: any) => {
   const data: any[] = [];
 
   for (const chatItem of chats) {
-    console.log('chatItem', chatItem);
     if (!chatItem.users.length) continue;
 
     const chatId = chatItem._id;

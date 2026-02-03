@@ -16,7 +16,7 @@ import { Coupon } from "../coupon/coupon.model";
 const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   
   const userId = (req as any)?.user?.userId;
-  const { paymentType, couponCode } = req.body;
+  const { paymentType, couponCode,name, streetAddress, town, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH  } = req.body;
 
   if (!paymentType) throw new AppError(400, "paymentType is required");
 
@@ -186,6 +186,9 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     workshopId: paymentType === "workshop" ? orderReferenceId : undefined,
     gearOrderId: paymentType === "gear" ? orderReferenceId : undefined,
     subscriptionDays: paymentType === "subscription" ? Number(req.body.days) : undefined,
+    name,
+    streetAddress, town, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH
+
   };
 
   const result = await PaymentService.createPaymentSession(paymentPayload as any);
@@ -206,6 +209,8 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
  */
  const confirmPayment = catchAsync(async (req: Request, res: Response) => {
 
+
+
   const { session_id } = req.query;
 
     if (!session_id) {
@@ -218,6 +223,8 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     String(session_id)
   );
 
+
+  console.log("payment result =========>>>>>>>>>> ", result)
   
   // Redirect to frontend success page
   return res.redirect(

@@ -72,51 +72,49 @@ const getMyChatList = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getConnectionUsersOfSpecificUser = catchAsync(
-  async (req: Request, res: Response) => {
-    const { userId } = req.user;
+// const getConnectionUsersOfSpecificUser = catchAsync(
+//   async (req: Request, res: Response) => {
+//     const { userId } = req.user;
 
-    const {searchTerm} = req.query
+//     const {searchTerm} = req.query
 
-    const result = await ChatService.getConnectionUsersOfSpecificUser(userId, searchTerm);
+//     const result = await ChatService.getConnectionUsersOfSpecificUser(userId, searchTerm);
 
-    sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: 'Chat ActiveUsers retrieved successfully',
-      data: result,
-    });
-  },
-);
+//     sendResponse(res, {
+//       statusCode: 200,
+//       success: true,
+//       message: 'Chat ActiveUsers retrieved successfully',
+//       data: result,
+//     });
+//   },
+// );
 
-const getOnlineConnectionUsersOfSpecificUser = catchAsync(
-  async (req: Request, res: Response) => {
-    const { userId } = req.user;
+// const getOnlineConnectionUsersOfSpecificUser = catchAsync(
+//   async (req: Request, res: Response) => {
+//     const { userId } = req.user;
 
-    const result =
-      await ChatService.getOnlineConnectionUsersOfSpecificUser(userId);
-    sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: 'Chat online users retrieved successfully',
-      data: result,
-    });
-  },
-);
+//     const result =
+//       await ChatService.getOnlineConnectionUsersOfSpecificUser(userId);
+//     sendResponse(res, {
+//       statusCode: 200,
+//       success: true,
+//       message: 'Chat online users retrieved successfully',
+//       data: result,
+//     });
+//   },
+// );
 
 const leaveUserFromSpecificChatController = catchAsync(
   async (req: Request, res: Response) => {
     const { chatId } = req.params;
     const { userId, fullName } = req.user;
 
-    console.log('req user = > ', req.user);
     const payload = {
       chatId,
       userId,
       fullName,
     };
 
-    console.log('payload ---->>> ', payload);
 
     const result = await ChatService.leaveUserFromSpecific(payload);
     sendResponse(res, {
@@ -243,8 +241,8 @@ export const ChatController = {
   addNewChat,
   // createGroupChat,
   // getUserChats,
-  getConnectionUsersOfSpecificUser,
-  getOnlineConnectionUsersOfSpecificUser,
+  // getConnectionUsersOfSpecificUser,
+  // getOnlineConnectionUsersOfSpecificUser,
   getMyChatList,
   getChatById,
   leaveUserFromSpecificChatController,

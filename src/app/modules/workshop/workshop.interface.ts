@@ -17,6 +17,15 @@ export interface IWorkshop {
   maxParticipant: number;
   approvalStatus?: "pending" | "approved" | "cancelled";
   declineReason?: string;
+  streetAddress?: string;
+  town?: string;
+  country?: string;
+  isRegisterAsCompany?: boolean;
+  companyName?: string;
+  ICO?: string;
+  DIC?: string;
+  IC_DPH?: string;
+  name?: string;
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

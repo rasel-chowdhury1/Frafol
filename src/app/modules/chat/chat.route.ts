@@ -34,29 +34,29 @@ router.get(
   ChatController.getMyChatList,
 );
 
-router.get(
-  '/my-connection-users',
-  auth(
-    USER_ROLE.USER,
-    USER_ROLE.PHOTOGRAPHER,
-    USER_ROLE.VIDEOGRAPHER,
-    USER_ROLE.BOTH,
-    USER_ROLE.ADMIN,
-  ),
-  ChatController.getConnectionUsersOfSpecificUser,
-);
+// router.get(
+//   '/my-connection-users',
+//   auth(
+//     USER_ROLE.USER,
+//     USER_ROLE.PHOTOGRAPHER,
+//     USER_ROLE.VIDEOGRAPHER,
+//     USER_ROLE.BOTH,
+//     USER_ROLE.ADMIN,
+//   ),
+//   ChatController.getConnectionUsersOfSpecificUser,
+// );
 
-router.get(
-  '/my-online-users',
-  auth(
-    USER_ROLE.USER,
-    USER_ROLE.PHOTOGRAPHER,
-    USER_ROLE.VIDEOGRAPHER,
-    USER_ROLE.BOTH,
-    USER_ROLE.ADMIN,
-  ),
-  ChatController.getOnlineConnectionUsersOfSpecificUser,
-);
+// router.get(
+//   '/my-online-users',
+//   auth(
+//     USER_ROLE.USER,
+//     USER_ROLE.PHOTOGRAPHER,
+//     USER_ROLE.VIDEOGRAPHER,
+//     USER_ROLE.BOTH,
+//     USER_ROLE.ADMIN,
+//   ),
+//   ChatController.getOnlineConnectionUsersOfSpecificUser,
+// );
 
 router.patch(
   '/leave-chat/:chatId',

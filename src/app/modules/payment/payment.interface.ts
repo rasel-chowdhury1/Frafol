@@ -33,6 +33,15 @@ export interface IPayment {
   eventOrderId?: Types.ObjectId;
   gearOrderIds?: Types.ObjectId[];
   workshopId?: Types.ObjectId;
+  streetAddress?: string;
+  town?: string;
+  country?: string;
+  isRegisterAsCompany?: boolean;
+  companyName?: string;
+  ICO?: string;
+  DIC?: string;
+  IC_DPH?: string;
+  name?: string;
   serviceProviderPaid?: boolean;
   serviceProviderPaidAt?: Date;
   createdAt?: Date;

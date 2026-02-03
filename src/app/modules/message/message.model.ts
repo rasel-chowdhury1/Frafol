@@ -26,6 +26,11 @@ const MessageSchema = new Schema<IMessage>(
       ref: 'User',
       required: true,
     },
+    receiver: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     chat: {
       type: Schema.Types.ObjectId,
       ref: 'Chat',

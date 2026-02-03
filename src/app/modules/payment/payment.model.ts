@@ -96,6 +96,17 @@ const PaymentSchema = new Schema<IPayment>(
 
     serviceProviderPaid: { type: Boolean, default: false },
     serviceProviderPaidAt: { type: Date },
+    streetAddress: { type: String },
+    town: { type: String },
+    country: { type: String },
+
+    // ✅ Company Info (for custom orders)
+    isRegisterAsCompany: { type: Boolean, default: false },
+    companyName: { type: String },
+    ICO: { type: String },
+    DIC: { type: String },
+    IC_DPH: { type: String },
+    name: { type: String },
   },
   { timestamps: true, versionKey: false }
 );

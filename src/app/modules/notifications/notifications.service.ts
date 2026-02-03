@@ -2,6 +2,8 @@
 import AppError from '../../error/AppError';
 import httpStatus from 'http-status';
 import Notification from './notifications.model';
+import { Types } from 'mongoose';
+import QueryBuilder from '../../builder/QueryBuilder';
 
 interface ICreateNotificationProps {
   userId: string;
@@ -31,9 +33,30 @@ const getAllNotifications = async (query: Record<string, unknown>) => {
   return notifications;
 };
 
-const getMyNotifications = async (userId: string) => {
-  const notifications = await Notification.find({ receiverId: userId }).sort({ createdAt: -1 });
-  return notifications;
+const getMyNotifications = async (userId: string, query: Record<string, unknown>) => {
+
+    await Notification.updateMany(
+    {
+      receiverId: { $ne: new Types.ObjectId(userId) },
+      isRead: false,
+    },
+    { $set: { isRead: true } }
+  );
+
+  const notificationQuery = new QueryBuilder(
+    Notification.find({ receiverId: userId }), query)
+    .sort() // will default to '-createdAt' if no sort param is passed
+    .paginate();
+
+  const notifications = await notificationQuery.modelQuery;
+  const meta = await notificationQuery.countTotal();
+
+
+  return {
+    meta,
+    notifications
+  }
+  
 };
 
 const markAsRead = async (id: string) => {

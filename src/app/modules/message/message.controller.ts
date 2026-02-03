@@ -83,8 +83,6 @@ const seenMessage = catchAsync(async (req: Request, res: Response) => {
     req.params.chatId,
   );
 
-  console.log("=== result ===>>> ", result)
-
 
 
   sendResponse(res, {
@@ -111,7 +109,6 @@ const getMessagesForChat = catchAsync(async (req: Request, res: Response) => {
   const {userId} = req.user;
   const result = await messageService.getMessagesForChat(req.params.chatId, userId, req.query);
 
-  console.log("result ",{result})
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
