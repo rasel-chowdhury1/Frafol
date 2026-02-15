@@ -87,7 +87,7 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
 
 
 const getEventOrders = async (query: Record<string, unknown>) => {
-  const eventOrderQuery = new QueryBuilder(EventOrder.find({ isDeleted: false, status: { $ne: "delivered" } }), query)
+  const eventOrderQuery = new QueryBuilder(EventOrder.find({ isDeleted: false, }), query)
     .filter() // apply filters (userId, serviceProviderId, orderType, etc.)
     .search(["orderId", "location", "town", "country"]) // allow searching by these fields
     .sort()
@@ -95,8 +95,8 @@ const getEventOrders = async (query: Record<string, unknown>) => {
     .fields();
 
   const result = await eventOrderQuery.modelQuery
-    .populate("userId", "name sureName profileImage role switchRole")
-    .populate("serviceProviderId", "name sureName profileImage role switchRole")
+    .populate("userId", "name sureName profileImage role switchRole email address ico dic ic_dph")
+    .populate("serviceProviderId", "name sureName profileImage role switchRole email address ico dic ic_dph")
     .populate("packageId", "title description price vatAmount mainPrice")
     .exec();
 
@@ -1164,7 +1164,7 @@ const getServiceProviderCalendar = async (
       $match: {
         serviceProviderId: new Types.ObjectId(serviceProviderId),
         isDeleted: false,
-        date: { $gte: startDate, $lte: endDate },
+        // date: { $gte: startDate, $lte: endDate },
       },
     },
     {
@@ -1182,7 +1182,7 @@ const getServiceProviderCalendar = async (
           $cond: [
             { $eq: ["$orderType", "direct"] },
             "$package.title",
-            "Custom Order",
+            "",
           ],
         },
       },
@@ -1190,6 +1190,7 @@ const getServiceProviderCalendar = async (
     {
       $project: {
         _id: 0,
+        title: 1,
         eventName: 1,
         eventDate: "$date",
         status: 1,
@@ -1204,6 +1205,7 @@ const getServiceProviderCalendar = async (
         },
         events: {
           $push: {
+            title: "$title",
             eventName: "$eventName",
             eventDate: "$eventDate",
             status: "$status",

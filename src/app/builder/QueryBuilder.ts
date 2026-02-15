@@ -26,59 +26,64 @@ class QueryBuilder<T> {
     return this;
   }
 
-  filter() {
-    const queryObj = { ...this.query } as Record<string, any>; //copy
-    // filtering
-    const excludeFields = ['searchTerm', 'sort', 'limit', 'page', 'fields'];
+filter() {
+  const queryObj = { ...this.query } as Record<string, any>;
 
-    excludeFields.forEach((el) => delete queryObj[el]);
+  const excludeFields = ['searchTerm', 'sort', 'limit', 'page', 'fields'];
+  excludeFields.forEach((el) => delete queryObj[el]);
 
+  // ===== PRICE FILTER =====
+  const minPrice = this.query.minPrice
+    ? Number(this.query.minPrice)
+    : undefined;
 
-  // Handle price filter independently
-    const minPrice = this.query.minPrice ? parseFloat(this.query.minPrice as string) : undefined;
-    const maxPrice = this.query.maxPrice ? parseFloat(this.query.maxPrice as string) : undefined;
+  const maxPrice = this.query.maxPrice
+    ? Number(this.query.maxPrice)
+    : undefined;
 
-    if (!isNaN(minPrice!) || !isNaN(maxPrice!)) {
-      queryObj['price'] = {};
-      if (!isNaN(minPrice!)) queryObj['price']['$gte'] = minPrice;
-      if (!isNaN(maxPrice!)) queryObj['price']['$lte'] = maxPrice;
-    }
-
-    delete queryObj.minPrice;
-    delete queryObj.maxPrice;
-
-
-    // Handle category name filter
-    if (this.query.categoryName) {
-
-      this.modelQuery = this.modelQuery.find({
-        'categoryId.title': { $regex: this.query.categoryName, $options: 'i' },
-      });
-
-      delete queryObj.categoryName;
-    }
-
-    if (this.query.categoryId) {
-      try {
-        queryObj['categoryId'] = new mongoose.Types.ObjectId(this.query.categoryId as string);
-      } catch {
-        console.warn("Invalid categoryId format, skipping filter");
-      }
-    }
-
-    if(this.query.hasActiveSubscription){
-      queryObj['hasActiveSubscription'] = true
-    }
-
-    // Handle condition filter
-    if (this.query.condition) {
-      queryObj['condition'] = this.query.condition;
-    }
-
-    this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
-
-    return this;
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    queryObj.mainPrice = {};
+    if (minPrice !== undefined) queryObj.mainPrice.$gte = minPrice;
+    if (maxPrice !== undefined) queryObj.mainPrice.$lte = maxPrice;
   }
+
+  delete queryObj.minPrice;
+  delete queryObj.maxPrice;
+
+  // ===== CATEGORY NAME FILTER =====
+  if (this.query.categoryName) {
+    queryObj['categoryId.title'] = {
+      $regex: this.query.categoryName,
+      $options: 'i',
+    };
+  }
+
+  // ===== CATEGORY ID FILTER =====
+  if (this.query.categoryId) {
+    try {
+      queryObj.categoryId = new mongoose.Types.ObjectId(
+        this.query.categoryId as string,
+      );
+    } catch {
+      console.warn('Invalid categoryId format, skipping filter');
+    }
+  }
+
+  // ===== SUBSCRIPTION FILTER =====
+  if (this.query.hasActiveSubscription === 'true') {
+    queryObj.hasActiveSubscription = true;
+  }
+
+  // ===== CONDITION FILTER =====
+  if (this.query.condition) {
+    queryObj.condition = this.query.condition;
+  }
+
+  // ✅ SINGLE FIND CALL
+  this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
+
+  return this;
+}
 
   sort() {
     const sort =

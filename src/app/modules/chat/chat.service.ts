@@ -8,6 +8,12 @@ import Chat from './chat.model';
 import httpStatus from 'http-status';
 import { Types } from 'mongoose';
 import { Console } from 'console';
+import QueryBuilder from '../../builder/QueryBuilder';
+
+import Pick  from 'mongoose';
+import { TUser } from '../user/user.interface';
+
+
 // Convert string to ObjectId
 const toObjectId = (id: string): mongoose.Types.ObjectId =>
   new mongoose.Types.ObjectId(id);
@@ -151,7 +157,7 @@ const getMyChatList = async (userId: string, query: any) => {
     }
 
     // Find the latest message (no populate)
-    const message = await Message.findOne({ chat: chatId })
+    const message: any = await Message.findOne({ chat: chatId })
       .sort({ updatedAt: -1 })
       .select('text sender updatedAt');
 
@@ -168,11 +174,11 @@ const getMyChatList = async (userId: string, query: any) => {
       images: message?.images || [],
       lastMessageSender: message?.sender || null, // 👈 only sender _id
       unreadMessageCount,
-      lastMessageCreatedAt: message?.updatedAt || null,
+      lastMessageCreatedAt: message?.updatedAt ?? null
     });
   }
 
-  console.log('data', data);
+
   // Sort chats by last message time (descending)
   data.sort((a, b) => {
     const dateA = a.lastMessageCreatedAt
@@ -293,6 +299,39 @@ const leaveUserFromSpecific = async (payload: any) => {
   // Return success message
   return 'User has left the chat successfully';
 };
+
+
+
+const getAllUserQueryForChat = async (
+  userId: string,
+  query: Record<string, unknown>,
+) => {
+
+  const filter = {
+    _id: { $ne: userId },
+    adminVerified: 'verified',
+  };
+
+  // Only select specific fields (subset of TUser)
+  type UserChatFields = Pick<TUser, 'name' | 'profileImage' | 'email' | 'role'>;
+
+  const userQuery = new QueryBuilder(
+    User.find(filter).select('name profileImage email role') as any as mongoose.Query<UserChatFields[], UserChatFields>,
+    query
+  )
+    .search(['name', 'sureName', 'email', 'companyName'])
+    .filter()
+    .sort()
+    .paginate();
+
+  const result = await userQuery.modelQuery;
+  const meta = await userQuery.countTotal();
+
+
+  return { meta, result };
+};
+
+
 
 // const updateUnreadCounts = async (
 //   chatId: string,
@@ -482,6 +521,7 @@ export const ChatService = {
   // getUserChats,
   getChatById,
   leaveUserFromSpecific,
+  getAllUserQueryForChat
   // getUserChats,
   // getChatById,
   // updateUnreadCounts,

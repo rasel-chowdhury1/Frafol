@@ -47,6 +47,8 @@ const createGearMarketplace = catchAsync(async (req: Request, res: Response) => 
 
 const getAllGearMarketplaces = catchAsync(async (req: Request, res: Response) => {
 
+
+  console.log("Query:", req.query);
     // Clean query
   const cleanedQuery: Record<string, any> = {};
   Object.entries(req.query).forEach(([key, value]) => {
@@ -59,6 +61,8 @@ const getAllGearMarketplaces = catchAsync(async (req: Request, res: Response) =>
       cleanedQuery[key] = value;
     }
   });
+
+  console.log("Cleaned query:", cleanedQuery);
   const result = await GearMarketplaceService.getAllGearMarketplaces(cleanedQuery);
 
   sendResponse(res, {

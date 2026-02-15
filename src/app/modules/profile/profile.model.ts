@@ -19,11 +19,11 @@ const ProfileSchema = new Schema<IProfile>(
     bankName: {
       type: String,
       default: ""   
-  },
-  accountNumber: {
-      type: String,
-      default: ""   
-  },
+    },
+    accountNumber: {
+        type: String,
+        default: ""   
+    },
 },
   {
     timestamps: true,

@@ -17,7 +17,7 @@ router
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
       USER_ROLE.COMPANY,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN,
     ),
     upload.single("image"),
     parseData(),

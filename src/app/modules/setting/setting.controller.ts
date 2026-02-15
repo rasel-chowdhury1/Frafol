@@ -58,6 +58,8 @@ const getDynamicDocuments = async (req: Request, res: Response) => {
 const updateSettingsByKey = async (req: Request, res: Response) => {
     try {
         const { key, content } = req.body;
+
+        console.log("body =>>>>>>>>>>>>>> ", req.body);
         const updatedPolicy = await settingsService.updateSettingsByKey(key, content);
 
         sendResponse(res, {

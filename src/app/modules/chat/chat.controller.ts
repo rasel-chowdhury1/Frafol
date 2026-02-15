@@ -72,6 +72,20 @@ const getMyChatList = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllUserQueryForChat = catchAsync(async (req: Request, res: Response) => {
+
+  const { userId } = req.user;
+
+  const result = await ChatService.getAllUserQueryForChat(userId, req.query);
+  
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Users retrieved for the chatsuccessfully',
+    data: result,
+  });
+})
+
 // const getConnectionUsersOfSpecificUser = catchAsync(
 //   async (req: Request, res: Response) => {
 //     const { userId } = req.user;
@@ -246,6 +260,7 @@ export const ChatController = {
   getMyChatList,
   getChatById,
   leaveUserFromSpecificChatController,
+  getAllUserQueryForChat
   //   getUserChats,
   //   getChatById,
   //   updateUnreadCounts,

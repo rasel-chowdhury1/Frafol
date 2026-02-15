@@ -22,11 +22,13 @@ router.post(
     "/earnings", 
     PaymentController.getPayments
 )
+
 .get(
     "/my", 
     auth(USER_ROLE.USER),
     PaymentController.getMyPayments
 )
+
 .get(
     "/my-stats", 
     auth(USER_ROLE.USER),

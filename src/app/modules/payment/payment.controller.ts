@@ -231,12 +231,6 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     `http://10.10.10.38:3000/success`
   );
 
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: "Payment confirmed successfully",
-    data: result,
-  });
 });
 
 const confirmStripePayment = async (req: Request, res: Response) => {

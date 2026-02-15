@@ -7,6 +7,7 @@ import {
   IOrderStats,
   OrderStats,
   PaginateQuery,
+  TownCategoryResponse,
   TUser,
   TUserCreate,
   VerifiedProfessionalPayload,
@@ -20,6 +21,7 @@ import { TPurposeType } from '../otp/otp.interface';
 import {
   otpSendEmail,
   profileVerifiedEmail,
+  welcomeEmail,
 } from '../../utils/eamilNotifiacation';
 import { createToken, verifyToken } from '../../utils/tokenManage';
 import { IProfile } from '../profile/profile.interface';
@@ -39,7 +41,10 @@ import { Review } from '../review/review.model';
 import { Package } from '../package/package.model';
 import { GearMarketplace } from '../gearMarketplace/gearMarketplace.model';
 import { Workshop } from '../workshop/workshop.model';
-import { aggregateOrders } from './user.utils';
+import { aggregateOrders, getUserType } from './user.utils';
+import { Town } from '../town/town.model';
+import { Category } from '../category/category.model';
+import { ICategory } from '../category/category.interface';
 export type IFilter = {
   searchTerm?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,6 +81,8 @@ const createUserToken = async (payload: TUserCreate) => {
     ico,
     dic,
     ic_dph,
+    phone,
+    dateOfBirth
   } = payload;
   let adminVerified = 'pending';
   if (role === 'user' || role === 'company') {
@@ -141,6 +148,8 @@ const createUserToken = async (payload: TUserCreate) => {
     ico,
     dic,
     ic_dph,
+    phone,
+    dateOfBirth
   };
 
   // send email
@@ -204,6 +213,8 @@ const otpVerifyAndCreateUser = async ({
     ico,
     dic,
     ic_dph,
+    phone,
+    dateOfBirth
   } = decodeData;
 
   // Check OTP
@@ -261,6 +272,8 @@ const otpVerifyAndCreateUser = async ({
           ico,
           dic,
           ic_dph,
+          phone,
+          dateOfBirth
         },
       ],
       { session },
@@ -282,6 +295,20 @@ const otpVerifyAndCreateUser = async ({
 
     await session.commitTransaction();
     session.endSession();
+
+    // 🔥 SEND WELCOME EMAIL (NON-BLOCKING)
+    process.nextTick(async () => {
+      try {
+        await welcomeEmail({
+          sentTo: user[0].email,
+          subject: "Welcome to Frafol 🎉",
+          name: user[0].name || "Customer",
+          userType: getUserType(user[0].role),
+        });
+      } catch (err) {
+        console.error("Welcome email failed:", err);
+      }
+    });
 
     const notificationData = {
       userId: user[0]._id,
@@ -314,6 +341,7 @@ const otpVerifyAndCreateUser = async ({
       access_secret: config.jwt_access_secret as string,
       expity_time: '5m',
     });
+
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -389,6 +417,76 @@ const switchUserRole = async (userId: string, newRole: string) => {
   };
 };
 
+const updateUserRole = async( userId: string, newRole: string) => {
+
+  // 1️⃣ Validate user existence
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // 2️⃣ Check if newRole is valid
+  const allowedRoles = [
+    'photographer',
+    'videographer',
+    'both',
+  ];
+
+  if (!allowedRoles.includes(newRole)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid role selected');
+  }
+
+  // 3️⃣ Check if user already has that role
+  if (user.role === newRole) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User already has this role');
+  }
+
+  // 4️⃣ Update switchRole
+  user.role = newRole;
+  await user.save();
+
+    // 5️⃣ Generate new JWT tokens
+  const jwtPayload = {
+    userId: user._id.toString(),
+    name: user.name || '',
+    sureName: user.sureName || '',
+    companyName: user.companyName || '',
+    email: user.email,
+    role: user.role,
+    mainRole: user.mainRole,
+    switchRole: user.switchRole,
+  };
+
+  const accessToken = createToken({
+    payload: jwtPayload,
+    access_secret: config.jwt_access_secret as string,
+    expity_time: config.jwt_access_expires_in as string,
+  });
+
+  const refreshToken = createToken({
+    payload: jwtPayload,
+    access_secret: config.jwt_refresh_secret as string,
+    expity_time: config.jwt_refresh_expires_in as string,
+  });
+
+  return {
+    user: {
+      _id: user._id,
+      name: user.name,
+      sureName: user.sureName,
+      companyName: user.companyName,
+      role: user.role,
+      mainRole: user.mainRole,
+      switchRole: user.switchRole,
+      email: user.email,
+      profileImage: user.profileImage,
+    },
+    accessToken,
+    refreshToken,
+  };
+
+}
+
 const updateUser = async (userId: string, payload: Partial<TUser>) => {
   const {
     role,
@@ -403,9 +501,31 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     ...rest
   } = payload;
 
+  console.log('Updating user with payload:', payload);
+
+
+
   // 1️⃣ Find existing user
   const user = await User.findById(userId);
   if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+
+  if(role){
+      // 2️⃣ Check if newRole is valid
+  const allowedRoles = [
+    'photographer',
+    'videographer',
+    'both',
+  ];
+
+  if (!allowedRoles.includes(role)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid role selected');
+  }
+
+
+
+  (rest as any).role = role;
+  
+  }
 
   // 2️⃣ Handle profile fields
   if (about || bankName || accountNumber) {
@@ -443,10 +563,15 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     ...(payload.profileImage ? { profileImage: payload.profileImage } : {}),
   };
 
+  console.log("updateData ->>> ", updateData);
+
   // Update user in DB
   const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
     new: true,
   });
+
+
+  console.log('updatedUser ->>> ', updatedUser);
 
   if (!updatedUser) {
     throw new AppError(httpStatus.BAD_REQUEST, 'User updating failed');
@@ -460,6 +585,7 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     email: string;
     profileImage: string;
     role: string;
+    mainRole: string;
     switchRole: string;
   } = {
     userId: updatedUser?._id?.toString() as string,
@@ -469,6 +595,7 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     email: updatedUser.email,
     profileImage: updatedUser.profileImage || '',
     role: updatedUser?.role,
+    mainRole: updatedUser?.mainRole,
     switchRole: updatedUser.switchRole,
   };
 
@@ -746,7 +873,16 @@ const updateUnAvailability = async (userId: string, dates: string[]) => {
 const getProfessionalPhotographerAndVideographer = async (
   query: Record<string, unknown>,
 ) => {
-  const { role, hasActiveSubscription, searchTerm, page = 1, limit = 10 } = query;
+  const { 
+    role, 
+    hasActiveSubscription, 
+    searchTerm,
+    minPrice,
+    maxPrice, 
+    availableDate,
+    page = 1, 
+    limit = 10 
+  } = query;
 
   const currentPage = Number(page);
   const perPage = Number(limit);
@@ -764,7 +900,62 @@ const getProfessionalPhotographerAndVideographer = async (
     isBlocked: false,
   };
 
-  // ✅ Subscription-only filter
+  // ✅ Price filter
+if (minPrice || maxPrice) {
+
+  console.log(" price =>>>> ", { minHourlyRate: { $lte: Number(maxPrice) } },
+      { maxHourlyRate: { $gte: Number(minPrice) } },)
+  matchCondition.$and = matchCondition.$and || [];
+
+  const priceCondition: any = {};
+
+  if (minPrice && maxPrice) {
+    // overlap logic (recommended)
+    priceCondition.$and = [
+      { minHourlyRate: { $lte: Number(maxPrice) } },
+      { maxHourlyRate: { $gte: Number(minPrice) } },
+    ];
+  } else if (minPrice) {
+    priceCondition.maxHourlyRate = { $gte: Number(minPrice) };
+  } else if (maxPrice) {
+    priceCondition.minHourlyRate = { $lte: Number(maxPrice) };
+  }
+
+  matchCondition.$and.push(priceCondition);
+}
+
+  // ✅ Available date filter
+if (availableDate) {
+  matchCondition.unAvailability = {
+    $ne: availableDate, // date must NOT exist in unAvailability
+  };
+}
+
+  // ✅ Price filter
+if (minPrice || maxPrice) {
+
+
+
+  matchCondition.$and = matchCondition.$and || [];
+
+  const priceCondition: any = {};
+
+  if (minPrice && maxPrice) {
+      // Full range must be inside user's range
+      priceCondition.$and = [
+        { minHourlyRate: { $gte: Number(minPrice) } },
+        { maxHourlyRate: { $lte: Number(maxPrice) } },
+      ];
+  } else if (minPrice) {
+    priceCondition.minHourlyRate = { $gte: Number(minPrice) };
+  } else if (maxPrice) {
+    priceCondition.minHourlyRate = { $lte: Number(maxPrice) };
+  }
+
+  matchCondition.$and.push(priceCondition);
+}
+
+  // ✅ Subscription filter (optional)
   if (hasActiveSubscription === 'true') {
     matchCondition.hasActiveSubscription = true;
   }
@@ -898,6 +1089,7 @@ const getProfessionalPhotographerAndVideographer = async (
 const getProfessionalUsersByCategory = async (
   query: Record<string, unknown>,
 ) => {
+
   const {
     role,
     categoryType,
@@ -905,6 +1097,9 @@ const getProfessionalUsersByCategory = async (
     limit = 10,
     hasActiveSubscription,
     searchTerm,
+    minPrice,
+    maxPrice,
+    availableDate
   } = query;
 
   const currentPage = Number(page);
@@ -922,6 +1117,37 @@ const getProfessionalUsersByCategory = async (
     isDeleted: false,
     isBlocked: false,
   };
+
+  // ✅ Available date filter
+if (availableDate) {
+  matchCondition.unAvailability = {
+    $ne: availableDate, // date must NOT exist in unAvailability
+  };
+}
+
+  // ✅ Price filter
+if (minPrice || maxPrice) {
+
+
+
+  matchCondition.$and = matchCondition.$and || [];
+
+  const priceCondition: any = {};
+
+  if (minPrice && maxPrice) {
+      // Full range must be inside user's range
+      priceCondition.$and = [
+        { minHourlyRate: { $gte: Number(minPrice) } },
+        { maxHourlyRate: { $lte: Number(maxPrice) } },
+      ];
+  } else if (minPrice) {
+    priceCondition.minHourlyRate = { $gte: Number(minPrice) };
+  } else if (maxPrice) {
+    priceCondition.minHourlyRate = { $lte: Number(maxPrice) };
+  }
+
+  matchCondition.$and.push(priceCondition);
+}
 
   // ✅ Subscription filter (optional)
   if (hasActiveSubscription === 'true') {
@@ -1061,6 +1287,7 @@ const getProfessionalUsersByCategory = async (
 
   return { meta, result };
 };
+
 
 
 
@@ -1285,6 +1512,10 @@ const getAllUserQuery = async (
   return { meta, result };
 };
 
+
+
+
+
 const getAllPhotographersVideographersBoth = async (
   query: Record<string, any> = {},
 ) => {
@@ -1433,7 +1664,10 @@ const getUserDetailsById = async (userId: string) => {
 
 // Optimized the function to improve performance, reducing the processing time to 235 milliseconds.
 const getMyProfile = async (id: string) => {
+
+  console.log("getMyProfile function called with id:  =>>> ", id);
   const result = await User.findById(id).populate('profileId');
+  console.log("getMyProfile function result:  =>>> ", result);
   return result;
 };
 
@@ -2137,7 +2371,13 @@ const getDeliveryOrders = async (
     baseQuery = model
       .find({ status: { $in: deliveryStatuses } })
       .populate('userId', 'name email profileImage')
-      .populate('serviceProviderId', 'name email profileImage');
+      .populate({
+        path: 'serviceProviderId',
+        select: 'name email profileImage profileId',
+        populate: {
+          path: 'profileId',
+        },
+      });
   } else if (type === 'gear') {
     model = GearOrder;
     deliveryStatuses = [
@@ -2148,7 +2388,14 @@ const getDeliveryOrders = async (
     baseQuery = model
       .find({ orderStatus: { $in: deliveryStatuses } })
       .populate('clientId', 'name email profileImage')
-      .populate('sellerId', 'name email profileImage')
+      .populate({
+        path: 'sellerId',
+        select: 'name email profileImage profileId',
+        populate: {
+          path: 'profileId',
+          select: "bankAccount bankName bankCode",
+        },
+      })
       .populate('gearMarketplaceId');
   } else {
     throw new Error('Invalid type. Allowed: professional, gear');
@@ -2236,9 +2483,34 @@ const getRandomGalleryImages = async () => {
   return shuffleArray(images).slice(0, 12);
 };
 
+
+const getTownAndIndividualCategoriesOptimized = async () => {
+    const [towns, categories] = await Promise.all([
+      // Towns (auto excludes deleted via middleware)
+      Town.find().sort({ createdAt: -1 }).lean(),
+
+      // Fetch only needed category types
+      Category.find({
+        isDeleted: false,
+        type: { $in: ["photoGraphy", "videoGraphy"] },
+      })
+        .sort({ order: 1 })
+        .lean(),
+    ]);
+
+
+
+    return {
+      towns: towns || [],
+      categories: categories || [],
+    };
+
+  };
+
 export const userService = {
   createUserToken,
   switchUserRole,
+  updateUserRole,
   otpVerifyAndCreateUser,
   getMyProfile,
   getAdminProfile,
@@ -2273,5 +2545,6 @@ export const userService = {
   getOrderManagementStats,
   getOrders,
   getDeliveryOrders,
-  getRandomGalleryImages
+  getRandomGalleryImages,
+  getTownAndIndividualCategoriesOptimized
 };

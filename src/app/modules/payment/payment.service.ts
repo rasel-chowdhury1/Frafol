@@ -13,6 +13,7 @@ import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.
 import QueryBuilder from '../../builder/QueryBuilder';
 import { MySubscription } from '../mySubscription/mySubscription.model';
 import { User } from '../user/user.model';
+import { frafolChoiceEmail, sendEmailAndNotification } from '../../utils/eamilNotifiacation';
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)
@@ -265,7 +266,7 @@ const confirmPayment = async (sessionId: string) => {
       );
 
       // ✅ Update user hasActiveSubscription = true
-      await User.findByIdAndUpdate(
+      const updateUser = await User.findByIdAndUpdate(
         payment.userId,
         { 
           subscriptionId: result[0]._id,
@@ -275,6 +276,14 @@ const confirmPayment = async (sessionId: string) => {
          },
         { session: dbSession },
       );
+
+        // Send email & notification without blocking
+        sendEmailAndNotification({
+          userId: (updateUser as any)._id,
+          email: (updateUser as any).email, // make sure Payment model stores user's email
+          name: (updateUser as any).name || '', // optional fallback
+          notificationText: 'Your Frafol Choice has been successfully activated on your profile. 🚀 Your profile now gets higher visibility and priority placement on Frafol.',
+        });
 
       console.log('✅ Subscription activated successfully', {
         userId: payment.userId,

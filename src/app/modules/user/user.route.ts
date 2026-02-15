@@ -26,6 +26,15 @@ userRoutes
 
 
   .patch(
+    "/update-role", 
+    auth(
+      USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,
+    ),
+    userController.updateUserRole
+  )
+
+  
+  .patch(
     "/switch-role", 
     auth(
       USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN
@@ -36,7 +45,7 @@ userRoutes
   .get(
     '/my-profile',
     auth(
-      USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN
+      USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY
     ),
     userController.getMyProfile,
   )
@@ -101,7 +110,7 @@ userRoutes
 
   .get(
   "/overview",
-  auth(USER_ROLE.USER),
+  auth(USER_ROLE.USER, USER_ROLE.COMPANY),
   userController.getUserOverview
 )
 
@@ -154,6 +163,11 @@ userRoutes
   )
 
   .get(
+    "/towns/categories",
+    userController.getTownAndIndividualCategoriesOptimized
+  )
+
+  .get(
     '/:id',
     // auth("user", "admin"),
     userController.getUserById
@@ -163,7 +177,7 @@ userRoutes
 
   .patch(
     '/update-my-profile',
-    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),
     upload.single('image'),
     parseData(),
     userController.updateMyProfile,
@@ -171,7 +185,7 @@ userRoutes
 
     .post(
     '/upload-new-video',
-    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),
     upload.single('video'),
     parseData(),
     userController.uploadIntroVideo,
@@ -179,7 +193,7 @@ userRoutes
 
   .patch(
     '/upload-new-photo',
-    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),
     upload.fields([
       { name: 'gallery', maxCount: 10 }
     ]),
@@ -189,7 +203,7 @@ userRoutes
 
     .patch(
     '/upload-new-banner',
-    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),
     upload.fields([
       { name: 'gallery', maxCount: 10 }
     ]),

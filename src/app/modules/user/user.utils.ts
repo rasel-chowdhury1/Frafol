@@ -1,4 +1,5 @@
 import { Model } from "mongoose";
+import { USER_ROLE } from "./user.constants";
 
 export const aggregateOrders = async (model: Model<any>) => {
   const stats = await model.aggregate([
@@ -22,4 +23,11 @@ export const aggregateOrders = async (model: Model<any>) => {
   ]);
 
   return stats[0] || { total: 0, completed: 0, active: 0, cancelled: 0 };
+};
+
+
+export const getUserType = (role: string): "client" | "professional" => {
+  return role === USER_ROLE.USER || role === USER_ROLE.COMPANY
+    ? "client"
+    : "professional";
 };

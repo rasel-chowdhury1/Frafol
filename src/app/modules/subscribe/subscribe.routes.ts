@@ -4,10 +4,16 @@ import { subscribeController } from "./subscribe.controller";
 
 const router = express.Router();
 
-router.post("/", subscribeController.subscribeByEmail);
-router.get("/verify", subscribeController.verifySubscription);
+router.post("/", subscribeController.subscribeByEmail)
+
+.post(
+    "/send-email",
+    subscribeController.sentEmailToSubscribers
+)
+
+.get("/verify", subscribeController.verifySubscription)
 
 // Admin only — add auth middleware if needed
-router.get("/", subscribeController.getAllSubscribers);
+.get("/", subscribeController.getAllSubscribers)
 
 export const SubscribeRoutes = router;

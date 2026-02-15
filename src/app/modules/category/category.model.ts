@@ -3,6 +3,7 @@ import { ICategory } from "./category.interface";
 
 const categorySchema = new Schema<ICategory>(
   {
+    order: { type: Number, required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     subTitle: { type: String,default: "" },

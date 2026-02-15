@@ -41,6 +41,8 @@ const auth = (...userRoles: string[]) => {
       throw new AppError(httpStatus.NOT_FOUND, 'User not found');
     }
 
+
+
     // 4️⃣ Role Not Authorized → 403 Forbidden
     if (userRoles.length && !userRoles.includes(role)) {
       throw new AppError(

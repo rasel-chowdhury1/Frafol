@@ -23,6 +23,25 @@ const subscribeByEmail = catchAsync(
   }
 );
 
+const sentEmailToSubscribers = catchAsync(
+  async (req: Request, res: Response) => {
+    const { subject, message, emails } = req.body;
+
+    const result = await SubscribeService.sentEmailToSubscribers({
+      subject,
+      message,
+      emails,
+    });
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: 'Email sent to subscribers successfully',
+      data: result,
+    });
+  }
+);
+
 const verifySubscription = catchAsync(
   async (req: Request, res: Response) => {
     const { token } = req.query;
@@ -57,6 +76,7 @@ const getAllSubscribers = catchAsync(
 
 export const subscribeController = {
     subscribeByEmail,
+    sentEmailToSubscribers,
     getAllSubscribers,
     verifySubscription,
 

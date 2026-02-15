@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 export type CategoryType = "photoGraphy" | "videoGraphy" | "Gear";
 
 export interface ICategory {
+  order: number;
   createdBy: Types.ObjectId;
   title: string;
   subTitle?: string;

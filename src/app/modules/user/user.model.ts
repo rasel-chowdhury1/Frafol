@@ -37,6 +37,10 @@ const userSchema = new Schema<TUser>(
       type: String,
       default: '',
     },
+    dateOfBirth: {
+      type: Date, 
+      default: null
+    },
     role: {
       type: String,
       enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY, USER_ROLE.ADMIN],

@@ -25,6 +25,7 @@ import { SubscribeRoutes } from "../modules/subscribe/subscribe.routes";
 import { ContactRoutes } from "../modules/contactUs/contactUs.route";
 import path from "path";
 import { SubscriptionRoutes } from "../modules/subscription/subscription.route";
+import { TownRoutes } from "../modules/town/town.route";
 
 const router = Router();
 
@@ -130,6 +131,11 @@ const moduleRoutes = [
    {
       path: "/contact-us",
       route: ContactRoutes
+   },
+
+   {
+      path: "/town",
+      route: TownRoutes
    }
 
 ];

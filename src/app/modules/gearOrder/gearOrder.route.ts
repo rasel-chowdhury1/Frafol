@@ -8,42 +8,42 @@ const router = express.Router();
 router
     .post(
         '/checkout',
-        auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
         GearOrderController.createGearOrders
     )
     
 
     .patch(
         "/complete-payment/:gearOrderId",
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.COMPANY),
         GearOrderController.completePaymentGearOrder
         )
 
         // Seller requests delivery
         .patch(
         "/request-delivery/:orderId",
-        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY),
         GearOrderController.requestGearMarketplaceDelivery
         )
 
         // Seller cancels the order
         .patch(
         "/cancel/:orderId",
-        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
         GearOrderController.cancelGearOrderBySeller
         )
 
         // Client accepts delivery request
         .patch(
         "/accept-delivery/:orderId",
-        auth(USER_ROLE.USER),
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY),
         GearOrderController.acceptGearDeliveryRequest
         )
 
         // Client declines delivery request
         .patch(
         "/decline-request/:orderId",
-        auth(USER_ROLE.USER),
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY),
         GearOrderController.declineGearDeliveryRequest
         )
     
@@ -51,7 +51,7 @@ router
         
         .get(
             "/my-orders", 
-            auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),  
+            auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),  
             GearOrderController.getMyGearOrders
         )
 

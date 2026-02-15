@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 
 export interface IReport {
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId;
   name: string;
   email: string;
   url: string;

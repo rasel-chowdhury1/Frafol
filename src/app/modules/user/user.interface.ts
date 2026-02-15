@@ -1,4 +1,7 @@
-import { Model, ObjectId, Schema } from 'mongoose';
+import { Date, Model, ObjectId, Schema } from 'mongoose';
+import { ICategory } from '../category/category.interface';
+import { ITown } from '../town/town.interface';
+
 
 
 export interface TUserCreate {
@@ -9,6 +12,7 @@ export interface TUserCreate {
   email: string;
   password: string;
   profileImage: string;
+  dateOfBirth?: Date;
   role: string;
   mainRole: string;
   switchRole: string;
@@ -45,9 +49,9 @@ export interface TUserCreate {
   routingNumber: string;
   isBlocked: boolean;
   isDeleted: boolean;
-    acceptTerms: boolean;
-    
-    ramcuvaAgree: boolean
+  acceptTerms: boolean;
+  
+  ramcuvaAgree: boolean
 }
 
 export interface TUser extends TUserCreate {

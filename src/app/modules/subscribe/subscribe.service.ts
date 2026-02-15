@@ -3,6 +3,8 @@ import { ISubscribe } from "./subscribe.interface";
 import crypto from "crypto";
 import AppError from "../../error/AppError";
 import QueryBuilder from "../../builder/QueryBuilder";
+import { sendEmail } from "../../utils/mailSender";
+import { sendFrafolEmail } from "../../utils/eamilNotifiacation";
 
 const subscribeByEmail = async (email: string): Promise<ISubscribe> => {
   // Check existing
@@ -23,6 +25,29 @@ const subscribeByEmail = async (email: string): Promise<ISubscribe> => {
   // TODO: send email
 
   return subscription;
+};
+
+
+
+const sentEmailToSubscribers = async ({
+  subject,
+  message,
+  emails,
+}: {
+  subject: string;
+  message: string;
+  emails: string[];
+}) => {
+  sendFrafolEmail({
+    to: emails,
+    subject,
+    message,
+  });
+
+  return {
+    total: emails.length,
+    status: 'queued',
+  };
 };
 
 const verifySubscription = async (token: string): Promise<string> => {
@@ -63,6 +88,7 @@ const getAllSubscribers = async (query: any) => {
 
 export const SubscribeService = {
   subscribeByEmail,
+  sentEmailToSubscribers,
   verifySubscription,
   getAllSubscribers,
 };

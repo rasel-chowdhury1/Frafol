@@ -34,6 +34,8 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
       throw new AppError(404, "Invalid packageId — package not found");
     }
 
+
+
     const basePrice = packageData.price || 0;
     const vatPercent = packageData.vatAmount || 0;
     // auto-fill fields from package
@@ -44,6 +46,7 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
     req.body.mainPrice = packageData.mainPrice;
     req.body.vatAmount = (basePrice * vatPercent) / 100;
     req.body.totalPrice = req.body.mainPrice;
+    req.body.priceWithServiceFee = packageData.mainPrice - req.body.vatAmount;
       // ✅ Ensure date is valid
     const orderDate = new Date(req.body.date || new Date());
     req.body.date = orderDate;

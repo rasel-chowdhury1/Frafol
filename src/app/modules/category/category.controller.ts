@@ -100,6 +100,17 @@ const deleteCategory = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const reorderCategoriesController = async (req: Request, res: Response) => {
+  const { categories } = req.body;
+
+  await CategoryService.reorderCategories(categories);
+
+  res.status(200).json({
+    success: true,
+    message: "Category order updated successfully",
+  });
+};
+
 export const CategoryController = {
   createCategory,
   getAllCategories,
@@ -107,4 +118,5 @@ export const CategoryController = {
   getCategoryById,
   updateCategory,
   deleteCategory,
+  reorderCategoriesController
 };

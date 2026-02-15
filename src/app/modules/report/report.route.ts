@@ -11,14 +11,14 @@ const router = Router();
 
 router.post(
   "/add",
-  auth(
-    USER_ROLE.USER,
-    USER_ROLE.COMPANY,
-    USER_ROLE.PHOTOGRAPHER,
-    USER_ROLE.VIDEOGRAPHER,
-    USER_ROLE.BOTH,
-    USER_ROLE.ADMIN
-  ),
+  // auth(
+  //   USER_ROLE.USER,
+  //   USER_ROLE.COMPANY,
+  //   USER_ROLE.PHOTOGRAPHER,
+  //   USER_ROLE.VIDEOGRAPHER,
+  //   USER_ROLE.BOTH,
+  //   USER_ROLE.ADMIN
+  // ),
   upload.single('image'),
   parseData(),
   ReportController.createReport

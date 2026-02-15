@@ -40,7 +40,8 @@ const gearMarketplaceSchema = new Schema<IGearMarketplace>(
     
     mainPrice: {
       type: Number, 
-      required: true},
+      required: true
+    },
     description: { 
       type: String, 
       required: true },

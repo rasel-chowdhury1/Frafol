@@ -14,6 +14,14 @@ const stripe = {
   stripe_api_secret: process.env.STRIPE_API_SECRET,
 };
 
+const smtp = {
+  host: process.env.NODEMAILER_HOST,
+  port: process.env.NODEMAILER_PORT,
+  user: process.env.NODEMAILER_HOST_EMAIL,
+  pass: process.env.NODEMAILER_HOST_PASS,
+  fromName: process.env.NODEMAILER_FROM_NAME,
+}
+
 export default {
   NODE_ENV: process.env.NODE_ENV,
   port: process.env.PORT,
@@ -38,4 +46,5 @@ export default {
   stripe_key: process.env.STRIPE_API_KEY,
   aws,
   stripe,
+  smtp
 };

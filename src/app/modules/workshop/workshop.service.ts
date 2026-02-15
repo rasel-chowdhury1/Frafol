@@ -10,7 +10,7 @@ const createWorkshop = async (payload: IWorkshop) => {
   payload.vatPercent = payload.vatAmount as number;
 
   // ✅ Calculate actual VAT amount based on main price
-  payload.vatAmount = (payload.mainPrice * payload.vatPercent) / 100;
+  payload.vatAmount = (payload.price * payload.vatPercent) / 100;
 
   return await Workshop.create(payload);
 };

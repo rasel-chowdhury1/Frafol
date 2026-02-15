@@ -43,6 +43,28 @@ const switchRole = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateUserRole = catchAsync(async (req: Request, res: Response) => {
+  const {userId} = req.user; // auth middleware adds req.user
+  const { newRole } = req.body;
+
+  if (!newRole) {
+    throw new AppError(400, "New role is required");
+  }
+
+  const result = await userService.updateUserRole(userId, newRole);
+
+  return sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `Role switched successfully to ${newRole}`,
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    },
+  });
+});
+
 const userCreateVarification = catchAsync(async (req, res) => {
   const token = req.headers?.token as string;
 
@@ -577,10 +599,24 @@ const getLatestGalleryImages = catchAsync(async (_req, res) => {
   });
 });
 
+const getTownAndIndividualCategoriesOptimized = catchAsync(async (_req, res) => {
+
+  const result = await userService.getTownAndIndividualCategoriesOptimized();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Town list and individual photography and videography categories fetched successfully",
+    data: result,
+  });
+
+})
+
 
 export const userController = {
   createUser,
   switchRole,
+  updateUserRole,
   userCreateVarification,
   getUserById,
   getUserGalleryById,
@@ -611,5 +647,6 @@ export const userController = {
   getOrderManagementStats,
   getOrders,
   getDeliveryOrders,
-  getLatestGalleryImages
+  getLatestGalleryImages,
+  getTownAndIndividualCategoriesOptimized
 };

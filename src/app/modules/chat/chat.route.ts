@@ -34,6 +34,15 @@ router.get(
   ChatController.getMyChatList,
 );
 
+router.get(
+  '/all-users',
+  auth(
+    USER_ROLE.ADMIN,
+  )
+,
+  ChatController.getAllUserQueryForChat
+)
+
 // router.get(
 //   '/my-connection-users',
 //   auth(

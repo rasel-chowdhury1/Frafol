@@ -26,6 +26,12 @@ router
         CategoryController.updateCategory
     )
 
+    .patch(
+        "/reorder",
+        auth(USER_ROLE.ADMIN),
+        CategoryController.reorderCategoriesController
+    )
+
      .get(
         "/", 
         CategoryController.getAllCategories

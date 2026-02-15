@@ -17,7 +17,8 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN,
+      USER_ROLE.COMPANY
     ),
     upload.single('image'),
     parseData(),
@@ -28,7 +29,7 @@ router
 
   .get(
     "/my",
-    auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY),
     WorkshopController.getMyWorkshops
   )
 
@@ -59,7 +60,8 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN,
+      USER_ROLE.COMPANY
     ),
     WorkshopController.getMyRegisteredWorkshops
   )
@@ -72,7 +74,8 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN,
+      USER_ROLE.COMPANY
     ),
     WorkshopController.getWorkshopById
   )
@@ -85,7 +88,8 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN,
+      USER_ROLE.COMPANY
     ),
     upload.single('image'),
     parseData(),
@@ -112,7 +116,8 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN,
+      USER_ROLE.COMPANY
     ),
     WorkshopController.deleteWorkshop
   );

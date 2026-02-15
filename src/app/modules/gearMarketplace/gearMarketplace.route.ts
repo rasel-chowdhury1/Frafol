@@ -11,7 +11,7 @@ const router = Router();
 router
     .post(
     "/add",
-    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY),
     upload.fields([
       { name: 'gallery', maxCount: 10 },
     ]),
@@ -27,7 +27,7 @@ router
 
     .get(
         "/my",
-        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY),
         GearMarketplaceController.getMyGearMarketplaces
     )
 
@@ -51,7 +51,7 @@ router
 
       .patch(
       "/update/:id",
-      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
       upload.fields([
         { name: 'gallery', maxCount: 10 },
       ]),
@@ -70,7 +70,7 @@ router
 
       .delete(
       "/:id",
-      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
       GearMarketplaceController.deleteGearMarketplace
       );
 
