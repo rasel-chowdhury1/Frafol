@@ -4,6 +4,11 @@ import config from '../config';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+console.log(" isProduction:", isProduction);
+console.log(" config.smtp.host:", config.smtp.host);
+console.log(" config.smtp.user:", config.smtp.user);
+console.log(" config.smtp.pass:", config.smtp.pass);
+
 export const sendEmail = async (to: string, subject: string, html: string) => {
 
 const transporter = nodemailer.createTransport({
@@ -16,7 +21,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-  
+transporter.verify((err, success) => {
+  if (err) {
+    console.error('SMTP connection failed', err);
+  } else {
+    console.log('SMTP is ready to send mail');
+  }
+});  
+
 
   try {
      console.log('mail send started');
