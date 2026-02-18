@@ -41,7 +41,7 @@ const logoUrl = 'https://res.cloudinary.com/dns84qf2p/image/upload/v1768557807/f
 const primaryColor = '#AD2B08';
 const supportEmail = 'support@frafol.com';
 
-const clientUrl = process.env.CLIENT_URL || "http://10:10:10:38:3000";
+const clientUrl = process.env.FRONT_URL || "http://76.13.133.178:3000";
 
 const otpSendEmail = async ({
   sentTo,

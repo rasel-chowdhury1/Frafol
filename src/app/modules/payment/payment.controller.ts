@@ -228,7 +228,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   
   // Redirect to frontend success page
   return res.redirect(
-    `http://10.10.10.38:3000/success`
+    `http://76.13.133.178:3000/success`
   );
 
 });
