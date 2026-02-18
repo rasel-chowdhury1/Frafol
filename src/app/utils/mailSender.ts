@@ -18,6 +18,8 @@ const transporter = nodemailer.createTransport({
     user: config.smtp.user,        // webmail email
     pass: config.smtp.pass   // SMTP/webmail password
   },
+  tls: { rejectUnauthorized: false },
+
 });
 
 transporter.verify((err, success) => {
