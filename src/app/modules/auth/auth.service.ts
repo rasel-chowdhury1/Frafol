@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import httpStatus from 'http-status';
 import config from '../../config';
 import AppError from '../../error/AppError';
-import { otpSendEmail } from '../../utils/eamilNotifiacation';
+import { forgotPasswordEmail, otpSendEmail, passwordChangedEmail } from '../../utils/eamilNotifiacation';
 import { createToken, verifyToken } from '../../utils/tokenManage';
 import { otpServices } from '../otp/otp.service';
 import { generateOptAndExpireTime } from '../otp/otp.utils';
@@ -222,6 +222,11 @@ const resetPassword = async ({
     { new: true },
   );
 
+  forgotPasswordEmail({
+    sentTo: user.email,
+    name: user.name || 'User',
+  }).catch((err) => console.error('Forgot password email failed:', err));
+
   return result;
 };
 
@@ -259,6 +264,11 @@ const changePassword = async ({
   if (!user) {
     throw new AppError(httpStatus.BAD_REQUEST, 'User updating failed');
   }
+
+  passwordChangedEmail({
+    sentTo: user.email,
+    name: user.name || 'User',
+  }).catch((err) => console.error('Password changed email failed:', err));
 
   return result;
 };

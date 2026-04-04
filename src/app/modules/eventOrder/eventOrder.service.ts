@@ -6,7 +6,7 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
 import { Review } from "../review/review.model";
 import { Payment } from "../payment/payment.model";
-import { sentNotificationForBookingRequest, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForOrderAccepted, sentNotificationForOrderDeclined } from "../../../socketIo";
+import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForOrderAccepted, sentNotificationForOrderDeclined } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -905,6 +905,18 @@ const cancelRequest = async (orderId: string, userId: string, reason: string) =>
   order.statusHistory.push({ status: "cancelRequest", changedAt: new Date(), reason });
 
   await order.save();
+
+  sentNotificationForCancelRequest({
+    orderType: order.orderType,
+    requestedBy: new mongoose.Types.ObjectId(userId),
+    receiverId:
+      order.userId.toString() === userId
+        ? order.serviceProviderId
+        : order.userId,
+    serviceType: order.serviceType,
+    reason,
+  }).catch((err) => console.error("Notification failed:", err));
+
   return order;
 };
 

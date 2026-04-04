@@ -5,10 +5,10 @@ import config from '../config';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-console.log(" isProduction:", isProduction);
-console.log(" config.smtp.host:", config.smtp.host);
-console.log(" config.smtp.user:", config.smtp.user);
-console.log(" config.smtp.pass:", config.smtp.pass);
+// console.log(" isProduction:", isProduction);
+// console.log(" config.smtp.host:", config.smtp.host);
+// console.log(" config.smtp.user:", config.smtp.user);
+// console.log(" config.smtp.pass:", config.smtp.pass);
 
 const transporter = nodemailer.createTransport({
   host: config.smtp.host, // sending SMTP server
@@ -19,7 +19,6 @@ const transporter = nodemailer.createTransport({
     pass: config.smtp.pass   // SMTP/webmail password
   },
   tls: { rejectUnauthorized: false },
-
 });
 
 transporter.verify((err, success) => {

@@ -5,7 +5,7 @@ const reportSchema = new Schema<IReport>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: false },
     name: { type: String, required: true },
-    email: { type: String, required: true },
+    email: { type: String, default: "" },
     url: { type: String, required: false, default: "" },
     image: { type: String, required: false, default: "" },
     reason: { type: String, required: true },

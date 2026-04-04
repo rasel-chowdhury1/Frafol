@@ -13,7 +13,8 @@ import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.
 import QueryBuilder from '../../builder/QueryBuilder';
 import { MySubscription } from '../mySubscription/mySubscription.model';
 import { User } from '../user/user.model';
-import { frafolChoiceEmail, sendEmailAndNotification } from '../../utils/eamilNotifiacation';
+import { sendFrafolEmail, sendEmailAndNotification } from '../../utils/eamilNotifiacation';
+import httpStatus from 'http-status';
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)

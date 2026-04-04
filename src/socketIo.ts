@@ -10,7 +10,7 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { sendBookingNotificationEmail } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
@@ -833,6 +833,225 @@ export const sentNotificationForOrderCancelled = async ({
     }).catch((err) => console.error('Email failed:', err));
   }
 
+};
+
+
+export const sentNotificationForCancelRequest = async ({
+  orderType,
+  requestedBy,
+  receiverId,
+  serviceType,
+  reason,
+}: {
+  orderType: 'direct' | 'custom';
+  requestedBy: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  serviceType?: string;
+  reason?: string;
+}) => {
+  const sender = await User.findById(requestedBy).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!sender || !receiver) return;
+
+  const text =
+    orderType === 'direct'
+      ? `${sender.name} has requested to cancel the ${serviceType || 'order'}${reason ? `: "${reason}"` : '.'}`
+      : `${sender.name} has requested to cancel your custom ${serviceType || 'booking'}${reason ? `: "${reason}"` : '.'}`;
+
+  const payload = {
+    userId: requestedBy,
+    receiverId,
+    userMsg: {
+      image: sender.profileImage || '',
+      text,
+      photos: [],
+    },
+    type: 'CancelRequest',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Cancel Request',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForProfileDeclined = async ({
+  receiverId,
+  reason,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  reason: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Your professional profile verification has been declined. Reason: "${reason}"`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: {
+      image: '',
+      text,
+      photos: [],
+    },
+    type: 'ProfileDeclined',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await profileDeclinedEmail({
+      sentTo: receiver.email,
+      name: receiver.name || '',
+      reason,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForCommunityRejected = async ({
+  receiverId,
+  communityTitle,
+  reason,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  communityTitle: string;
+  reason: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Your community post "${communityTitle}" has been rejected by the admin. Reason: "${reason}"`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: {
+      image: '',
+      text,
+      photos: [],
+    },
+    type: 'CommunityRejected',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Your Community Post Has Been Rejected',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForCommunityDeleted = async ({
+  receiverId,
+  communityTitle,
+  reason,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  communityTitle: string;
+  reason: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Your community post "${communityTitle}" has been removed by the system admin. Reason: "${reason}"`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: {
+      image: '',
+      text,
+      photos: [],
+    },
+    type: 'CommunityDeleted',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Your Community Post Has Been Removed',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForCommentOrReply = async ({
+  actorId,
+  receiverId,
+  communityTitle,
+  isReply,
+  commentText,
+}: {
+  actorId: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  communityTitle: string;
+  isReply: boolean;
+  commentText: string;
+}) => {
+  if (actorId.toString() === receiverId.toString()) return;
+
+  const actor = await User.findById(actorId).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!actor || !receiver) return;
+
+  const text = isReply
+    ? `${actor.name} replied to a comment on your post "${communityTitle}": "${commentText}"`
+    : `${actor.name} commented on your post "${communityTitle}": "${commentText}"`;
+
+  const payload = {
+    userId: actorId,
+    receiverId,
+    userMsg: {
+      image: actor.profileImage || '',
+      text,
+      photos: [],
+    },
+    type: isReply ? 'CommentReply' : 'NewComment',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: isReply ? 'New Reply on Your Post' : 'New Comment on Your Post',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
 };
 
 

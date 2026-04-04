@@ -8,6 +8,8 @@ const communitySchema = new Schema<ICommunity>(
     text: { type: String, required: true },
     images: [{ type: String }],
     isDeleted: { type: Boolean, default: false },
+    deleteReason: { type: String },
+    rejectReason: { type: String },
     approvalStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],

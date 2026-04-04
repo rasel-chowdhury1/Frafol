@@ -33,11 +33,13 @@ export interface TUserCreate {
   rating?: number;
   totalReview: number;
   averageRating: number;
+  travelTowns?: string[];
   photographerSpecializations: string[];
   videographerSpecializations: string[];
   newsLetterSub: boolean;
   
   adminVerified: string;
+  declineReason?: string;
   unAvailability: Date[];
   subscriptionId: ObjectId | null;
   hasActiveSubscription: boolean;

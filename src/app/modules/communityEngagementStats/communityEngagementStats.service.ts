@@ -1,6 +1,8 @@
 import { Types } from "mongoose";
 import { CommunityEngagementStats } from "./communityEngagementStats.model";
 import AppError from "../../error/AppError";
+import { Community } from "../community/community.model";
+import { sentNotificationForCommentOrReply } from "../../../socketIo";
 
 
 const likeCommunity = async (communityId: string, userId: string) => {
@@ -22,24 +24,33 @@ const unlikeCommunity = async (communityId: string, userId: string) => {
 const addCommentOrReply = async (communityId: string, userId: string, text: string, commentId?: string) => {
 
   let result;
-  if(commentId){
+  if (commentId) {
     result = await CommunityEngagementStats.findOneAndUpdate(
       { communityId, "comments._id": commentId },
       { $push: { "comments.$.replies": { user: userId, text } } },
       { upsert: true, new: true }
     );
+  } else {
+    result = await CommunityEngagementStats.findOneAndUpdate(
+      { communityId },
+      { $push: { comments: { user: userId, text } } },
+      { upsert: true, new: true }
+    );
   }
-  else{
-     result = await CommunityEngagementStats.findOneAndUpdate(
-    { communityId },
-    { $push: { comments: { user: userId, text } } },
-    { upsert: true, new: true }
-  );
 
-
+  // 🔔 Notify the community author
+  const community = await Community.findById(communityId).select("authorId title");
+  if (community) {
+    sentNotificationForCommentOrReply({
+      actorId: new Types.ObjectId(userId),
+      receiverId: community.authorId,
+      communityTitle: community.title,
+      isReply: !!commentId,
+      commentText: text,
+    }).catch((err) => console.error("Notification failed:", err));
+  }
 
   return result;
-}
 };
 
 const addReply = async (

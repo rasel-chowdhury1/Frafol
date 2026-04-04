@@ -5,7 +5,7 @@ import { ReportService } from "./report.service";
 import { storeFile } from "../../utils/fileHelper";
 
 const createReport = catchAsync(async (req: Request, res: Response) => {
-  req.body.userId = req.user.userId; 
+  req.body.userId = req.user?.userId; 
   
     if (req?.file) {
     // console.log("req file =>>>> ",req.file)

@@ -59,6 +59,7 @@ export interface IEventOrder extends Document {
   duration?: string;
   streetAddress?: string;
   town?: string;
+  zipCode?: string;
   country?: string;
   isRegisterAsCompany?: boolean;
   companyName?: string;

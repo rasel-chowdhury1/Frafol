@@ -177,7 +177,8 @@ const approveCommunity = catchAsync(async (req: Request, res: Response) => {
 });
 
 const rejectCommunity = catchAsync(async (req: Request, res: Response) => {
-  const data = await CommunityService.rejectPost(req.params.id);
+  const { reason } = req.body;
+  const data = await CommunityService.rejectPost(req.params.id, reason);
   sendResponse(res, {
     statusCode: 200,
     success: true,
@@ -188,9 +189,10 @@ const rejectCommunity = catchAsync(async (req: Request, res: Response) => {
 
 const deleteCommunity = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const {userId,role} = req.user;
+  const { userId, role } = req.user;
+  const { reason } = req.body;
 
-  const result = await CommunityService.deleteCommunity(id, userId, role);
+  const result = await CommunityService.deleteCommunity(id, userId, role, reason);
 
   sendResponse(res, {
     statusCode: 200,

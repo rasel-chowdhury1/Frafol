@@ -19,6 +19,8 @@ import { otpServices } from '../otp/otp.service';
 import { generateOptAndExpireTime } from '../otp/otp.utils';
 import { TPurposeType } from '../otp/otp.interface';
 import {
+  accountBlockedEmail,
+  bankDetailsChangedEmail,
   otpSendEmail,
   profileVerifiedEmail,
   welcomeEmail,
@@ -29,7 +31,7 @@ import Profile from '../profile/profile.model';
 import Notification from '../notifications/notifications.model';
 import mongoose, { Types } from 'mongoose';
 import { getAdminId } from '../../DB/adminStrore';
-import { emitNotification } from '../../../socketIo';
+import { emitNotification, sentNotificationForProfileDeclined } from '../../../socketIo';
 import { USER_ROLE, UserRole } from './user.constants';
 import fs from 'fs';
 import path from 'path';
@@ -57,7 +59,7 @@ export interface OTPVerifyAndCreateUserProps {
 }
 
 const createUserToken = async (payload: TUserCreate) => {
-  console.log('before create user => >> ', { payload });
+  // console.log('before create user => >> ', { payload });
 
   const {
     name,
@@ -82,7 +84,8 @@ const createUserToken = async (payload: TUserCreate) => {
     dic,
     ic_dph,
     phone,
-    dateOfBirth
+    dateOfBirth,
+    travelTowns
   } = payload;
   let adminVerified = 'pending';
   if (role === 'user' || role === 'company') {
@@ -149,7 +152,8 @@ const createUserToken = async (payload: TUserCreate) => {
     dic,
     ic_dph,
     phone,
-    dateOfBirth
+    dateOfBirth,
+    travelTowns
   };
 
   // send email
@@ -214,7 +218,8 @@ const otpVerifyAndCreateUser = async ({
     dic,
     ic_dph,
     phone,
-    dateOfBirth
+    dateOfBirth,
+    travelTowns
   } = decodeData;
 
   // Check OTP
@@ -273,7 +278,8 @@ const otpVerifyAndCreateUser = async ({
           dic,
           ic_dph,
           phone,
-          dateOfBirth
+          dateOfBirth,
+          travelTowns
         },
       ],
       { session },
@@ -546,6 +552,14 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
       (user.profileId as any) = profile._id; // Keep as ObjectId
       await user.save();
     }
+
+    // 🔔 Notify professional when bank details change
+    if (bankName || accountNumber) {
+      bankDetailsChangedEmail({
+        sentTo: user.email,
+        name: user.name || 'User',
+      }).catch((err) => console.error('Bank details email failed:', err));
+    }
   }
 
   // Delete previous profile image if a new one is uploaded
@@ -768,7 +782,7 @@ const verifyProfessionalUserById = async (userId: string, status?: string) => {
     );
   }
 
-  // 🔥 Fire-and-forget email (non-blocking)
+  // 🔥 Fire-and-forget emails (non-blocking)
   if (updatedStatus === 'verified') {
     profileVerifiedEmail({
       sentTo: user.email,
@@ -776,6 +790,15 @@ const verifyProfessionalUserById = async (userId: string, status?: string) => {
       name: user.name || 'User',
     }).catch((error) => {
       console.error('Profile verified email failed:', error);
+    });
+
+    welcomeEmail({
+      sentTo: user.email,
+      subject: 'Welcome to Frafol – Here\'s How It Works',
+      name: user.name || 'User',
+      userType: 'professional_verified',
+    }).catch((error) => {
+      console.error('Welcome email failed:', error);
     });
   }
 
@@ -788,16 +811,24 @@ const declineProfessionalUserById = async (userId: string, reason?: string) => {
     userId,
     {
       isDeleted: true,
-      adminVerified: 'declined', // optional, could use 'declined' if you add this enum
+      adminVerified: 'declined',
+      ...(reason && { declineReason: reason }),
     },
     { new: true, runValidators: true },
-  ).select('-password'); // exclude password
+  ).select('-password');
 
   if (!user) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
       'Failed to decline the professional user',
     );
+  }
+
+  if (reason) {
+    sentNotificationForProfileDeclined({
+      receiverId: user._id as any,
+      reason,
+    }).catch((err) => console.error('Notification failed:', err));
   }
 
   return user;
@@ -873,15 +904,16 @@ const updateUnAvailability = async (userId: string, dates: string[]) => {
 const getProfessionalPhotographerAndVideographer = async (
   query: Record<string, unknown>,
 ) => {
-  const { 
-    role, 
-    hasActiveSubscription, 
+  const {
+    role,
+    hasActiveSubscription,
     searchTerm,
     minPrice,
-    maxPrice, 
+    maxPrice,
     availableDate,
-    page = 1, 
-    limit = 10 
+    travelTowns,
+    page = 1,
+    limit = 10
   } = query;
 
   const currentPage = Number(page);
@@ -899,6 +931,8 @@ const getProfessionalPhotographerAndVideographer = async (
     isDeleted: false,
     isBlocked: false,
   };
+
+
 
   // ✅ Price filter
 if (minPrice || maxPrice) {
@@ -960,6 +994,16 @@ if (minPrice || maxPrice) {
     matchCondition.hasActiveSubscription = true;
   }
 
+    // ✅ Travel towns filter (comma-separated: 'Bratislava,Cumilla')
+  if (travelTowns) {
+    const townsArray = (travelTowns as string)
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (townsArray.length > 0) {
+      matchCondition.travelTowns = { $in: townsArray };
+    }
+  }
 
     // ✅ Search filter
   if (searchTerm) {
@@ -1665,9 +1709,8 @@ const getUserDetailsById = async (userId: string) => {
 // Optimized the function to improve performance, reducing the processing time to 235 milliseconds.
 const getMyProfile = async (id: string) => {
 
-  console.log("getMyProfile function called with id:  =>>> ", id);
   const result = await User.findById(id).populate('profileId');
-  console.log("getMyProfile function result:  =>>> ", result);
+
   return result;
 };
 
@@ -1732,6 +1775,12 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'user deleting failed');
   }
 
+  accountBlockedEmail({
+    sentTo: (user as any).email,
+    name: (user as any).name || 'User',
+    isDeleted: true,
+  }).catch((err) => console.error('Account deleted email failed:', err));
+
   return userDeleted;
 };
 
@@ -1758,6 +1807,15 @@ const blockedUser = async (id: string) => {
 
   if (!user) {
     throw new AppError(httpStatus.BAD_REQUEST, 'user deleting failed');
+  }
+
+  // Only send email when blocking (not unblocking)
+  if (status === true) {
+    accountBlockedEmail({
+      sentTo: singleUser.email,
+      name: singleUser.name || 'User',
+      isDeleted: false,
+    }).catch((err) => console.error('Account blocked email failed:', err));
   }
 
   return { status, user };

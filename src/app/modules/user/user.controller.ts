@@ -224,6 +224,8 @@ const getAdminProfile = catchAsync(async (req: Request, res: Response) => {
 const getProfessionalPhotographerAndVideographer = catchAsync(async (req: Request, res: Response) => {
   const { page, limit, ...rest } = req.query;
 
+  console.log("query data =>> ",req.query)
+
   const query = {
     page: Number(page) || 1,
     limit: Number(limit) || 10,
@@ -259,6 +261,8 @@ const getProfessionalUsersByCategory = catchAsync(async (req: Request, res: Resp
     message: "Professional photographers and videographers retrieved successfully",
     data: result,
   });
+
+  
 });
 
 

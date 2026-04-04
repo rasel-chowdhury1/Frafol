@@ -43,7 +43,8 @@ const NotificationSchema = new Schema<INotification>(
         'AdminNotice',
         'added',
         "newMessage",
-        
+        "NewComment",
+        "CommentReply"
       ],
       required: true,
     },

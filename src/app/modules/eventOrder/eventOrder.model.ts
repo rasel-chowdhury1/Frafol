@@ -75,6 +75,7 @@ const EventOrderSchema = new Schema<IEventOrder>(
     duration: { type: String },
     streetAddress: { type: String },
     town: { type: String },
+    zipCode: { type: String },
     country: { type: String },
 
     // ✅ Company Info (for custom orders)

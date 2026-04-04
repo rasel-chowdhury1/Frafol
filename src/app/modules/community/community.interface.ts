@@ -6,6 +6,8 @@ export interface ICommunity {
   text: string;
   images?: string[];
   isDeleted?: boolean;
+  deleteReason?: string;
+  rejectReason?: string;
   approvalStatus?: "pending" | "approved" | "rejected";
 }
 

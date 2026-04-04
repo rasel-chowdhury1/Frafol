@@ -125,6 +125,10 @@ const userSchema = new Schema<TUser>(
       default: 0
     },
     
+    travelTowns: {
+      type: [String],
+      default: []
+    },
     photographerSpecializations: {
       type: [String],
       default: []
@@ -142,6 +146,7 @@ const userSchema = new Schema<TUser>(
       enum: ["pending", "verified", 'declined'],
       default: "pending"
     },
+    declineReason: { type: String },
     unAvailability: {
       type: [String],
       default: [],

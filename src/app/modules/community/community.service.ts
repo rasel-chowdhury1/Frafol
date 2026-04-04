@@ -7,6 +7,7 @@ import { deleteFile } from "../../utils/fileHelper";
 import { CommunityEngagementStats } from "../communityEngagementStats/communityEngagementStats.model";
 import QueryBuilder from "../../builder/QueryBuilder";
 import { Types } from "mongoose";
+import { sentNotificationForCommunityDeleted, sentNotificationForCommunityRejected } from "../../../socketIo";
 
 const createCommunity = async (payload: ICommunity) => {
   const { title, text } = payload;
@@ -363,19 +364,35 @@ const approvePost = async (id: string) => {
   );
 };
 
-const rejectPost = async (id: string) => {
-  return await Community.findByIdAndUpdate(
+const rejectPost = async (id: string, reason: string) => {
+  const community = await Community.findById(id);
+
+  if (!community) throw new AppError(404, "Community post not found");
+
+  const rejected = await Community.findByIdAndUpdate(
     id,
-    { approvalStatus: "rejected" },
+    { approvalStatus: "rejected", rejectReason: reason },
     { new: true }
   );
+
+  sentNotificationForCommunityRejected({
+    receiverId: community.authorId,
+    communityTitle: community.title,
+    reason,
+  }).catch((err) => console.error("Notification failed:", err));
+
+  return rejected;
 };
 
 const deleteCommunity = async (
   communityId: string,
   userId: string,
-  userRole: string
+  userRole: string,
+  reason?: string
 ) => {
+
+
+  console.log(" payload =>> ", communityId, userId, userRole, reason)
   if (!Types.ObjectId.isValid(communityId)) {
     throw new AppError(400, "Invalid Community ID");
   }
@@ -394,9 +411,18 @@ const deleteCommunity = async (
   // ✅ Soft delete
   const deleted = await Community.findByIdAndUpdate(
     communityId,
-    { $set: { isDeleted: true } },
+    { $set: { isDeleted: true, ...(reason && { deleteReason: reason }) } },
     { new: true }
   );
+
+  // 🔔 Notify owner when admin deletes with a reason
+  if (userRole === "admin" && reason) {
+    sentNotificationForCommunityDeleted({
+      receiverId: community.authorId,
+      communityTitle: community.title,
+      reason,
+    }).catch((err) => console.error("Notification failed:", err));
+  }
 
   return deleted;
 };

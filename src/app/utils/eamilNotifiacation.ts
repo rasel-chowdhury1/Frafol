@@ -21,7 +21,7 @@ interface WelcomeEmailParams {
   sentTo: string;
   subject: string;
   name: string;
-  userType: "client" | "professional"; // to show correct how-it-works link
+  userType: "client" | "professional" | "professional_verified";
 }
 
 interface FrafolChoiceEmailParams {
@@ -126,10 +126,50 @@ export const welcomeEmail = async ({
   name,
   userType,
 }: WelcomeEmailParams): Promise<void> => {
-  const howItWorksLink =
-    userType === "client"
-      ? `${clientUrl}/how-ordering-works`
-      : `${clientUrl}/how-it-works`;
+  const howItWorksLink = userType === "client"
+    ? `${clientUrl}/how-ordering-works`
+    : `${clientUrl}/how-it-works`;
+
+  const dynamicSection =
+    userType === "professional"
+      ? `
+      <p>
+        Your account has been successfully created. Our admin team is currently
+        reviewing your profile.
+      </p>
+      <div style="
+        background-color: #fff8e1;
+        border-left: 4px solid #f5a623;
+        padding: 14px 18px;
+        border-radius: 4px;
+        margin: 20px 0;
+        font-size: 14px;
+        color: #555;
+      ">
+        <strong>Profile Verification in Progress</strong><br/>
+        Your profile is being verified by our team. You will receive a confirmation
+        email once the verification is complete.
+      </div>`
+      : `
+      <p>
+        ${userType === "professional_verified"
+          ? "Your profile has been verified! You can now start receiving booking requests."
+          : "Your account has been successfully created. We’re excited to have you on board."}
+      </p>
+      <p>To get started, please review how our platform works:</p>
+      <p style="margin: 20px 0;">
+        <a href="${howItWorksLink}" style="
+          display: inline-block;
+          padding: 12px 20px;
+          background-color: ${primaryColor};
+          color: #ffffff;
+          text-decoration: none;
+          border-radius: 6px;
+          font-size: 14px;
+        ">
+          How It Works
+        </a>
+      </p>`;
 
   const emailBody = `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
@@ -145,29 +185,8 @@ export const welcomeEmail = async ({
     <!-- Body -->
     <div style="padding: 24px; color: #333;">
       <p>Hello <strong>${name}</strong>,</p>
-
-      <p>
-        Welcome to <strong>Frafol</strong>! Your account has been successfully created.
-        We’re excited to have you on board.
-      </p>
-
-      <p>
-        To get started, please review how our platform works:
-      </p>
-
-      <p style="margin: 20px 0;">
-        <a href="${howItWorksLink}" style="
-          display: inline-block;
-          padding: 12px 20px;
-          background-color: ${primaryColor};
-          color: #ffffff;
-          text-decoration: none;
-          border-radius: 6px;
-          font-size: 14px;
-        ">
-          How It Works
-        </a>
-      </p>
+      <p>Welcome to <strong>Frafol</strong>!</p>
+      ${dynamicSection}
 
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 32px 0;" />
 
@@ -481,4 +500,197 @@ const sendFrafolEmail = ({
   });
 };
 
-export { otpSendEmail, sendBookingNotificationEmail , profileVerifiedEmail, sendEmailAndNotification, sendFrafolEmail};
+const profileDeclinedEmail = async ({
+  sentTo,
+  name,
+  reason,
+}: {
+  sentTo: string;
+  name: string;
+  reason: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Profile Verification Update</h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${name}</strong>,</p>
+
+        <p>
+          Thank you for submitting your professional profile on <strong>Frafol</strong>.
+          After careful review, we regret to inform you that your profile verification
+          has not been approved at this time.
+        </p>
+
+        <div style="
+          background-color: #fff3f3;
+          border-left: 4px solid #e53935;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason for Decline:</strong><br/>
+          ${reason}
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you believe this is an error or would like to provide additional information,
+          please contact our support team at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Best regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Profile Verification Declined', emailBody);
+};
+
+const passwordChangedEmail = async ({
+  sentTo,
+  name,
+}: {
+  sentTo: string;
+  name: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Password Changed</h1>
+      </div>
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your account password has been successfully changed.</p>
+        <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
+          If you did not make this change, please contact us immediately at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </div>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+  await sendEmail(sentTo, 'Your Password Has Been Changed', emailBody);
+};
+
+const forgotPasswordEmail = async ({
+  sentTo,
+  name,
+}: {
+  sentTo: string;
+  name: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Password Reset Successful</h1>
+      </div>
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your password has been reset successfully. You can now log in with your new password.</p>
+        <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
+          If you did not request this reset, please contact us immediately at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </div>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+  await sendEmail(sentTo, 'Your Password Has Been Reset', emailBody);
+};
+
+const bankDetailsChangedEmail = async ({
+  sentTo,
+  name,
+}: {
+  sentTo: string;
+  name: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bank Account Updated</h1>
+      </div>
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your bank account details on <strong>Frafol</strong> have been successfully updated.</p>
+        <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
+          If you did not make this change, please contact us immediately at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </div>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+  await sendEmail(sentTo, 'Bank Account Details Changed', emailBody);
+};
+
+const accountBlockedEmail = async ({
+  sentTo,
+  name,
+  reason,
+  isDeleted = false,
+}: {
+  sentTo: string;
+  name: string;
+  reason?: string;
+  isDeleted?: boolean;
+}): Promise<void> => {
+  const action = isDeleted ? 'deleted' : 'blocked';
+  const title = isDeleted ? 'Account Deleted' : 'Account Blocked';
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">${title}</h1>
+      </div>
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your Frafol account has been <strong>${action}</strong> by our admin team.</p>
+        ${reason ? `
+        <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
+          <strong>Reason:</strong><br/>${reason}
+        </div>` : ''}
+        <p style="font-size: 14px; color: #555;">
+          If you believe this is a mistake, please reach out to us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </p>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+  await sendEmail(sentTo, `Your Frafol Account Has Been ${isDeleted ? 'Deleted' : 'Blocked'}`, emailBody);
+};
+
+export { otpSendEmail, sendBookingNotificationEmail, profileVerifiedEmail, profileDeclinedEmail, passwordChangedEmail, forgotPasswordEmail, bankDetailsChangedEmail, accountBlockedEmail, sendEmailAndNotification, sendFrafolEmail};
