@@ -26,8 +26,15 @@ interface WelcomeEmailParams {
 
 interface FrafolChoiceEmailParams {
   sentTo: string;
-  subject: string;
   name: string;
+  // order / invoice fields
+  orderId?: string;
+  planName?: string;
+  planDays?: number;
+  amount?: number;
+  currency?: string;
+  purchaseDate?: string;
+  expiryDate?: string;
 }
 
 interface SendEmailNotificationParams {
@@ -35,6 +42,13 @@ interface SendEmailNotificationParams {
   email: string;
   name?: string;
   notificationText?: string;
+  orderId?: string;
+  planName?: string;
+  planDays?: number;
+  amount?: number;
+  currency?: string;
+  purchaseDate?: string;
+  expiryDate?: string;
 }
 
 const logoUrl = 'https://res.cloudinary.com/dns84qf2p/image/upload/v1768557807/frafolLogo_vftuvh.png'; // Use Frafol domain
@@ -360,59 +374,84 @@ const profileVerifiedEmail = async ({
 
 const frafolChoiceEmail = async ({
   sentTo,
-  subject,
   name,
+  orderId,
+  planName,
+  planDays,
+  amount,
+  currency = 'EUR',
+  purchaseDate,
+  expiryDate,
 }: FrafolChoiceEmailParams): Promise<void> => {
   const emailBody = `
-  <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; background-color:#fff;">
-    
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
+
     <!-- Header -->
-    <div style="background-color: ${primaryColor}; text-align:center; padding:24px;">
-      <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px; height:auto; display:block; margin:0 auto 12px;" />
-      <h1 style="color:#fff; margin:0; font-size:22px; font-weight:600;">Payment Successful 🎉</h1>
+    <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+      <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Activated 🎉</h1>
     </div>
 
     <!-- Body -->
-    <div style="padding:24px; color:#333;">
+    <div style="padding:24px;color:#333;">
       <p>Hello <strong>${name}</strong>,</p>
-      
-      <p>Your <strong>Frafol Choice</strong> has been <strong>successfully activated on your profile</strong>! 🚀</p>
+      <p>Your <strong>Frafol Choice</strong> subscription has been <strong>successfully activated</strong>. Your profile now gets higher visibility and priority placement.</p>
 
-      <ul style="padding-left:20px; color:#333;">
-        <li>Highlighted profile for higher visibility</li>
-        <li>Higher ranking in client search results</li>
-        <li>Featured visibility on the Frafol homepage</li>
-        <li>Frafol Choice badge displayed on your profile</li>
+      <!-- Benefits -->
+      <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin:20px 0;">
+        <p style="margin:0 0 8px;font-weight:bold;color:${primaryColor};">Your Frafol Choice Benefits:</p>
+        <ul style="margin:0;padding-left:18px;color:#333;font-size:14px;">
+          <li>Highlighted profile for higher visibility</li>
+          <li>Higher ranking in client search results</li>
+          <li>Featured visibility on the Frafol homepage</li>
+          <li>Frafol Choice badge displayed on your profile</li>
+          <li>Priority placement over standard profiles</li>
+        </ul>
+      </div>
+
+      <!-- Order Details -->
+      <p style="font-weight:bold;margin-bottom:8px;">Order Details</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
+        ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Order ID</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
+        ${planName ? `<tr><td style="padding:6px 0;color:#777;">Plan</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
+        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Duration</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
+        ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Amount Paid</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
+        ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Purchase Date</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
+        ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Valid Until</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
+      </table>
+      <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
+
+      <!-- Legal -->
+      <p style="font-size:13px;color:#555;margin-bottom:4px;">By completing this purchase you agreed to:</p>
+      <ul style="font-size:13px;color:#555;padding-left:18px;margin-top:4px;">
+        <li><a href="${clientUrl}/terms-of-service-marketplace" style="color:${primaryColor};text-decoration:none;">Terms &amp; Conditions (Marketplace)</a></li>
+        <li><a href="${clientUrl}/terms-of-service" style="color:${primaryColor};text-decoration:none;">Terms &amp; Conditions (Conceptual)</a></li>
+        <li><a href="${clientUrl}/data-protection" style="color:${primaryColor};text-decoration:none;">GDPR &amp; Data Protection Policy</a></li>
       </ul>
 
-      <p>Your profile now gets priority over standard profiles.</p>
-
-      <p style="margin-top:24px; font-size:14px;">
-        If you have any questions, contact us at 
-        <a href="mailto:${supportEmail}" style="color:${primaryColor}; text-decoration:none;">
-          ${supportEmail}
-        </a>.
+      <p style="font-size:13px;color:#777;margin-top:16px;">
+        This email serves as your invoice / payment confirmation. Please keep it for your records.
       </p>
 
-      <p style="margin-top:32px;">
-        Kind regards,<br />
-        <strong>Frafol Team</strong>
+      <p style="margin-top:24px;font-size:14px;">
+        Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
       </p>
+      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
     </div>
 
     <!-- Footer -->
-    <div style="background-color:#f5f5f5; text-align:center; padding:14px; font-size:12px; color:#777;">
+    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">
       © ${new Date().getFullYear()} Frafol. All rights reserved.
     </div>
   </div>
   `;
 
-  await sendEmail(sentTo, subject, emailBody);
+  await sendEmail(sentTo, 'Frafol Choice Activated – Order Confirmation', emailBody);
 };
 
 
 const sendEmailAndNotification = (params: SendEmailNotificationParams) => {
-  const { userId, email, name,notificationText } = params;
+  const { userId, email, name, notificationText, orderId, planName, planDays, amount, currency, purchaseDate, expiryDate } = params;
 
   const adminData = getAdminData();
 
@@ -420,8 +459,14 @@ const sendEmailAndNotification = (params: SendEmailNotificationParams) => {
     // 🔹 Send Email
     frafolChoiceEmail({
       sentTo: email,
-      subject: 'Frafol Choice Activated Successfully 🎉',
       name: name || 'User',
+      orderId,
+      planName,
+      planDays,
+      amount,
+      currency,
+      purchaseDate,
+      expiryDate,
     }).catch((err) => console.error('❌ Frafol Choice email failed:', err));
 
 
@@ -693,4 +738,146 @@ const accountBlockedEmail = async ({
   await sendEmail(sentTo, `Your Frafol Account Has Been ${isDeleted ? 'Deleted' : 'Blocked'}`, emailBody);
 };
 
-export { otpSendEmail, sendBookingNotificationEmail, profileVerifiedEmail, profileDeclinedEmail, passwordChangedEmail, forgotPasswordEmail, bankDetailsChangedEmail, accountBlockedEmail, sendEmailAndNotification, sendFrafolEmail};
+const frafolChoiceRenewalSuccessEmail = async ({
+  sentTo,
+  name,
+  orderId,
+  planName,
+  planDays,
+  amount,
+  currency = 'EUR',
+  purchaseDate,
+  expiryDate,
+}: FrafolChoiceEmailParams): Promise<void> => {
+  const emailBody = `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
+    <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+      <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Renewed ✅</h1>
+    </div>
+    <div style="padding:24px;color:#333;">
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>Your <strong>Frafol Choice</strong> subscription has been <strong>successfully renewed</strong>. Your benefits continue without interruption.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;margin:16px 0;">
+        ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Order ID</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
+        ${planName ? `<tr><td style="padding:6px 0;color:#777;">Plan</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
+        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Duration</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
+        ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Amount Paid</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
+        ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Renewal Date</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
+        ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Valid Until</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
+      </table>
+      <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
+      <p style="font-size:13px;color:#777;">This email serves as your invoice / payment confirmation for the renewal. Please keep it for your records.</p>
+      <p style="font-size:13px;color:#555;">By renewing you continue to agree to our <a href="${clientUrl}/terms-of-service-marketplace" style="color:${primaryColor};text-decoration:none;">Terms &amp; Conditions</a> and <a href="${clientUrl}/data-protection" style="color:${primaryColor};text-decoration:none;">GDPR &amp; Data Protection Policy</a>.</p>
+      <p style="margin-top:24px;font-size:14px;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+    </div>
+    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+  </div>`;
+  await sendEmail(sentTo, 'Frafol Choice Renewed – Payment Confirmation', emailBody);
+};
+
+const frafolChoiceRenewalFailedEmail = async ({
+  sentTo,
+  name,
+  expiryDate,
+}: {
+  sentTo: string;
+  name: string;
+  expiryDate?: string;
+}): Promise<void> => {
+  const emailBody = `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
+    <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+      <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+      <h1 style="color:#fff;margin:0;font-size:22px;">Payment Failed</h1>
+    </div>
+    <div style="padding:24px;color:#333;">
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>We were unable to process the renewal payment for your <strong>Frafol Choice</strong> subscription.</p>
+      <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
+        <strong>Action Required:</strong> Please try a different payment method to avoid losing your Frafol Choice benefits.
+        ${expiryDate ? `<br/>Your current subscription remains active until <strong>${expiryDate}</strong>.` : ''}
+      </div>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Update Payment Method</a>
+      </div>
+      <p style="font-size:14px;color:#555;">If you need help, contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.</p>
+      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+    </div>
+    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+  </div>`;
+  await sendEmail(sentTo, 'Frafol Choice – Payment Failed, Please Update Your Payment Method', emailBody);
+};
+
+const frafolChoiceExpiringSoonEmail = async ({
+  sentTo,
+  name,
+  expiryDate,
+  daysLeft,
+}: {
+  sentTo: string;
+  name: string;
+  expiryDate: string;
+  daysLeft: number;
+}): Promise<void> => {
+  const emailBody = `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
+    <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+      <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+      <h1 style="color:#fff;margin:0;font-size:22px;">Your Frafol Choice Expires Soon</h1>
+    </div>
+    <div style="padding:24px;color:#333;">
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>Your <strong>Frafol Choice</strong> subscription is expiring in <strong>${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong> on <strong>${expiryDate}</strong>.</p>
+      <div style="background-color:#fff8e1;border-left:4px solid #f5a623;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
+        <strong>Don't lose your perks!</strong> Renew now to keep your highlighted profile, priority ranking, and Frafol Choice badge.
+      </div>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
+      </div>
+      <p style="font-size:14px;color:#555;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+    </div>
+    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+  </div>`;
+  await sendEmail(sentTo, `Your Frafol Choice Expires in ${daysLeft} Day${daysLeft !== 1 ? 's' : ''} – Renew Now`, emailBody);
+};
+
+const frafolChoiceExpiredEmail = async ({
+  sentTo,
+  name,
+}: {
+  sentTo: string;
+  name: string;
+}): Promise<void> => {
+  const emailBody = `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
+    <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+      <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Has Expired</h1>
+    </div>
+    <div style="padding:24px;color:#333;">
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>Your <strong>Frafol Choice</strong> subscription has expired. Your profile has returned to standard visibility.</p>
+      <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
+        <strong>You have lost access to:</strong>
+        <ul style="margin:8px 0 0;padding-left:16px;">
+          <li>Highlighted profile &amp; priority ranking</li>
+          <li>Featured visibility on the Frafol homepage</li>
+          <li>Frafol Choice badge on your profile</li>
+        </ul>
+      </div>
+      <p style="font-size:14px;color:#555;">Renew your Frafol Choice to regain these benefits and stay ahead of the competition.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
+      </div>
+      <p style="font-size:14px;color:#555;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+    </div>
+    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+  </div>`;
+  await sendEmail(sentTo, 'Your Frafol Choice Has Expired – Renew to Restore Your Benefits', emailBody);
+};
+
+export { otpSendEmail, sendBookingNotificationEmail, profileVerifiedEmail, profileDeclinedEmail, passwordChangedEmail, forgotPasswordEmail, bankDetailsChangedEmail, accountBlockedEmail, sendEmailAndNotification, sendFrafolEmail, frafolChoiceRenewalSuccessEmail, frafolChoiceRenewalFailedEmail, frafolChoiceExpiringSoonEmail, frafolChoiceExpiredEmail };

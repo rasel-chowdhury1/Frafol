@@ -281,9 +281,16 @@ const confirmPayment = async (sessionId: string) => {
         // Send email & notification without blocking
         sendEmailAndNotification({
           userId: (updateUser as any)._id,
-          email: (updateUser as any).email, // make sure Payment model stores user's email
-          name: (updateUser as any).name || '', // optional fallback
+          email: (updateUser as any).email,
+          name: (updateUser as any).name || '',
           notificationText: 'Your Frafol Choice has been successfully activated on your profile. 🚀 Your profile now gets higher visibility and priority placement on Frafol.',
+          orderId: payment.transactionId,
+          planName: `Frafol Choice – ${payment.subscriptionDays} days`,
+          planDays: payment.subscriptionDays,
+          amount: payment.amount,
+          currency: 'EUR',
+          purchaseDate: new Date().toLocaleDateString('en-GB'),
+          expiryDate: expireDate.toLocaleDateString('en-GB'),
         });
 
       console.log('✅ Subscription activated successfully', {
