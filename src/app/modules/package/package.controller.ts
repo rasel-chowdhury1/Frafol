@@ -102,7 +102,7 @@ const updatePackage = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Response) => {
-  const { approvalStatus } = req.body as { approvalStatus: ApprovalStatus };
+  const { approvalStatus, reason } = req.body as { approvalStatus: ApprovalStatus; reason?: string };
 
   if (!approvalStatus) {
     sendResponse(res, {
@@ -115,7 +115,8 @@ const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Respons
 
   const result = await PackageService.updateApprovalStatusByAdmin(
     req.params.id,
-    approvalStatus
+    approvalStatus,
+    reason
   );
 
   sendResponse(res, {

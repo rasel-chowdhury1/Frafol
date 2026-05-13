@@ -43,17 +43,17 @@ const userSchema = new Schema<TUser>(
     },
     role: {
       type: String,
-      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY, USER_ROLE.ADMIN],
+      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN],
       default: 'user',
     },
     mainRole: {
       type: String,
-      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY, USER_ROLE.ADMIN],
+      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN],
       default: 'user',
     },
     switchRole: {
       type: String,
-      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH,USER_ROLE.COMPANY, USER_ROLE.ADMIN],
+      enum: [USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH,USER_ROLE.COMPANY, USER_ROLE.ADMIN , USER_ROLE.SUPER_ADMIN],
       default: 'user',
     },
     thumbnailImage: {
@@ -147,6 +147,16 @@ const userSchema = new Schema<TUser>(
       default: "pending"
     },
     declineReason: { type: String },
+    allowedRoutes: { type: [String], default: [] },
+    deleteRequestStatus: {
+      type: String,
+      enum: ['none', 'pending', 'approved', 'rejected'],
+      default: 'none',
+    },
+    deleteRequestedAt: { type: Date, default: null },
+    deleteApprovedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    deleteRequestReason: { type: String },
+    deleteRejectReason: { type: String },
     unAvailability: {
       type: [String],
       default: [],
@@ -187,12 +197,8 @@ const userSchema = new Schema<TUser>(
 );
 
 userSchema.pre('save', async function (next) {
-  // eslint-disable-next-line @typescript-eslint/no-this-alias
-  const user = this;
-  // user.password = await bcrypt.hash(
-  //   user.password,
-  //   Number(config.bcrypt_salt_rounds),
-  // );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = this as any;
 
   if (user.isModified('password') && user.password) {
     user.password = await bcrypt.hash(

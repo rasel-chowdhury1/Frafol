@@ -12,7 +12,7 @@ authRoutes
   
   .post(
     '/refresh-token',
-    validateRequest(authValidation.refreshTokenValidationSchema),
+    // validateRequest(authValidation.refreshTokenValidationSchema),
     authControllers.refreshToken,
   )
   .post(
@@ -29,7 +29,7 @@ authRoutes
 
   .patch(
     '/change-password',
-    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN,  USER_ROLE.SUPER_ADMIN),
     authControllers.changePassword,
   )
 

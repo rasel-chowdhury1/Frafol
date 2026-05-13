@@ -17,7 +17,7 @@ router
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
       USER_ROLE.COMPANY,
-      USER_ROLE.ADMIN,
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
     ),
     upload.single("image"),
     parseData(),
@@ -34,13 +34,13 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH, 
-      USER_ROLE.ADMIN),
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     PackageController.getMyPackages
   )
 
   .get(
     "/pending",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     PackageController.getPendingPackages
   )
 
@@ -57,7 +57,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
     ),
     PackageController.getPackageById
   )
@@ -70,7 +70,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN),
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     upload.single("image"),
     parseData(),
     PackageController.updatePackage
@@ -78,13 +78,13 @@ router
 
   .patch(
     "/updateApprovalStatus/:id",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     PackageController.updateApprovalStatusByAdmin
   )
 
   .patch(
     "/decline/:id",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     PackageController.declinePackageById
   )
 
@@ -96,7 +96,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN),
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     PackageController.deletePackage
   );
 

@@ -9,7 +9,7 @@ router.get("/", SubscriptionController.getAllSubscriptions);
 
 router.patch(
   "/update/:id",
-  auth(USER_ROLE.ADMIN),
+  auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
   SubscriptionController.updateSubscriptionPrice
 );
 

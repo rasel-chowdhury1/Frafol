@@ -15,7 +15,7 @@ router.post(
 // Admin sees all insurance applications
 .get(
   "/all",
-  auth(USER_ROLE.ADMIN),
+  auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
   InsuranceController.getAllInsurance
 )
 

@@ -8,13 +8,13 @@ const AdminUser = {
   email: config.admin_email,
   password: config.admin_password,
   phone: config.admin_phone,
-  role: USER_ROLE.ADMIN,
+  role: USER_ROLE.SUPER_ADMIN,
   isDeleted: false,
 };
 
 const createDefaultAdmin = async () => {
   //when database is connected, we will check is there any user who is super admin
-  const existingAdmin = await User.findOne({ role: USER_ROLE.ADMIN });
+  const existingAdmin = await User.findOne({ role: USER_ROLE.SUPER_ADMIN });
 
   if (!existingAdmin) {
     const result = await User.create(AdminUser);

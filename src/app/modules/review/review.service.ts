@@ -208,7 +208,7 @@ const getMyReviews = async (userId: string, query: Record<string, unknown>) => {
       .populate({
         path: 'eventOrderId',
         select:
-          'orderId orderType serviceType date location totalPrice packageId statusTimestamps',
+          'title orderId orderType serviceType date location totalPrice packageId statusTimestamps',
         populate: {
           path: 'packageId',
           select: 'title',
@@ -253,7 +253,7 @@ const getMyPendingReviews = async (
       .populate({
         path: 'eventOrderId',
         select:
-          'orderId orderType serviceType date location totalPrice packageId statusTimestamps',
+          ' title orderId orderType serviceType date location totalPrice packageId statusTimestamps',
         populate: {
           path: 'packageId',
           select: 'title',
@@ -302,7 +302,9 @@ const getReviewsByServiceProvider = async (
 
   // 4️⃣ Initialize QueryBuilder
   const reviewQuery = new QueryBuilder(
-    Review.find(baseFilter).populate('userId', 'name email profileImage'),
+    Review.find(baseFilter)
+          .populate('userId', 'name companyName email profileImage')
+          .populate('eventOrderId', 'title') ,
     restQuery || {},
   )
     .paginate()
@@ -322,6 +324,8 @@ const getReviewsByServiceProvider = async (
   // 6️⃣ Execute query
   const reviews = await reviewQuery.modelQuery;
   const meta = await reviewQuery.countTotal();
+
+  console.log("reviews ===>>>>> ", reviews)
 
   return { meta, reviews };
 };

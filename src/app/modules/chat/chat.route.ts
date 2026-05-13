@@ -17,7 +17,7 @@ router.post(
     USER_ROLE.PHOTOGRAPHER,
     USER_ROLE.VIDEOGRAPHER,
     USER_ROLE.BOTH,
-    USER_ROLE.ADMIN,
+    USER_ROLE.ADMIN,USER_ROLE.SUPER_ADMIN
   ),
   ChatController.addNewChat,
 );
@@ -29,7 +29,7 @@ router.get(
     USER_ROLE.PHOTOGRAPHER,
     USER_ROLE.VIDEOGRAPHER,
     USER_ROLE.BOTH,
-    USER_ROLE.ADMIN,
+    USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
   ),
   ChatController.getMyChatList,
 );
@@ -37,7 +37,7 @@ router.get(
 router.get(
   '/all-users',
   auth(
-    USER_ROLE.ADMIN,
+    USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
   )
 ,
   ChatController.getAllUserQueryForChat
@@ -50,7 +50,7 @@ router.get(
 //     USER_ROLE.PHOTOGRAPHER,
 //     USER_ROLE.VIDEOGRAPHER,
 //     USER_ROLE.BOTH,
-//     USER_ROLE.ADMIN,
+//     USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
 //   ),
 //   ChatController.getConnectionUsersOfSpecificUser,
 // );
@@ -62,7 +62,7 @@ router.get(
 //     USER_ROLE.PHOTOGRAPHER,
 //     USER_ROLE.VIDEOGRAPHER,
 //     USER_ROLE.BOTH,
-//     USER_ROLE.ADMIN,
+//     USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
 //   ),
 //   ChatController.getOnlineConnectionUsersOfSpecificUser,
 // );
@@ -74,7 +74,7 @@ router.patch(
     USER_ROLE.PHOTOGRAPHER,
     USER_ROLE.VIDEOGRAPHER,
     USER_ROLE.BOTH,
-    USER_ROLE.ADMIN,
+    USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
   ),
   ChatController.leaveUserFromSpecificChatController,
 );
@@ -86,7 +86,7 @@ router.get(
     USER_ROLE.PHOTOGRAPHER,
     USER_ROLE.VIDEOGRAPHER,
     USER_ROLE.BOTH,
-    USER_ROLE.ADMIN,
+    USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
   ),
   ChatController.getChatById,
 );

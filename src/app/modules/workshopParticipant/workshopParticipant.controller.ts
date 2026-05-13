@@ -64,6 +64,16 @@ const updateWorkshopParticipant = catchAsync(async (req: Request, res: Response)
   });
 });
 
+const completeInstructorPayment = catchAsync(async (req: Request, res: Response) => {
+  const result = await WorkshopParticipantService.completeInstructorPayment(req.params.id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Instructor payment completed successfully',
+    data: result,
+  });
+});
+
 const deleteWorkshopParticipant = catchAsync(async (req: Request, res: Response) => {
   const result = await WorkshopParticipantService.deleteWorkshopParticipant(req.params.id);
   sendResponse(res, {
@@ -80,4 +90,5 @@ export const WorkshopParticipantController = {
   getWorkshopParticipantById,
   updateWorkshopParticipant,
   deleteWorkshopParticipant,
+  completeInstructorPayment,
 };

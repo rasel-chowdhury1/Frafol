@@ -261,7 +261,7 @@ const profileVerifiedEmail = async ({
   name: string;
 }): Promise<void> => {
 
-  const profileSettingsUrl = `${clientUrl}/dashboard/professional/profile-settings`;
+  const profileSettingsUrl = `${clientUrl}/dashboard/professional/profile-settings?tab=portfolio`;
 
   const emailBody = `
     <div style="
@@ -361,15 +361,81 @@ const profileVerifiedEmail = async ({
   userName,
   messageText,
 }: BookingNotificationEmailParams): Promise<void> => {
-  await sendEmail(
-    sentTo,
-    subject,
-    `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-       <h1>Hello ${userName},</h1>
-       <p style="font-size: 16px;">${messageText}</p>
-       <p style="font-size: 14px; color: #666;">Thank you for using our platform!</p>
-    </div>`
-  );
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          New Booking Request
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${userName}</strong>,</p>
+
+        <p>You have received a new booking request on <strong>Frafol</strong>. Please review the details below.</p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border: 1px dashed ${primaryColor};
+          padding: 20px;
+          text-align: center;
+          border-radius: 6px;
+          margin: 24px 0;
+        ">
+          <p style="margin: 0; font-size: 14px; color: #555;">Booking Details</p>
+          <p style="margin: 10px 0 0; font-size: 15px; color: #333333; line-height: 1.6;">
+            ${messageText}
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          Log in to your Frafol account to review and respond to this request.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Booking Request
+          </a>
+        </div>
+
+        <p style="margin-top: 24px; font-size: 14px;">
+          If you have any questions, please contact our support team at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, subject, emailBody);
 };
 
 const frafolChoiceEmail = async ({
@@ -880,4 +946,828 @@ const frafolChoiceExpiredEmail = async ({
   await sendEmail(sentTo, 'Your Frafol Choice Has Expired – Renew to Restore Your Benefits', emailBody);
 };
 
-export { otpSendEmail, sendBookingNotificationEmail, profileVerifiedEmail, profileDeclinedEmail, passwordChangedEmail, forgotPasswordEmail, bankDetailsChangedEmail, accountBlockedEmail, sendEmailAndNotification, sendFrafolEmail, frafolChoiceRenewalSuccessEmail, frafolChoiceRenewalFailedEmail, frafolChoiceExpiringSoonEmail, frafolChoiceExpiredEmail };
+const sendCommentOrReplyEmail = async ({
+  sentTo,
+  receiverName,
+  actorName,
+  communityTitle,
+  commentText,
+  isReply,
+}: {
+  sentTo: string;
+  receiverName: string;
+  actorName: string;
+  communityTitle: string;
+  commentText: string;
+  isReply: boolean;
+}): Promise<void> => {
+  const action = isReply ? 'replied to a comment on' : 'commented on';
+  const subject = isReply ? 'New Reply on Your Post' : 'New Comment on Your Post';
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          ${subject}
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${actorName}</strong> ${action} your post
+          <strong>"${communityTitle}"</strong>.
+        </p>
+
+        <div style="
+          background-color: #f4f6fb;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #333;
+          font-style: italic;
+        ">
+          "${commentText}"
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/community" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Post
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, subject, emailBody);
+};
+
+const sendBookingRequestEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  orderType,
+  serviceType,
+  packageName,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+}): Promise<void> => {
+  const isDirectBooking = orderType === 'direct';
+  const orderLabel = isDirectBooking
+    ? packageName ? `"${packageName}"` : 'a package'
+    : `custom ${serviceType?.trim() || 'service'}`;
+  const bookingType = isDirectBooking ? 'Direct Booking' : `Custom ${serviceType?.trim() || 'Service'} Booking`;
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          New ${bookingType} Request
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          You have received a new <strong>${bookingType.toLowerCase()} request</strong>
+          from <strong>${senderName}</strong> for ${orderLabel}.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Action required:</strong> Please review this request and accept or decline it from your dashboard.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Review Request
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, `New ${bookingType} Request from ${senderName}`, emailBody);
+};
+
+const sendOrderAcceptedEmail = async ({
+  sentTo,
+  clientName,
+  serviceProviderName,
+  orderType,
+  serviceType,
+  packageName,
+}: {
+  sentTo: string;
+  clientName: string;
+  serviceProviderName: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+}): Promise<void> => {
+  const orderLabel =
+    orderType === 'direct'
+      ? packageName ? `"${packageName}"` : 'your package'
+      : `custom ${serviceType || 'booking'}`;
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Booking Accepted
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${clientName}</strong>,</p>
+
+        <p>
+          Great news! <strong>${serviceProviderName}</strong> has <strong>accepted</strong>
+          your booking request for <strong>${orderLabel}</strong>.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #22c55e;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Next step:</strong> Please complete your payment to confirm the booking.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Complete Payment
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Your Booking Has Been Accepted – Complete Payment`, emailBody);
+};
+
+const sendPaymentSuccessEmail = async ({
+  sentTo,
+  receiverName,
+  clientName,
+  orderType,
+  serviceType,
+  packageName,
+}: {
+  sentTo: string;
+  receiverName: string;
+  clientName: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+}): Promise<void> => {
+  const orderLabel =
+    orderType === 'direct'
+      ? packageName ? `"${packageName}"` : 'your package'
+      : `custom ${serviceType || 'booking'}`;
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Payment Received – Order In Progress
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${clientName}</strong> has successfully completed payment for
+          <strong>${orderLabel}</strong>. The order is now in progress.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #22c55e;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Payment confirmed.</strong> You can now start working on the order.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Order
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Payment Received – Your Order Is Now In Progress', emailBody);
+};
+
+const sendNewMessageEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  messageText,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  messageText: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          New Message
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>You have received a new message from <strong>${senderName}</strong>.</p>
+
+        <div style="
+          background-color: #f4f6fb;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #333;
+        ">
+          ${messageText}
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/messages" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Reply to Message
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, `New Message from ${senderName}`, emailBody);
+};
+
+const sendDeliveryAcceptedEmail = async ({
+  sentTo,
+  receiverName,
+  clientName,
+  serviceType,
+  packageName,
+}: {
+  sentTo: string;
+  receiverName: string;
+  clientName: string;
+  serviceType?: string;
+  packageName?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Delivery Accepted ✅
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          Great news! <strong>${clientName}</strong> has <strong>accepted your delivery</strong>
+          for the <strong>${serviceType || 'order'}${packageName ? ` – ${packageName}` : ''}</strong>.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #22c55e;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          The order has been successfully completed. Well done!
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Order
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Your Delivery Has Been Accepted', emailBody);
+};
+
+const sendCancelRequestDeclinedEmail = async ({
+  sentTo,
+  receiverName,
+  declinedByName,
+  serviceType,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  declinedByName: string;
+  serviceType?: string;
+  reason?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Cancellation Request Declined
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${declinedByName}</strong> has <strong>declined</strong> your cancellation request
+          for the <strong>${serviceType || 'order'}</strong>.
+          The order will continue as previously agreed.
+        </p>
+
+        ${reason ? `
+        <div style="
+          background-color: #fff3f3;
+          border-left: 4px solid #e53935;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason for decline:</strong><br/>
+          ${reason}
+        </div>` : ''}
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Order
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Your Cancellation Request Has Been Declined', emailBody);
+};
+
+const sendCancelRequestEmail = async ({
+  sentTo,
+  receiverName,
+  requesterName,
+  serviceType,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  requesterName: string;
+  serviceType?: string;
+  reason?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Cancellation Request Received
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${requesterName}</strong> has requested to cancel the
+          <strong>${serviceType || 'order'}</strong>.
+          Please review this request and take action.
+        </p>
+
+        ${reason ? `
+        <div style="
+          background-color: #fff8e1;
+          border-left: 4px solid #f5a623;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason provided:</strong><br/>
+          ${reason}
+        </div>` : ''}
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Review Request
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Cancellation Request – Action Required', emailBody);
+};
+
+const sendRefundRequiredEmail = async ({
+  sentTo,
+  adminName,
+  cancellerName,
+  orderId,
+  serviceType,
+}: {
+  sentTo: string;
+  adminName: string;
+  cancellerName: string;
+  orderId: string;
+  serviceType?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Refund Required – Order Cancelled
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${adminName}</strong>,</p>
+
+        <p>
+          An order has been cancelled and may require a <strong>refund</strong>.
+          Please review the details below and take the necessary action.
+        </p>
+
+        <div style="
+          background-color: #fff3f3;
+          border: 1px dashed #e53935;
+          padding: 20px;
+          border-radius: 6px;
+          margin: 24px 0;
+        ">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #333;">
+            <tr>
+              <td style="padding: 6px 0; color: #777;">Order ID</td>
+              <td style="padding: 6px 0; text-align: right; font-weight: bold;">${orderId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #777;">Cancelled By</td>
+              <td style="padding: 6px 0; text-align: right;">${cancellerName}</td>
+            </tr>
+            ${serviceType ? `
+            <tr>
+              <td style="padding: 6px 0; color: #777;">Service Type</td>
+              <td style="padding: 6px 0; text-align: right;">${serviceType}</td>
+            </tr>` : ''}
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/order-management" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Review Order
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, please contact our support team at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol System</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
+        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      </div>
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Refund Required – Order Cancelled', emailBody);
+};
+
+export { otpSendEmail, sendBookingNotificationEmail, profileVerifiedEmail, profileDeclinedEmail, passwordChangedEmail, forgotPasswordEmail, bankDetailsChangedEmail, accountBlockedEmail, sendEmailAndNotification, sendFrafolEmail, frafolChoiceRenewalSuccessEmail, frafolChoiceRenewalFailedEmail, frafolChoiceExpiringSoonEmail, frafolChoiceExpiredEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail };

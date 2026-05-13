@@ -17,6 +17,7 @@ const packageSchema = new Schema<IPackage>(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
+    declineReason: { type: String, default: null },
     isDeleted: { type: Boolean, default: false },
     thumbnailImage: { type: String, default: "" },
   },

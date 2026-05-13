@@ -26,6 +26,7 @@ import { ContactRoutes } from "../modules/contactUs/contactUs.route";
 import path from "path";
 import { SubscriptionRoutes } from "../modules/subscription/subscription.route";
 import { TownRoutes } from "../modules/town/town.route";
+import { WorkshopParticipantRoutes } from "../modules/workshopParticipant/workshopParticipant.route";
 
 const router = Router();
 
@@ -69,6 +70,10 @@ const moduleRoutes = [
   {
      path: "/workshop",
      route: WorkshopRoutes
+  },
+  {
+   path: "/workshopParticipant",
+   route: WorkshopParticipantRoutes
   },
   {
    path : "/package",

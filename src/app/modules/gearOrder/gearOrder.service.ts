@@ -343,7 +343,7 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
     GearOrder.find(baseQuery)
       .populate("clientId", "name  email phone companyName ico dic ic_dph address")
       .populate("sellerId", "name  email phone companyName ico dic ic_dph address")
-      .populate("gearMarketplaceId", " name price vatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
+      .populate("gearMarketplaceId", " name price vatAmount totalVatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
       .populate("paymentId", "transactionId paymentMethod"),
     query
   )
@@ -440,7 +440,7 @@ const getMyGearOrders = async (
     GearOrder.find(baseQuery)
       .populate("clientId", "name  email phone companyName ico dic ic_dph address")
       .populate("sellerId", "name  email phone companyName ico dic ic_dph address")
-      .populate("gearMarketplaceId", " name price vatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
+      .populate("gearMarketplaceId", " name price vatAmount totalVatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
       .populate("paymentId", "transactionId paymentMethod"),
     queryParams
   )

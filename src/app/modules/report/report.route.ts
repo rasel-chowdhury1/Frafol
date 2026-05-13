@@ -26,7 +26,7 @@ router.post(
 
 router.get(
   "/",
-  auth(USER_ROLE.ADMIN), // only admin can see all reports
+  auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN), // only admin can see all reports
   ReportController.getAllReports
 );
 
@@ -38,20 +38,20 @@ router.get(
     USER_ROLE.PHOTOGRAPHER,
     USER_ROLE.VIDEOGRAPHER,
     USER_ROLE.BOTH,
-    USER_ROLE.ADMIN
+    USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
   ),
   ReportController.getReportById
 );
 
 router.patch(
   "/update/:id",
-  auth(USER_ROLE.ADMIN), // only admin can update reports
+  auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN), // only admin can update reports
   ReportController.updateReport
 );
 
 router.delete(
   "/:id",
-  auth(USER_ROLE.ADMIN), // only admin can delete reports
+  auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN), // only admin can delete reports
   ReportController.deleteReport
 );
 

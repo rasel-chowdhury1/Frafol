@@ -28,6 +28,8 @@ const getSingleCoupon = async (id: string) => {
 };
 
 const isCouponCodeValid = async (code: string) => {
+
+  console.log("coupon code =>>>>>>> ", code );
   const coupon = await Coupon.findOne({
     code: code.trim(),
     isActive: true,

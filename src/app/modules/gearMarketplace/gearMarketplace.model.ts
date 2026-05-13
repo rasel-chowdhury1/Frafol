@@ -33,6 +33,10 @@ const gearMarketplaceSchema = new Schema<IGearMarketplace>(
       type: Number, 
       default: 0 
     },
+    totalVatAmount: {
+      type: Number,
+      default: 0
+    },
     platformCommission: { 
       type: Number, 
       default: 0 

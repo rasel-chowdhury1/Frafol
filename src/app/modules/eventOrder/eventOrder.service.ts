@@ -6,7 +6,7 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
 import { Review } from "../review/review.model";
 import { Payment } from "../payment/payment.model";
-import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForOrderAccepted, sentNotificationForOrderDeclined } from "../../../socketIo";
+import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -135,7 +135,7 @@ const getMyEventOrders = async (
           // baseQuery.sort = "date"; 
           break;
         case "upcoming":
-          baseQuery.status = "inProgress";
+          baseQuery.status = { $in: ["inProgress", "deliveryRequest", "deliveryRequestDeclined"] };
           baseQuery.date = { $gte: new Date() };
           // baseQuery.sort = "date"; 
           break;
@@ -169,7 +169,7 @@ const getMyEventOrders = async (
     case "user":
       switch (tab) {
         case "currentOrder":
-          baseQuery.status = "inProgress";
+          baseQuery.status = { $in: ["inProgress", "deliveryRequestDeclined"] };
           // baseQuery.sort = "date"; // ✅ Nearest future event first
           break;
         case "toConfirm":
@@ -207,6 +207,8 @@ const getMyEventOrders = async (
     default:
       throw new AppError(400, "Invalid role type — must be 'user' or 'professional'");
   }
+
+  if (!queryParams.sort) queryParams.sort = '-updatedAt';
 
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
@@ -255,6 +257,7 @@ const getMyExtensionEventOrders = async (userId: string) => {
     })
       .populate("userId", "name email")
       .populate("serviceProviderId", "name email")
+      .populate("packageId", "_id title description price mainPrice")
       .populate("extensionRequests.requestedBy", "name email")
       .sort({ createdAt: -1 });
 
@@ -423,6 +426,13 @@ const requestExtension = async (
     { new: true }
   );
 
+  sentNotificationForExtensionRequest({
+    requestedBy: new mongoose.Types.ObjectId(requestedBy),
+    receiverId: order.userId,
+    serviceType: order.serviceType,
+    reason,
+  }).catch((err) => console.error('Extension request notification failed:', err));
+
   return result;
 };
 
@@ -456,8 +466,12 @@ const acceptExtensionRequest = async (
   // ✅ Save changes
   await order.save();
 
-  // ✅ Optional: send notification or email to user
-  // await sendExtensionApprovedNotification(order.userId, order.serviceProviderId, extensionRequest.newDeliveryDate);
+  sentNotificationForExtensionAccepted({
+    acceptedBy: new mongoose.Types.ObjectId(approvedBy),
+    receiverId: order.serviceProviderId,
+    serviceType: order.serviceType,
+    newDeliveryDate: extensionRequest.newDeliveryDate,
+  }).catch((err) => console.error('Extension accepted notification failed:', err));
 
   return order;
 };
@@ -490,8 +504,12 @@ const rejectExtensionRequest = async (
   // ✅ Save changes
   await order.save();
 
-  // ✅ Optional: send notification or email to user
-  // await sendExtensionApprovedNotification(order.userId, order.serviceProviderId, extensionRequest.newDeliveryDate);
+  sentNotificationForExtensionRejected({
+    rejectedBy: order.userId,
+    receiverId: order.serviceProviderId,
+    serviceType: order.serviceType,
+    reason,
+  }).catch((err) => console.error('Extension rejected notification failed:', err));
 
   return order;
 };
@@ -951,6 +969,14 @@ console.log({order})
   order.statusHistory.push({ status: "cancelRequestDeclined", changedAt: new Date(), reason });
 
   await order.save();
+
+  sentNotificationForCancelRequestDeclined({
+    declinedBy: new mongoose.Types.ObjectId(userId),
+    receiverId: order.cancelRequestedBy as mongoose.Types.ObjectId,
+    serviceType: order.serviceType,
+    reason,
+  }).catch((err) => console.error('Cancel request declined notification failed:', err));
+
   return order;
 };
 
@@ -983,6 +1009,20 @@ const cancelOrder = async (orderId: string, userId: string) => {
   order.statusHistory.push({ status: "cancelled", changedAt: new Date(), reason: order.cancelReason });
 
   await order.save();
+
+  sentNotificationForOrderCancelled({
+    orderType: order.orderType,
+    cancelledBy: new mongoose.Types.ObjectId(userId),
+    receiverId: order.cancelRequestedBy as mongoose.Types.ObjectId,
+    serviceType: order.serviceType,
+  }).catch((err) => console.error('Cancel approved notification failed:', err));
+
+  sentNotificationForRefundRequired({
+    cancelledBy: new mongoose.Types.ObjectId(userId),
+    orderId: order._id as mongoose.Types.ObjectId,
+    serviceType: order.serviceType,
+  }).catch((err) => console.error('Admin refund notification failed:', err));
+
   return order;
 };
 
@@ -1001,6 +1041,21 @@ const cancelEventOrderByAdmin = async (orderId: string, userId: string, reason: 
   order.statusHistory.push({ status: "cancelled", changedAt: new Date(), reason });
 
   await order.save();
+
+  sentNotificationForOrderCancelled({
+    orderType: order.orderType,
+    cancelledBy: new mongoose.Types.ObjectId(userId),
+    receiverId: order.userId,
+    serviceType: order.serviceType,
+  }).catch((err) => console.error('Admin cancel notification (client) failed:', err));
+
+  sentNotificationForOrderCancelled({
+    orderType: order.orderType,
+    cancelledBy: new mongoose.Types.ObjectId(userId),
+    receiverId: order.serviceProviderId,
+    serviceType: order.serviceType,
+  }).catch((err) => console.error('Admin cancel notification (professional) failed:', err));
+
   return order;
 };
 

@@ -570,18 +570,18 @@ const getOrders = catchAsync(async (req, res) => {
 const getDeliveryOrders = catchAsync(async (req, res) => {
   const { type, ...rest } = req.query;
 
-  const validTypes = ["professional", "gear"] as const;
+  const validTypes = ["professional", "gear", "workshop"] as const;
 
   if (!validTypes.includes(type as any)) {
     return sendResponse(res, {
       statusCode: 400,
       success: false,
-      message: "Invalid type. Allowed: professional, gear",
+      message: "Invalid type. Allowed: professional, gear and workshop",
       data: null,
     });
   }
 
-  const result = await userService.getDeliveryOrders(type as "professional" | "gear", rest);
+  const result = await userService.getDeliveryOrders(type as "professional" | "gear" | "workshop", rest);
 
   sendResponse(res, {
     statusCode: 200,
@@ -616,6 +616,96 @@ const getTownAndIndividualCategoriesOptimized = catchAsync(async (_req, res) => 
 
 })
 
+
+const getDeleteAccountRequests = catchAsync(async (_req: Request, res: Response) => {
+  const result = await userService.getDeleteAccountRequests();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Pending delete account requests fetched',
+    data: result,
+  });
+});
+
+const approveDeleteAccount = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const adminId = req.user.userId;
+  const result = await userService.approveDeleteAccount(userId, adminId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Account deleted successfully',
+    data: result,
+  });
+});
+
+const rejectDeleteAccount = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const adminId = req.user.userId;
+  const { reason } = req.body;
+  const result = await userService.rejectDeleteAccount(userId, adminId, reason);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Delete request rejected',
+    data: result,
+  });
+});
+
+const updateAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { adminId } = req.params;
+  const result = await userService.updateAdmin(adminId, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Admin updated successfully',
+    data: result,
+  });
+});
+
+const createAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { name, email, password, phone, address, allowedRoutes } = req.body;
+  const result = await userService.createAdmin({ name, email, password, phone, address, allowedRoutes });
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'Admin created successfully',
+    data: result,
+  });
+});
+
+const getAdmins = catchAsync(async (_req: Request, res: Response) => {
+  const result = await userService.getAdmins();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Admins fetched successfully',
+    data: result,
+  });
+});
+
+const updateAdminRoutes = catchAsync(async (req: Request, res: Response) => {
+  const { adminId } = req.params;
+  const { allowedRoutes } = req.body;
+  const result = await userService.updateAdminRoutes(adminId, allowedRoutes);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Admin routes updated successfully',
+    data: result,
+  });
+});
+
+const deleteAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { adminId } = req.params;
+  const result = await userService.deleteAdmin(adminId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Admin deleted successfully',
+    data: result,
+  });
+});
 
 export const userController = {
   createUser,
@@ -652,5 +742,13 @@ export const userController = {
   getOrders,
   getDeliveryOrders,
   getLatestGalleryImages,
-  getTownAndIndividualCategoriesOptimized
+  getTownAndIndividualCategoriesOptimized,
+  createAdmin,
+  getAdmins,
+  updateAdmin,
+  updateAdminRoutes,
+  deleteAdmin,
+  getDeleteAccountRequests,
+  approveDeleteAccount,
+  rejectDeleteAccount,
 };

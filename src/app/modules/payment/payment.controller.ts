@@ -49,6 +49,8 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     case "workshop": {
         const { workshopId } = req.body;
 
+        console.log("workshop body =>>>> ", req.body)
+
         if (!workshopId) {
           throw new AppError(httpStatus.BAD_REQUEST, "workshopId is required for workshop payment");
         }
@@ -224,7 +226,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   );
 
 
-  console.log("payment result =========>>>>>>>>>> ", result)
+
   
   // Redirect to frontend success page
   return res.redirect(

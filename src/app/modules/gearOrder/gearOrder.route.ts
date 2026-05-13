@@ -8,14 +8,14 @@ const router = express.Router();
 router
     .post(
         '/checkout',
-        auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+        auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),
         GearOrderController.createGearOrders
     )
     
 
     .patch(
         "/complete-payment/:gearOrderId",
-        auth(USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),
         GearOrderController.completePaymentGearOrder
         )
 
@@ -29,7 +29,7 @@ router
         // Seller cancels the order
         .patch(
         "/cancel/:orderId",
-        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),
         GearOrderController.cancelGearOrderBySeller
         )
 
@@ -51,7 +51,7 @@ router
         
         .get(
             "/my-orders", 
-            auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),  
+            auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),  
             GearOrderController.getMyGearOrders
         )
 

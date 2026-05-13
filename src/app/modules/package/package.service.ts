@@ -5,7 +5,8 @@ import { deleteFile } from "../../utils/fileHelper";
 import AppError from "../../error/AppError";
 import mongoose from "mongoose";
 import { Review } from "../review/review.model";
-
+import httpStatus from 'http-status';
+import { sentNotificationForPackageApproved, sentNotificationForPackageDeclined } from "../../../socketIo";
 const createPackage = async (payload: IPackage) => {
   return await Package.create(payload);
 };
@@ -142,28 +143,50 @@ const updatePackage = async (id: string, userId: string, payload: IUpdatePackage
   );
 };
 
-const updateApprovalStatusByAdmin = async (id: string, status: string) => {
-  return await Package.findOneAndUpdate(
+const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: string) => {
+  const updateData: Record<string, any> = { approvalStatus: status };
+  if (status === 'rejected' && reason) {
+    updateData.declineReason = reason;
+  }
+
+  const pkg = await Package.findOneAndUpdate(
     { _id: id, isDeleted: false },
-    { approvalStatus: status },
+    updateData,
     { new: true }
-  );
+  ).populate({ path: 'authorId', select: 'name email' });
+
+  if (pkg && status === 'approved') {
+    sentNotificationForPackageApproved({
+      receiverId: pkg.authorId as mongoose.Types.ObjectId,
+      packageTitle: pkg.title,
+    }).catch((err) => console.error('Package approved notification failed:', err));
+  } else if (pkg && status === 'rejected' && reason) {
+    sentNotificationForPackageDeclined({
+      receiverId: pkg.authorId as mongoose.Types.ObjectId,
+      packageTitle: pkg.title,
+      reason,
+    }).catch((err) => console.error('Package declined notification failed:', err));
+  }
+
+  return pkg;
 };
 
 const declinePackageById = async (id: string, reason: string) => {
-
-  // Soft delete + mark as declined
-  const pkg = await Package.findByIdAndUpdate(
-    id,
-    { 
-      isDeleted: true, 
-      approvalStatus: 'rejected' // optional, could use 'declined' if you add this enum
-    },
+  const pkg = await Package.findOneAndUpdate(
+    { _id: id, isDeleted: false },
+    { isDeleted: true, approvalStatus: 'rejected', declineReason: reason },
     { new: true, runValidators: true }
-  )
+  ).populate({ path: 'authorId', select: 'name email' });
+
   if (!pkg) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the package or package not found');
   }
+
+  sentNotificationForPackageDeclined({
+    receiverId: pkg.authorId as mongoose.Types.ObjectId,
+    packageTitle: pkg.title,
+    reason,
+  }).catch((err) => console.error('Package declined notification failed:', err));
 
   return pkg;
 }

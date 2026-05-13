@@ -5,6 +5,7 @@ import colors from 'colors'; // Ensure correct import
 import config from './app/config';
 import createDefaultAdmin from './app/DB/createDefaultAdmin';
 import { initSocketIO } from './socketIo';
+import { startAutoDeliverScheduler } from './app/scheduler/autoDeliverEventOrders';
 import { logger } from './app/utils/logger';
 
 // Create a new HTTP server
@@ -45,7 +46,10 @@ async function main() {
     );
 
     //create a defult admin
-    createDefaultAdmin()
+    createDefaultAdmin();
+
+    // Start scheduled jobs
+    startAutoDeliverScheduler();
 
 
     // Start HTTP server

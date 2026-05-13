@@ -23,6 +23,8 @@ export interface IWorkshopParticipant {
   DIC?: string;
   IC_DPH?: string;
   name?: string;
+  couponCode?: string;
+  couponDiscount?: number;
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

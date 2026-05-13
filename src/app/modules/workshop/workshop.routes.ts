@@ -17,7 +17,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN,
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
       USER_ROLE.COMPANY
     ),
     upload.single('image'),
@@ -28,6 +28,14 @@ router
   .get("/", WorkshopController.getAllWorkshops)
 
   .get(
+    "/admin",
+    auth(
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
+    ),
+    WorkshopController.getAllWorkshopsForAdmin
+  )
+
+  .get(
     "/my",
     auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.COMPANY),
     WorkshopController.getMyWorkshops
@@ -35,7 +43,7 @@ router
 
   .get(
     "/pending",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     WorkshopController.getPendingWorkshops
   )
 
@@ -47,7 +55,7 @@ router
     //   USER_ROLE.PHOTOGRAPHER,
     //   USER_ROLE.VIDEOGRAPHER,
     //   USER_ROLE.BOTH,
-    //   USER_ROLE.ADMIN
+    //   USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN
     // ),
     WorkshopController.getParticipantsByWorkshop
   )
@@ -60,7 +68,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN,
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
       USER_ROLE.COMPANY
     ),
     WorkshopController.getMyRegisteredWorkshops
@@ -74,7 +82,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN,
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
       USER_ROLE.COMPANY
     ),
     WorkshopController.getWorkshopById
@@ -88,7 +96,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN,
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
       USER_ROLE.COMPANY
     ),
     upload.single('image'),
@@ -98,13 +106,13 @@ router
 
   .patch(
     "/updateApprovalStatus/:id",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     WorkshopController.updateApprovalStatusByAdmin
     )
 
   .patch(
     "/decline/:id",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     WorkshopController.declineWorkshopById
     )
 
@@ -116,7 +124,7 @@ router
       USER_ROLE.PHOTOGRAPHER,
       USER_ROLE.VIDEOGRAPHER,
       USER_ROLE.BOTH,
-      USER_ROLE.ADMIN,
+      USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,
       USER_ROLE.COMPANY
     ),
     WorkshopController.deleteWorkshop

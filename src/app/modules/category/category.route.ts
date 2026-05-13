@@ -12,7 +12,7 @@ const router = Router();
 router
      .post(
         "/add", 
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
         upload.single('image'),
         parseData(),
         CategoryController.createCategory
@@ -20,7 +20,7 @@ router
 
      .patch(
         "/update/:id", 
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
         upload.single('image'),
         parseData(),
         CategoryController.updateCategory
@@ -28,7 +28,7 @@ router
 
     .patch(
         "/reorder",
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
         CategoryController.reorderCategoriesController
     )
 
@@ -50,7 +50,7 @@ router
 
      .delete(
         "/:id", 
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
         CategoryController.deleteCategory
     );
 

@@ -45,34 +45,32 @@ userRoutes
   .get(
     '/my-profile',
     auth(
-      USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY
+      USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY
     ),
     userController.getMyProfile,
   )
 
   .get(
     '/admin-profile',
-    auth(
-      'admin'
-    ),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.getAdminProfile,
   )
 
   .get(
-    '/all-users', 
-    auth("admin"),
+    '/all-users',
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
      userController.getAllUsers
     )
 
   .get(
     '/stats',
-    auth(USER_ROLE.ADMIN),  
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),  
     userController.getUserRoleStats
   )
 
   .get(
     '/pending-professionals',
-    auth(USER_ROLE.ADMIN),  
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.getPendingPhotographersVideographersBoth
   )
 
@@ -94,7 +92,7 @@ userRoutes
 
   .get(
     '/me/subscription',
-    auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.COMPANY, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.COMPANY, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.getMySubscriptionStatus
   )
   .get(
@@ -143,8 +141,8 @@ userRoutes
   )
 
   .get(
-    "/admin/dashboard-stats", 
-    auth(USER_ROLE.ADMIN),
+    "/admin/dashboard-stats",
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.getAdminDashboardStats
   )
 
@@ -167,17 +165,12 @@ userRoutes
     userController.getTownAndIndividualCategoriesOptimized
   )
 
-  .get(
-    '/:id',
-    // auth("user", "admin"),
-    userController.getUserById
-  )
 
  
 
   .patch(
     '/update-my-profile',
-    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),
     upload.single('image'),
     parseData(),
     userController.updateMyProfile,
@@ -228,27 +221,83 @@ userRoutes
 
   .patch(
     '/verified/:userId',
-    auth('admin'),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.verifyProfessionalUserController,
   )
 
   .patch(
     '/declined/:userId',
-    auth('admin'),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.declineProfessionalUserController,
   )
-  
+
   .patch(
     '/block/:id',
-    auth('admin'),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     userController.blockedUser,
   )
   
   .delete(
     '/delete-my-account',
-    auth('user'
-    ),
+    auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
     userController.deleteMyAccount,
+  )
+
+  // Admin/super-admin: delete account requests
+  .get(
+    '/delete-account-requests',
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+    userController.getDeleteAccountRequests,
+  )
+
+  .patch(
+    '/delete-account-requests/:userId/approve',
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+    userController.approveDeleteAccount,
+  )
+
+  .patch(
+    '/delete-account-requests/:userId/reject',
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+    userController.rejectDeleteAccount,
+  )
+
+  // Super-admin: admin management
+  .post(
+    '/admin',
+    auth(USER_ROLE.SUPER_ADMIN),
+    userController.createAdmin,
+  )
+
+  .get(
+    '/admins',
+    auth(USER_ROLE.SUPER_ADMIN),
+    userController.getAdmins,
+  )
+
+    .get(
+    '/:id',
+    // auth("user", "admin"),
+    userController.getUserById
+  )
+
+
+  .patch(
+    '/admin/update/:adminId',
+    auth(USER_ROLE.SUPER_ADMIN),
+    userController.updateAdmin,
+  )
+
+  .patch(
+    '/admin/:adminId/routes',
+    auth(USER_ROLE.SUPER_ADMIN),
+    userController.updateAdminRoutes,
+  )
+
+  .delete(
+    '/admin/:adminId',
+    auth(USER_ROLE.SUPER_ADMIN),
+    userController.deleteAdmin,
   );
 
 // export default userRoutes;

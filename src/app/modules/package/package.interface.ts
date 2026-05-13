@@ -10,9 +10,10 @@ export interface IPackage extends Document {
   price: number;
   mainPrice: number;
  category: "photography" | "videography";
-  duration: string; 
+  duration: string;
   deliveryTime: number;
   approvalStatus: ApprovalStatus;
+  declineReason?: string;
   isDeleted: boolean;
   thumbnailImage?: string;
   createdAt?: Date;
@@ -29,5 +30,6 @@ export interface IUpdatePackage {
   duration?: string;
   deliveryTime?: number;
   approvalStatus?: ApprovalStatus;
+  declineReason?: string;
   thumbnailImage?: string;
 }

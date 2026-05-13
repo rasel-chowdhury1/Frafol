@@ -4,6 +4,8 @@ import sendResponse from "../../utils/sendResponse";
 import { WorkshopService } from "./workshop.service";
 import { storeFile } from "../../utils/fileHelper";
 import { ApprovalStatus } from "../gearMarketplace/gearMarketplace.interface";
+import httpStatus from 'http-status';
+
 
 const createWorkshop = catchAsync(async (req: Request, res: Response) => {
   req.body.authorId = req.user.userId; // logged-in user
@@ -28,6 +30,17 @@ const getAllWorkshops = catchAsync(async (req: Request, res: Response) => {
     statusCode: 200,
     success: true,
     message: "Workshops retrieved successfully",
+    data: result,
+  });
+});
+
+const getAllWorkshopsForAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await WorkshopService.getAllWorkshopsForAdmin(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "All workshops retrieved successfully",
     data: result,
   });
 });
@@ -114,8 +127,8 @@ const updateWorkshop = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Response) => {
-    const {approvalStatus} = req.body as { approvalStatus: ApprovalStatus };
-  
+    const { approvalStatus, reason } = req.body as { approvalStatus: ApprovalStatus; reason?: string };
+
     if (!approvalStatus) {
       sendResponse(res, {
         statusCode: httpStatus.BAD_REQUEST,
@@ -126,7 +139,8 @@ const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Respons
     }
   const result = await WorkshopService.updateApprovalStatusByAdmin(
     req.params.id,
-    approvalStatus
+    approvalStatus,
+    reason
   );
 
   sendResponse(res, {
@@ -178,6 +192,7 @@ const deleteWorkshop = catchAsync(async (req: Request, res: Response) => {
 export const WorkshopController = {
   createWorkshop,
   getAllWorkshops,
+  getAllWorkshopsForAdmin,
   getWorkshopById,
   getMyWorkshops,
   getMyRegisteredWorkshops,

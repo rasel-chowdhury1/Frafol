@@ -28,21 +28,25 @@ const login = async (payload: TLogin) => {
     name: string;
     sureName: string;
     companyName: string;
+    profileImage: string;
     role: string;
     switchRole: string;
     email: string;
     hasActiveSubscription: boolean;
     subscriptionDays: number;
+    allowedRoutes: string[];
   } = {
     userId: user?._id?.toString() as string,
     name: user.name || '',
     sureName: user.sureName || '',
     companyName: user.companyName || '',
+    profileImage: user.profileImage || '',
     email: user.email,
     role: user?.role,
     switchRole: user.switchRole,
     hasActiveSubscription: user.hasActiveSubscription,
     subscriptionDays: user.subscriptionDays,
+    allowedRoutes: user.allowedRoutes as any,
   };
 
   const accessToken = createToken({
@@ -303,6 +307,7 @@ const refreshToken = async (token: string) => {
     companyName: string;
     email: string;
     role: string;
+    allowedRoutes: string[];
   } = {
     userId: activeUser?._id?.toString() as string,
     name: activeUser?.name || '',
@@ -310,6 +315,7 @@ const refreshToken = async (token: string) => {
     companyName: activeUser.companyName || '',
     email: activeUser.email,
     role: activeUser?.role,
+    allowedRoutes: activeUser?.allowedRoutes || [],
   };
 
   const accessToken = createToken({

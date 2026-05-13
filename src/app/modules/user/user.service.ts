@@ -14,6 +14,7 @@ import {
 } from './user.interface';
 import { User } from './user.model';
 import config from '../../config';
+import bcrypt from 'bcrypt';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { otpServices } from '../otp/otp.service';
 import { generateOptAndExpireTime } from '../otp/otp.utils';
@@ -43,6 +44,7 @@ import { Review } from '../review/review.model';
 import { Package } from '../package/package.model';
 import { GearMarketplace } from '../gearMarketplace/gearMarketplace.model';
 import { Workshop } from '../workshop/workshop.model';
+import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.model';
 import { aggregateOrders, getUserType } from './user.utils';
 import { Town } from '../town/town.model';
 import { Category } from '../category/category.model';
@@ -160,7 +162,7 @@ const createUserToken = async (payload: TUserCreate) => {
   process.nextTick(async () => {
     await otpSendEmail({
       sentTo: email,
-      subject: 'Your one time otp for email  verification',
+      subject: 'Frafol Verification Code',
       name: 'Customer',
       otp,
       expiredAt: expiredAt,
@@ -1757,23 +1759,78 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
   }
 
+
+
   if (user?.isDeleted) {
-    throw new AppError(httpStatus.FORBIDDEN, 'This user is deleted');
+    throw new AppError(httpStatus.FORBIDDEN, 'This user is already deleted');
+  }
+
+  if ((user as any).deleteRequestStatus === 'pending') {
+    throw new AppError(httpStatus.CONFLICT, 'A delete request is already pending review');
   }
 
   if (!(await User.isPasswordMatched(payload.password, user.password))) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Password does not match');
   }
 
-  const userDeleted = await User.findByIdAndUpdate(
+  const result = await User.findByIdAndUpdate(
     id,
-    { isDeleted: true },
+    {
+      deleteRequestStatus: 'pending',
+      deleteRequestedAt: new Date(),
+      deleteRequestReason: payload.reason,
+    },
     { new: true },
+  ).select('-password');
+
+  if (!result) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Delete request failed');
+  }
+
+  return { message: 'Delete request submitted. An admin will review and process it.' };
+};
+
+const getDeleteAccountRequests = async () => {
+  const requests = await User.find({
+    deleteRequestStatus: 'pending',
+    isDeleted: false,
+  }).select('-password').lean();
+
+  // Attach pending order counts for each user
+  const enriched = await Promise.all(
+    requests.map(async (user) => {
+      const activeEventOrders = await EventOrder.countDocuments({
+        $or: [{ userId: user._id }, { serviceProviderId: user._id }],
+        status: { $in: ['pending', 'accepted', 'inProgress', 'deliveryRequest', 'cancelRequest'] },
+      });
+      const activeGearOrders = await GearOrder.countDocuments({
+        $or: [{ clientId: user._id }, { sellerId: user._id }],
+        orderStatus: { $in: ['pending', 'inProgress', 'deliveryRequest'] },
+      });
+      return { ...user, activeEventOrders, activeGearOrders };
+    }),
   );
 
-  if (!userDeleted) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'user deleting failed');
+  return enriched;
+};
+
+const approveDeleteAccount = async (userId: string, adminId: string) => {
+  const user = await User.IsUserExistById(userId);
+
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  if ((user as any).deleteRequestStatus !== 'pending') {
+    throw new AppError(httpStatus.BAD_REQUEST, 'No pending delete request for this user');
   }
+
+  const deleted = await User.findByIdAndUpdate(
+    userId,
+    {
+      isDeleted: true,
+      deleteRequestStatus: 'approved',
+      deleteApprovedBy: new Types.ObjectId(adminId),
+    },
+    { new: true },
+  ).select('-password');
 
   accountBlockedEmail({
     sentTo: (user as any).email,
@@ -1781,7 +1838,28 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
     isDeleted: true,
   }).catch((err) => console.error('Account deleted email failed:', err));
 
-  return userDeleted;
+  return deleted;
+};
+
+const rejectDeleteAccount = async (userId: string, adminId: string, reason: string) => {
+  const user = await User.IsUserExistById(userId);
+
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  if ((user as any).deleteRequestStatus !== 'pending') {
+    throw new AppError(httpStatus.BAD_REQUEST, 'No pending delete request for this user');
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    userId,
+    {
+      deleteRequestStatus: 'rejected',
+      deleteApprovedBy: new Types.ObjectId(adminId),
+      deleteRejectReason: reason,
+    },
+    { new: true },
+  ).select('-password');
+
+  return updated;
 };
 
 const blockedUser = async (id: string) => {
@@ -2073,26 +2151,144 @@ const getMyEarnings = async (
     throw new Error('Invalid serviceProviderId');
   }
 
-  const filter = {
-    serviceProviderId: new Types.ObjectId(serviceProviderId),
-    paymentStatus: 'completed',
-    isDeleted: false,
+  const { type, ...restQuery } = query as Record<string, any>;
+  const providerObjId = new Types.ObjectId(serviceProviderId);
+
+  if (type === 'event') {
+    const earningsQuery = new QueryBuilder(
+      Payment.find({
+        serviceProviderId: providerObjId,
+        paymentType: 'event',
+        paymentStatus: 'completed',
+      })
+        .populate('userId', 'name companyName profileImage email')
+        .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph')
+        .populate('eventOrderId', 'serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
+      restQuery,
+    )
+      .search(['transactionId'])
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
+
+    const [result, meta] = await Promise.all([
+      earningsQuery.modelQuery.lean(),
+      earningsQuery.countTotal(),
+    ]);
+
+    return {
+      meta,
+      result: result.map((p: any) => ({
+        ...p,
+        adminPaid: p.serviceProviderPaid ?? false,
+        adminPaidAt: p.serviceProviderPaidAt ?? null,
+      })),
+    };
+  }
+
+  if (type === 'gear') {
+    const earningsQuery = new QueryBuilder(
+      GearOrder.find({
+        sellerId: providerObjId,
+        orderStatus: 'delivered',
+        isDeleted: false,
+      })
+        .populate({ path: 'gearMarketplaceId', select: 'name price mainPrice vatAmount totalVatAmount platformCommission shippingCompany' })
+        .populate('clientId', 'name companyName profileImage email')
+        .populate('sellerId', 'name companyName profileImage email ico dic ic_dph')
+        ,
+      restQuery,
+    )
+      .search(['orderId'])
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
+
+    const [result, meta] = await Promise.all([
+      earningsQuery.modelQuery.lean(),
+      earningsQuery.countTotal(),
+    ]);
+
+    return {
+      meta,
+      result: result.map((g: any) => ({
+        ...g,
+        adminPaid: g.paymentStatus === 'received',
+        adminPaidAt: null,
+      })),
+    };
+  }
+
+  if (type === 'workshop') {
+    const earningsQuery = new QueryBuilder(
+      WorkshopParticipant.find({
+        instructorId: providerObjId,
+        paymentStatus: 'completed',
+        isDeleted: false,
+      })
+        .populate({ path: 'workshopId', select: 'title date time price mainPrice vatAmount' })
+        .populate('clientId', 'name email profileImage')
+        .populate('instructorId', 'name email profileImage ico dic ic_dph'),
+      restQuery,
+    )
+      .search(['orderId'])
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
+
+    const [result, meta] = await Promise.all([
+      earningsQuery.modelQuery.lean(),
+      earningsQuery.countTotal(),
+    ]);
+
+    return {
+      meta,
+      result: result.map((w: any) => ({
+        ...w,
+        adminPaid: w.instructorPayment?.status === 'received',
+        adminPaidAt: w.instructorPayment?.paidAt ?? null,
+        netAmount: w.instructorPayment?.amount ?? 0,
+      })),
+    };
+  }
+
+  // No type — return all three without pagination
+  const [eventPayments, gearOrders, workshopParticipants] = await Promise.all([
+    Payment.find({ serviceProviderId: providerObjId, paymentType: 'event', paymentStatus: 'completed' })
+      .populate('userId', 'name companyName profileImage email')
+      .populate('eventOrderId', 'serviceType orderType date')
+      .sort({ createdAt: -1 }).lean(),
+    GearOrder.find({ sellerId: providerObjId, orderStatus: 'delivered', isDeleted: false })
+      .populate({ path: 'gearMarketplaceId', select: 'name price mainPrice vatAmount totalVatAmount platformCommission' })
+      .populate('clientId', 'name companyName profileImage email')
+      .sort({ createdAt: -1 }).lean(),
+    WorkshopParticipant.find({ instructorId: providerObjId, paymentStatus: 'completed', isDeleted: false })
+      .populate({ path: 'workshopId', select: 'title date time price mainPrice vatAmount' })
+      .populate('clientId', 'name email profileImage')
+      .sort({ createdAt: -1 }).lean(),
+  ]);
+
+  return {
+    event: eventPayments.map((p: any) => ({
+      ...p,
+      adminPaid: p.serviceProviderPaid ?? false,
+      adminPaidAt: p.serviceProviderPaidAt ?? null,
+    })),
+    gear: gearOrders.map((g: any) => ({
+      ...g,
+      adminPaid: g.paymentStatus === 'received',
+      adminPaidAt: null,
+    })),
+    workshop: workshopParticipants.map((w: any) => ({
+      ...w,
+      adminPaid: w.instructorPayment?.status === 'received',
+      adminPaidAt: w.instructorPayment?.paidAt ?? null,
+      netAmount: w.instructorPayment?.amount ?? 0,
+    })),
   };
-
-  const earningsQuery = new QueryBuilder(
-    Payment.find(filter).populate('userId', 'name profileImage email'),
-    query,
-  )
-    .search(['transactionId', 'paymentType', 'method'])
-    .filter()
-    .sort()
-    .paginate()
-    .fields();
-
-  const result = await earningsQuery.modelQuery;
-  const meta = await earningsQuery.countTotal();
-
-  return { meta, result };
 };
 
 const getMonthlyEarningsOfSpecificProfessional = async (
@@ -2243,6 +2439,9 @@ const getAdminDashboardStats = async (adminId: string) => {
       },
     },
   ]);
+
+
+
 
   const {
     totalUsers = 0,
@@ -2416,50 +2615,83 @@ const getOrders = async (
 };
 
 const getDeliveryOrders = async (
-  type: 'professional' | 'gear',
+  type: 'professional' | 'gear' | "workshop",
   query: Record<string, unknown>,
 ) => {
   let model: any;
   let deliveryStatuses: string[] = [];
   let baseQuery: any;
 
+  const { paymentStatus, ...restQuery } = query as Record<string, any>;
+  query = restQuery;
+
   if (type === 'professional') {
     model = EventOrder;
-    deliveryStatuses = ['deliveryRequest', 'deliveryAccepted', 'delivered'];
+    deliveryStatuses = ['delivered'];
+    const filter: any = { status: { $in: deliveryStatuses } };
+    if (paymentStatus === 'paid') filter.paymentStatus = 'Paid';
+    else if (paymentStatus === 'unpaid') filter.paymentStatus = 'Unpaid';
+
     baseQuery = model
-      .find({ status: { $in: deliveryStatuses } })
+      .find(filter)
       .populate('userId', 'name email profileImage')
       .populate({
         path: 'serviceProviderId',
         select: 'name email profileImage profileId',
-        populate: {
-          path: 'profileId',
-        },
+        populate: { path: 'profileId' },
       });
   } else if (type === 'gear') {
     model = GearOrder;
-    deliveryStatuses = [
-      'deliveryRequest',
-      'deliveryRequestDeclined',
-      'delivered',
-    ];
+    deliveryStatuses = ['delivered'];
+    const filter: any = { orderStatus: { $in: deliveryStatuses } };
+    if (paymentStatus === 'paid') filter.paymentStatus = 'received';
+    else if (paymentStatus === 'unpaid') filter.paymentStatus = 'pending';
+
     baseQuery = model
-      .find({ orderStatus: { $in: deliveryStatuses } })
+      .find(filter)
       .populate('clientId', 'name email profileImage')
       .populate({
         path: 'sellerId',
         select: 'name email profileImage profileId',
-        populate: {
-          path: 'profileId',
-          select: "bankAccount bankName bankCode",
-        },
+        populate: { path: 'profileId', select: 'bankAccount bankName bankCode' },
       })
       .populate('gearMarketplaceId');
+  } else if (type === 'workshop') {
+    const deliveredWorkshops = await Workshop.find({
+      approvalStatus: 'approved',
+      isDeleted: false,
+    }).select('_id');
+
+    const workshopIds = deliveredWorkshops.map((w) => w._id);
+    const filter: any = { workshopId: { $in: workshopIds }, paymentStatus: 'completed', isDeleted: false };
+    if (paymentStatus === 'paid') filter['instructorPayment.status'] = 'received';
+    else if (paymentStatus === 'unpaid') filter['instructorPayment.status'] = 'pending';
+
+    model = WorkshopParticipant;
+    baseQuery = model
+      .find(filter)
+      .populate({
+        path: 'workshopId',
+        select: 'title date time locationType location image price mainPrice vatAmount',
+      })
+      .populate('clientId', 'name email profileImage')
+      .populate({
+        path: 'instructorId',
+        select: 'name email profileImage profileId',
+        populate: { path: 'profileId', select: 'bankAccount bankName bankCode' },
+      });
   } else {
-    throw new Error('Invalid type. Allowed: professional, gear');
+    throw new Error('Invalid type. Allowed: professional, gear, workshop');
   }
 
-  const deliveryQuery = new QueryBuilder(baseQuery, query)
+  // Default sort: unpaid first, then by newest — override per type if no sort provided
+  if (!restQuery.sort) {
+    if (type === 'professional') restQuery.sort = '-paymentStatus,-createdAt';       // 'Unpaid' > 'Paid' desc
+    else if (type === 'gear') restQuery.sort = 'paymentStatus,-createdAt';           // 'pending' < 'received' asc
+    else if (type === 'workshop') restQuery.sort = 'instructorPayment.status,-createdAt'; // 'pending' < 'received' asc
+  }
+
+  const deliveryQuery = new QueryBuilder(baseQuery, restQuery)
     .search(['orderId'])
     .filter()
     .sort()
@@ -2565,6 +2797,101 @@ const getTownAndIndividualCategoriesOptimized = async () => {
 
   };
 
+const createAdmin = async ({
+  name,
+  email,
+  password,
+  phone,
+  address,
+  allowedRoutes,
+}: {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  address: string;
+  allowedRoutes: string[];
+}) => {
+  const existing = await User.isUserExist(email).catch(() => null);
+  if (existing) {
+    throw new AppError(httpStatus.CONFLICT, 'An account with this email already exists');
+  }
+
+  const hashedPassword = await bcrypt.hash(password, Number(config.bcrypt_salt_rounds));
+
+  const admin = await User.create({
+    name,
+    email,
+    password: hashedPassword,
+    phone,
+    address,
+    role: USER_ROLE.ADMIN,
+    mainRole: USER_ROLE.ADMIN,
+    switchRole: USER_ROLE.ADMIN,
+    allowedRoutes: allowedRoutes.includes('all') ? ['all'] : allowedRoutes,
+    adminVerified: 'verified',
+  });
+
+  const { password: _, ...adminData } = admin.toObject();
+  return adminData;
+};
+
+const getAdmins = async () => {
+  return User.find({ role: USER_ROLE.ADMIN, isDeleted: false }).select('-password');
+};
+
+const updateAdminRoutes = async (adminId: string, allowedRoutes: string[]) => {
+  const admin = await User.findOne({ _id: adminId, role: USER_ROLE.ADMIN });
+  if (!admin) throw new AppError(httpStatus.NOT_FOUND, 'Admin not found');
+
+  const updated = await User.findByIdAndUpdate(
+    adminId,
+    { allowedRoutes: allowedRoutes.includes('all') ? ['all'] : allowedRoutes },
+    { new: true },
+  ).select('-password');
+
+  return updated;
+};
+
+const deleteAdmin = async (adminId: string) => {
+  const admin = await User.findOne({ _id: adminId, role: USER_ROLE.ADMIN });
+  if (!admin) throw new AppError(httpStatus.NOT_FOUND, 'Admin not found');
+
+  return User.findByIdAndUpdate(adminId, { isDeleted: true }, { new: true }).select('-password');
+};
+
+const updateAdmin = async (
+  adminId: string,
+  payload: {
+    name?: string;
+    email?: string;
+    password?: string;
+    phone?: string;
+    address?: string;
+    allowedRoutes?: string[];
+  },
+) => {
+  const admin = await User.findOne({ _id: adminId, role: USER_ROLE.ADMIN, isDeleted: false });
+  if (!admin) throw new AppError(httpStatus.NOT_FOUND, 'Admin not found');
+
+  const updateData: Record<string, any> = {};
+
+  if (payload.name) updateData.name = payload.name;
+  if (payload.email) updateData.email = payload.email;
+  if (payload.phone) updateData.phone = payload.phone;
+  if (payload.address) updateData.address = payload.address;
+  if (payload.allowedRoutes) {
+    updateData.allowedRoutes = payload.allowedRoutes.includes('all')
+      ? ['all']
+      : payload.allowedRoutes;
+  }
+  if (payload.password) {
+    updateData.password = await bcrypt.hash(payload.password, Number(config.bcrypt_salt_rounds));
+  }
+
+  return User.findByIdAndUpdate(adminId, { $set: updateData }, { new: true, runValidators: true }).select('-password');
+};
+
 export const userService = {
   createUserToken,
   switchUserRole,
@@ -2604,5 +2931,13 @@ export const userService = {
   getOrders,
   getDeliveryOrders,
   getRandomGalleryImages,
-  getTownAndIndividualCategoriesOptimized
+  getTownAndIndividualCategoriesOptimized,
+  createAdmin,
+  getAdmins,
+  updateAdmin,
+  updateAdminRoutes,
+  deleteAdmin,
+  getDeleteAccountRequests,
+  approveDeleteAccount,
+  rejectDeleteAccount,
 };

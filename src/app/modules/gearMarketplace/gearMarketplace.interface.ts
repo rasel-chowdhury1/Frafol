@@ -13,7 +13,9 @@ export interface IGearMarketplace {
   categoryId: Types.ObjectId;
   name: string;
   price: number;
+  vatPercentage?: number;
   vatAmount?: number;
+  totalVatAmount?: number;
   platformCommission?: number;
   mainPrice?: number;
   description: string;
@@ -32,7 +34,9 @@ export interface IUpdateGearMarketplace {
   name?: string;
   price?: number;
   categoryId?: Types.ObjectId;
+  vatPercentage?: number;
   vatAmount?: number;
+  totalVatAmount?: number;
   mainPrice?: number;
   description?: string;
   condition?: ConditionType;

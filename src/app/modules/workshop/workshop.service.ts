@@ -4,8 +4,13 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
 import AppError from "../../error/AppError";
 import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
+import httpStatus from 'http-status';
+import mongoose from "mongoose";
+import { sentNotificationForWorkshopApproved, sentNotificationForWorkshopDeclined } from "../../../socketIo";
+
 
 const createWorkshop = async (payload: IWorkshop) => {
+
   // ✅ Keep vatPercent as percentage (e.g., 15 for 15%)
   payload.vatPercent = payload.vatAmount as number;
 
@@ -18,7 +23,7 @@ const createWorkshop = async (payload: IWorkshop) => {
 
 const getAllWorkshops = async (query: Record<string, any> = {}) => {
   const workshopQuery = new QueryBuilder(
-    Workshop.find({ isDeleted: false, approvalStatus: "approved" }).populate({
+    Workshop.find({ isDeleted: false, approvalStatus: "approved", date: { $gte: new Date() } }).populate({
       path: "authorId",
       select: "name sureName role profileImage",
     }),
@@ -34,6 +39,40 @@ const getAllWorkshops = async (query: Record<string, any> = {}) => {
   const meta = await workshopQuery.countTotal();
 
     // ✅ Add total participants count for each workshop
+  const result = await Promise.all(
+    workshops.map(async (workshop: any) => {
+      const totalParticipants = await WorkshopParticipant.countDocuments({
+        workshopId: workshop._id,
+        isDeleted: false,
+      });
+
+      return {
+        ...workshop.toObject(),
+        totalParticipants,
+      };
+    })
+  );
+
+  return { meta, result };
+};
+
+const getAllWorkshopsForAdmin = async (query: Record<string, any> = {}) => {
+  const workshopQuery = new QueryBuilder(
+    Workshop.find({ isDeleted: false }).populate({
+      path: "authorId",
+      select: "name sureName role profileImage",
+    }),
+    query
+  )
+    .search(["title", "description", "location"])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const workshops = await workshopQuery.modelQuery;
+  const meta = await workshopQuery.countTotal();
+
   const result = await Promise.all(
     workshops.map(async (workshop: any) => {
       const totalParticipants = await WorkshopParticipant.countDocuments({
@@ -98,7 +137,7 @@ const getMyRegisteredWorkshops = async (userId: string, query: Record<string, un
         path: "workshopId",
         populate: {
           path: "authorId",
-          select: "name sureName role profileImage",
+          select: "name companyName sureName address role profileImage ico dic ic_dph",
         },
       }),
     query
@@ -149,6 +188,10 @@ const getParticipantsByWorkshop = async (workshopId: string) => {
 
   const participants = await WorkshopParticipant.find({workshopId,isDeleted: false})
                                                 .populate('clientId', 'name email profileImage')
+                                                .populate('instructorId', 'name email profileImage ico dic ic_dph')
+                                                .populate('workshopId', 'title date time price mainPrice vatAmount');
+
+
 
   return participants || [];
 
@@ -185,28 +228,50 @@ const updateWorkshop = async (
   );
 };
 
-const updateApprovalStatusByAdmin = async (id: string, status: string) => {
-  return await Workshop.findOneAndUpdate(
-    { _id: id, isDeleted: false }, // only author can delete
-    { approvalStatus: status },
+const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: string) => {
+  const updateData: Record<string, any> = { approvalStatus: status };
+  if (status === 'cancelled' && reason) {
+    updateData.declineReason = reason;
+  }
+
+  const workshop = await Workshop.findOneAndUpdate(
+    { _id: id, isDeleted: false },
+    updateData,
     { new: true }
-  );
+  ).populate({ path: 'authorId', select: 'name email' });
+
+  if (workshop && status === 'approved') {
+    sentNotificationForWorkshopApproved({
+      receiverId: workshop.authorId as mongoose.Types.ObjectId,
+      workshopTitle: workshop.title,
+    }).catch((err) => console.error('Workshop approved notification failed:', err));
+  } else if (workshop && status === 'cancelled' && reason) {
+    sentNotificationForWorkshopDeclined({
+      receiverId: workshop.authorId as mongoose.Types.ObjectId,
+      workshopTitle: workshop.title,
+      reason,
+    }).catch((err) => console.error('Workshop declined notification failed:', err));
+  }
+
+  return workshop;
 };
 
 const declineWorkshopById = async (id: string, reason: string) => {
   const workshop = await Workshop.findOneAndUpdate(
-    { _id: id }, // ✅ must pass filter object
-    { 
-      isDeleted: true,
-      approvalStatus: 'cancelled', // or 'declined' if you add it to enum
-      declineReason: reason        // ✅ store reason if your schema supports it
-    },
+    { _id: id, isDeleted: false },
+    { isDeleted: true, approvalStatus: 'cancelled', declineReason: reason },
     { new: true, runValidators: true }
-  );
+  ).populate({ path: 'authorId', select: 'name email' });
 
   if (!workshop) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the workshop or workshop not found');
   }
+
+  sentNotificationForWorkshopDeclined({
+    receiverId: workshop.authorId as mongoose.Types.ObjectId,
+    workshopTitle: workshop.title,
+    reason,
+  }).catch((err) => console.error('Workshop declined notification failed:', err));
 
   return workshop;
 };
@@ -228,6 +293,7 @@ const deleteWorkshop = async (id: string, userId: string, role: string) => {
 export const WorkshopService = {
   createWorkshop,
   getAllWorkshops,
+  getAllWorkshopsForAdmin,
   getWorkshopById,
   getMyWorkshops,
   getMyRegisteredWorkshops,

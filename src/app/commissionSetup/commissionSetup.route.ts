@@ -8,17 +8,17 @@ const router = Router();
 router
   .post(
     "/",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommissionSetupController.createOrUpdateCommission
   )
   .get(
     "/",
-    // auth(USER_ROLE.ADMIN),
+    // auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommissionSetupController.getCommission
   )
   .patch(
     "/update",
-    auth(USER_ROLE.ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommissionSetupController.updateCommission
   );
 

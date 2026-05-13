@@ -33,13 +33,13 @@ router
 
     .get(
         "/pending",
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
         GearMarketplaceController.getPendingGearMarketplace
     )
 
     .get(
         "/decline/:id",
-        auth(USER_ROLE.ADMIN),
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
         GearMarketplaceController.declineGearById
     )
 
@@ -51,7 +51,7 @@ router
 
       .patch(
       "/update/:id",
-      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),
       upload.fields([
         { name: 'gallery', maxCount: 10 },
       ]),
@@ -62,7 +62,7 @@ router
 
       .patch(
       "/updateApprovalStatus/:id",
-      auth(USER_ROLE.ADMIN),
+      auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
       GearMarketplaceController.updateApprovalStatusByAdmin
       )
 
@@ -70,7 +70,7 @@ router
 
       .delete(
       "/:id",
-      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY),
       GearMarketplaceController.deleteGearMarketplace
       );
 

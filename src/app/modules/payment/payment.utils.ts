@@ -185,6 +185,8 @@ export const createStripePaymentSession = async (payload: {
   
   try {
     paymentRecord = await Payment.create(newPayment);
+
+    console.log("payemnt create =>>> ", paymentRecord)
   }
   catch (error) {
     console.log("=== error =>>>> ",error)

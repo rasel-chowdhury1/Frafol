@@ -10,12 +10,13 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { profileDeclinedEmail, sendBookingNotificationEmail } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
 import { ChatService } from './app/modules/chat/chat.service';
 import { text } from 'stream/consumers';
+import { USER_ROLE } from './app/modules/user/user.constants';
 
 // Define the socket server port
 const socketPort: number = parseInt(process.env.SOCKET_PORT || '9020', 10);
@@ -415,10 +416,9 @@ export const emitMessage = async(userId: string) =>{
   // Get the socket ID of the specific user
   const userSocket = connectedUsers.get(userId.toString());
 
-    // Fetch unread notifications count for the receiver before creating the new notification
   const unreadCount = await Message.countDocuments({
     receiver: userId,
-    seen: true, // Filter by unread notifications
+    seen: false,
   });
 
   // Notify the specific user
@@ -456,11 +456,10 @@ export const sentNotificationForBookingRequest = async ({
   );
   if (!receiver) throw new AppError(404, 'receiver not found for notification');
   // ✅ Define defaults
-  const senderName = user.name || 'A user';
+  const senderName = user.role === USER_ROLE.COMPANY ? user.companyName : user.name;
   const image = user.profileImage || '';
   let type: string;
   let text: string;
-  let emailSubject: string;
 
   // ✅ Handle notification text by order type
   switch (orderType) {
@@ -468,7 +467,6 @@ export const sentNotificationForBookingRequest = async ({
       const safePackageName = packageName ? `"${packageName}"` : 'a package';
       type = 'DirectBookingRequest';
       text = `${senderName} has requested a direct booking from your ${safePackageName}.`;
-      emailSubject = `New Direct Booking Request from ${senderName}`;
       break;
     }
 
@@ -476,7 +474,6 @@ export const sentNotificationForBookingRequest = async ({
       const readableType = serviceType?.trim() || 'service';
       type = 'CustomBookingRequest';
       text = `${senderName} has sent you a custom ${readableType} booking request from your profile.`;
-      emailSubject = `New Custom ${readableType} Booking Request from ${senderName}`;
       break;
     }
 
@@ -500,13 +497,15 @@ export const sentNotificationForBookingRequest = async ({
     console.error('Socket notification failed:', err),
   );
 
-  // ✉️ Send email notification to client
+  // ✉️ Send email notification to receiver (service provider)
   if (receiver.email) {
-    sendBookingNotificationEmail({
+    sendBookingRequestEmail({
       sentTo: receiver.email,
-      subject: emailSubject,
-      userName: receiver.name || '', // show service provider name
-      messageText: text,
+      receiverName: receiver.name || '',
+      senderName: senderName || '',
+      orderType: orderType as 'direct' | 'custom',
+      serviceType,
+      packageName,
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
@@ -565,12 +564,14 @@ export const sentNotificationForOrderAccepted = async ({
   );
 
   // ✉️ Send email notification to client
-  if (serviceProvider.email) {
-    sendBookingNotificationEmail({
-      sentTo: serviceProvider.email,
-      subject: 'Booking Accepted Notification',
-      userName: serviceProvider.name || '', // show service provider name
-      messageText: text,
+  if (client.email) {
+    sendOrderAcceptedEmail({
+      sentTo: client.email,
+      clientName: client.name || '',
+      serviceProviderName: serviceProvider.name || '',
+      orderType,
+      serviceType,
+      packageName,
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
@@ -630,11 +631,13 @@ export const sentNotificationForPaymentSuccess = async ({
 
   // ✉️ Send email notification to service provider
   if (serviceProvider.email) {
-    sendBookingNotificationEmail({
+    sendPaymentSuccessEmail({
       sentTo: serviceProvider.email,
-      subject: 'Payment Successful - Order In Progress',
-      userName: serviceProvider.name || '',
-      messageText: text,
+      receiverName: serviceProvider.name || '',
+      clientName: client.name || '',
+      orderType,
+      serviceType,
+      packageName,
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
@@ -728,11 +731,12 @@ export const sentNotificationForDeliveryAccepted = async ({
 
   // ✉️ Send email notification
   if (receiver.email) {
-    sendBookingNotificationEmail({
+    sendDeliveryAcceptedEmail({
       sentTo: receiver.email,
-      subject: 'Delivery Request Accepted ✅',
-      userName: receiver.name || '',
-      messageText: text,
+      receiverName: receiver.name || '',
+      clientName: sender.name || '',
+      serviceType,
+      packageName,
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
@@ -875,11 +879,12 @@ export const sentNotificationForCancelRequest = async ({
   );
 
   if (receiver.email) {
-    await sendBookingNotificationEmail({
+    await sendCancelRequestEmail({
       sentTo: receiver.email,
-      subject: 'Cancel Request',
-      userName: receiver.name || '',
-      messageText: text,
+      receiverName: receiver.name || '',
+      requesterName: sender.name || '',
+      serviceType,
+      reason,
     }).catch((err) => console.error('Email failed:', err));
   }
 };
@@ -1045,13 +1050,379 @@ export const sentNotificationForCommentOrReply = async ({
   );
 
   if (receiver.email) {
+    await sendCommentOrReplyEmail({
+      sentTo: receiver.email,
+      receiverName: receiver.name || '',
+      actorName: actor.name || '',
+      communityTitle,
+      commentText,
+      isReply,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForCancelRequestDeclined = async ({
+  declinedBy,
+  receiverId,
+  serviceType,
+  reason,
+}: {
+  declinedBy: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  serviceType?: string;
+  reason?: string;
+}) => {
+  const sender = await User.findById(declinedBy).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!sender || !receiver) return;
+
+  const text = `${sender.name} has declined your cancellation request for the ${serviceType || 'order'}${reason ? `. Reason: "${reason}"` : '.'}`;
+
+  const payload = {
+    userId: declinedBy,
+    receiverId,
+    userMsg: { image: sender.profileImage || '', text, photos: [] },
+    type: 'CancelRequestDeclined',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendCancelRequestDeclinedEmail({
+      sentTo: receiver.email,
+      receiverName: receiver.name || '',
+      declinedByName: sender.name || '',
+      serviceType,
+      reason,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForExtensionRequest = async ({
+  requestedBy,
+  receiverId,
+  serviceType,
+  reason,
+}: {
+  requestedBy: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  serviceType?: string;
+  reason?: string;
+}) => {
+  const sender = await User.findById(requestedBy).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!sender || !receiver) return;
+
+  const text = `${sender.name} has requested a delivery date extension for the ${serviceType || 'order'}${reason ? `: "${reason}"` : '.'}`;
+
+  const payload = {
+    userId: requestedBy,
+    receiverId,
+    userMsg: { image: sender.profileImage || '', text, photos: [] },
+    type: 'ExtensionRequest',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
     await sendBookingNotificationEmail({
       sentTo: receiver.email,
-      subject: isReply ? 'New Reply on Your Post' : 'New Comment on Your Post',
+      subject: 'Delivery Date Extension Requested',
       userName: receiver.name || '',
       messageText: text,
     }).catch((err) => console.error('Email failed:', err));
   }
+};
+
+
+export const sentNotificationForExtensionAccepted = async ({
+  acceptedBy,
+  receiverId,
+  serviceType,
+  newDeliveryDate,
+}: {
+  acceptedBy: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  serviceType?: string;
+  newDeliveryDate?: Date;
+}) => {
+  const sender = await User.findById(acceptedBy).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!sender || !receiver) return;
+
+  const dateStr = newDeliveryDate
+    ? new Date(newDeliveryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'the new date';
+
+  const text = `${sender.name} has accepted your delivery date extension request for the ${serviceType || 'order'}. New delivery date: ${dateStr}.`;
+
+  const payload = {
+    userId: acceptedBy,
+    receiverId,
+    userMsg: { image: sender.profileImage || '', text, photos: [] },
+    type: 'ExtensionAccepted',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Delivery Date Extension Accepted',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForExtensionRejected = async ({
+  rejectedBy,
+  receiverId,
+  serviceType,
+  reason,
+}: {
+  rejectedBy: mongoose.Types.ObjectId;
+  receiverId: mongoose.Types.ObjectId;
+  serviceType?: string;
+  reason?: string;
+}) => {
+  const sender = await User.findById(rejectedBy).select('name profileImage');
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!sender || !receiver) return;
+
+  const text = `${sender.name} has rejected your delivery date extension request for the ${serviceType || 'order'}${reason ? `. Reason: "${reason}"` : '.'}`;
+
+  const payload = {
+    userId: rejectedBy,
+    receiverId,
+    userMsg: { image: sender.profileImage || '', text, photos: [] },
+    type: 'ExtensionRejected',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Delivery Date Extension Rejected',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForWorkshopApproved = async ({
+  receiverId,
+  workshopTitle,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  workshopTitle: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Congratulations! Your workshop "${workshopTitle}" has been approved by the admin and is now live.`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'WorkshopApproved',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Your Workshop Has Been Approved',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForWorkshopDeclined = async ({
+  receiverId,
+  workshopTitle,
+  reason,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  workshopTitle: string;
+  reason: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Your workshop "${workshopTitle}" has been declined by the admin. Reason: "${reason}"`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'WorkshopDeclined',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Your Workshop Has Been Declined',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForPackageApproved = async ({
+  receiverId,
+  packageTitle,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  packageTitle: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Congratulations! Your package "${packageTitle}" has been approved by the admin and is now live.`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: {
+      image: '',
+      text,
+      photos: [],
+    },
+    type: 'PackageApproved',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Your Package Has Been Approved',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForPackageDeclined = async ({
+  receiverId,
+  packageTitle,
+  reason,
+}: {
+  receiverId: mongoose.Types.ObjectId;
+  packageTitle: string;
+  reason: string;
+}) => {
+  const receiver = await User.findById(receiverId).select('name email');
+
+  if (!receiver) return;
+
+  const text = `Your package "${packageTitle}" has been declined by the admin. Reason: "${reason}"`;
+
+  const payload = {
+    userId: receiverId,
+    receiverId,
+    userMsg: {
+      image: '',
+      text,
+      photos: [],
+    },
+    type: 'PackageDeclined',
+  };
+
+  await emitNotification(payload).catch((err) =>
+    console.error('Socket error:', err),
+  );
+
+  if (receiver.email) {
+    await sendBookingNotificationEmail({
+      sentTo: receiver.email,
+      subject: 'Your Package Has Been Declined',
+      userName: receiver.name || '',
+      messageText: text,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+
+export const sentNotificationForRefundRequired = async ({
+  cancelledBy,
+  orderId,
+  serviceType,
+}: {
+  cancelledBy: mongoose.Types.ObjectId;
+  orderId: mongoose.Types.ObjectId;
+  serviceType?: string;
+}) => {
+  const canceller = await User.findById(cancelledBy).select('name role companyName profileImage');
+  const admins = await User.find({ role: USER_ROLE.ADMIN, isDeleted: false }).select('_id name email');
+
+  if (!canceller || !admins.length) return;
+
+  const text = `Order #${orderId} for ${serviceType || 'a service'} has been cancelled by ${canceller.name}. A refund may be required.`;
+
+  await Promise.all(
+    admins.map(async (admin) => {
+      const payload = {
+        userId: cancelledBy,
+        receiverId: admin._id as any,
+        userMsg: {
+          image: canceller.profileImage || '',
+          text,
+          photos: [],
+        },
+        type: 'RefundRequired',
+      };
+
+      await emitNotification(payload).catch((err) =>
+        console.error('Socket error:', err),
+      );
+
+      if (admin.email) {
+        await sendRefundRequiredEmail({
+          sentTo: admin.email,
+          adminName: admin.name || '',
+          cancellerName: canceller.name || '',
+          orderId: orderId.toString(),
+          serviceType,
+        }).catch((err) => console.error('Email failed:', err));
+      }
+    }),
+  );
 };
 
 
@@ -1072,32 +1443,18 @@ export const sendNotificationForNewMessage = async ({
     throw new AppError(404, 'User not found for message notification');
   }
 
-  // 🔹 Notification text
-  const text = `New message from ${sender.name}: ${messageText}`;
-
-  const notificationPayload = {
-    userId: senderId, // sender
-    receiverId: receiverId, // receiver
-    userMsg: {
-      image: sender.profileImage || '',
-      text,
-      photos: [],
-    },
-    type: 'newMessage',
-  };
-
-  // 🔔 Emit socket notification + save DB
-  emitNotification(notificationPayload).catch((err) =>
-    console.error('Socket notification failed:', err),
+  // 🔔 Emit unread message count to receiver via socket
+  emitMessage(receiverId.toString()).catch((err) =>
+    console.error('Message count socket emit failed:', err),
   );
 
   // ✉️ Send email
   if (receiver.email) {
-    sendBookingNotificationEmail({
+    sendNewMessageEmail({
       sentTo: receiver.email,
-      subject: '📩 You have a new message',
-      userName: receiver.name || '',
-      messageText: text,
+      receiverName: receiver.name || '',
+      senderName: sender.name || '',
+      messageText,
     }).catch((err) =>
       console.error('Email notification failed:', err),
     );

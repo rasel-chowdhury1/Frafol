@@ -37,7 +37,7 @@ const auth = (...userRoles: string[]) => {
     // 3️⃣ User Not Found → 404 Not Found
     const isUserExist = await User.IsUserExistById(userId);
 
-    if (!isUserExist) {
+    if (!isUserExist || isUserExist.isDeleted ) {
       throw new AppError(httpStatus.NOT_FOUND, 'User not found');
     }
 

@@ -52,6 +52,12 @@ export interface TUserCreate {
   isBlocked: boolean;
   isDeleted: boolean;
   acceptTerms: boolean;
+  allowedRoutes?: string[];
+  deleteRequestStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  deleteRequestedAt?: Date | null;
+  deleteApprovedBy?: ObjectId | null;
+  deleteRequestReason?: string;
+  deleteRejectReason?: string;
   
   ramcuvaAgree: boolean
 }
@@ -62,6 +68,7 @@ export interface TUser extends TUserCreate {
 
 export interface DeleteAccountPayload {
   password: string;
+  reason: string;
 }
 
 export interface UserModel extends Model<TUser> {

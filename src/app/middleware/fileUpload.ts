@@ -49,6 +49,7 @@ const fileUpload = (uploadDirectory: string) => {
         'video/mp4',
         'video/avi',
         'video/mov',
+        'video/quicktime',
         'video/mkv',
         'application/pdf',
         'application/msword',

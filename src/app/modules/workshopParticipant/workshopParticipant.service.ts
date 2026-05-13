@@ -60,6 +60,28 @@ const updateWorkshopParticipant = async (
   return updated;
 };
 
+const completeInstructorPayment = async (participantId: string) => {
+  const participant = await WorkshopParticipant.findOne({
+    _id: participantId,
+    isDeleted: false,
+  });
+
+  if (!participant) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Workshop participant not found');
+  }
+
+  if (participant.instructorPayment.status === 'received') {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Instructor payment already completed');
+  }
+
+  participant.instructorPayment.status = 'received';
+  participant.instructorPayment.paidAt = new Date();
+
+  await participant.save();
+
+  return participant;
+};
+
 const deleteWorkshopParticipant = async (id: string) => {
   const deleted = await WorkshopParticipant.findOneAndUpdate(
     { _id: id, isDeleted: false },
@@ -76,4 +98,5 @@ export const WorkshopParticipantService = {
   getWorkshopParticipantById,
   updateWorkshopParticipant,
   deleteWorkshopParticipant,
+  completeInstructorPayment,
 };

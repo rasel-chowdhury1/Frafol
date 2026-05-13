@@ -104,6 +104,8 @@ const confirmPayment = async (sessionId: string) => {
       payment.paymentStatus = 'completed';
       await payment.save({ session: dbSession });
 
+
+      console.log("payment data from confirm payment =>>>>> ", payment)
       // ======================================================
       // ✅ EVENT Payment Handling
       // ======================================================
@@ -112,7 +114,10 @@ const confirmPayment = async (sessionId: string) => {
           payment.eventOrderId,
           {
             status: 'inProgress',
+            paymentId: payment._id,
             'statusTimestamps.inProgressAt': new Date(),
+            ...(payment.couponCode && { couponCode: payment.couponCode }),
+            ...(payment.couponDiscount && { couponDiscount: payment.couponDiscount }),
             $push: {
               statusHistory: {
                 status: 'inProgress',
@@ -176,6 +181,7 @@ const confirmPayment = async (sessionId: string) => {
           },
         );
       } 
+
       else if (payment.paymentType === 'workshop' && payment.workshopId) {
 
 
@@ -208,14 +214,16 @@ const confirmPayment = async (sessionId: string) => {
                 paidAt: null,
               },
               name: payment.name,
-              streetAddress: payment.streetAddress, 
-              town: payment.town, 
-              country: payment.country, 
-              isRegisterAsCompany: payment.isRegisterAsCompany, 
-              companyName: payment.companyName, 
-              ICO: payment.ICO, 
-              DIC: payment.DIC, 
-              IC_DPH: payment.IC_DPH
+              streetAddress: payment.streetAddress,
+              town: payment.town,
+              country: payment.country,
+              isRegisterAsCompany: payment.isRegisterAsCompany,
+              companyName: payment.companyName,
+              ICO: payment.ICO,
+              DIC: payment.DIC,
+              IC_DPH: payment.IC_DPH,
+              couponCode: payment.couponCode ?? undefined,
+              couponDiscount: payment.couponDiscount ?? 0,
             },
           ],
           { session: dbSession },
@@ -372,27 +380,72 @@ const cancelPayment = async (transactionId: string) => {
   return payment;
 };
 
-const getPayments = async (query: any) => {
-  const filter: Record<string, any> = {};
+// const getPayments = async (query: any) => {
+//   const filter: Record<string, any> = {};
 
-  // Filter by paymentStatus, paymentType, paymentMethod
+//   // Filter by paymentStatus, paymentType, paymentMethod
+//   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
+//   if (query.paymentType && query.paymentType !== 'all') filter.paymentType = query.paymentType;
+//   if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
+
+//   // Filter by date range
+//   if (query.startDate || query.endDate) {
+//     filter.createdAt = {};
+//     if (query.startDate) filter.createdAt.$gte = new Date(query.startDate);
+//     if (query.endDate) filter.createdAt.$lte = new Date(query.endDate);
+//   }
+
+//   // Build query with QueryBuilder
+//   const paymentQuery = new QueryBuilder(
+//     Payment.find(filter)
+//       .populate('userId', 'name profileImage email')
+//       .populate('serviceProviderId', 'name profileImage email')
+//       .populate('serviceProviders.serviceProviderId'),
+//     query,
+//   )
+//     .search(['transactionId', 'userId.name', 'serviceProviderId.name'])
+//     .filter()
+//     .sort()
+//     .paginate()
+//     .fields();
+
+//   const payments = await paymentQuery.modelQuery;
+//   const meta = await paymentQuery.countTotal();
+
+//   return { meta, payments };
+// };
+
+
+
+const getPayments = async (query: any) => {
+  const filter: Record<string, any> = {paymentStatus: "completed"};
+
   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
-  if (query.paymentType) filter.paymentType = query.paymentType;
+  if (query.paymentType && query.paymentType !== 'all') filter.paymentType = query.paymentType;
   if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
 
-  // Filter by date range
   if (query.startDate || query.endDate) {
     filter.createdAt = {};
     if (query.startDate) filter.createdAt.$gte = new Date(query.startDate);
     if (query.endDate) filter.createdAt.$lte = new Date(query.endDate);
   }
 
-  // Build query with QueryBuilder
   const paymentQuery = new QueryBuilder(
     Payment.find(filter)
-      .populate('userId', 'name profileImage email')
-      .populate('serviceProviderId', 'name profileImage email')
-      .populate('serviceProviders.serviceProviderId'),
+      .populate('userId', 'name companyName profileImage email ico dic ic_dph')
+      .populate('eventOrderId', 'orderId serviceType orderType date price priceWithServiceFee vatAmount couponCode couponDiscount totalPrice')
+      .populate('workshopId', 'orderId title date time price mainPrice vatAmount couponCode couponDiscount')
+      .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph')
+      .populate('serviceProviders.serviceProviderId', 'name email')
+      .populate({
+        path: 'gearOrderIds',
+        select: 'orderId paymentStatus orderStatus sellerId clientId',
+        populate: [
+          { path: 'gearMarketplaceId', select: 'name price mainPrice vatAmount totalVatAmount platformCommission shippingCompany' },
+          { path: 'sellerId', select: 'name companyName profileImage email ico dic ic_dph' },
+          { path: 'clientId', select: 'name companyName profileImage email ico dic ic_dph' },
+        ],
+      }),
     query,
   )
     .search(['transactionId', 'userId.name', 'serviceProviderId.name'])
@@ -404,7 +457,44 @@ const getPayments = async (query: any) => {
   const payments = await paymentQuery.modelQuery;
   const meta = await paymentQuery.countTotal();
 
-  return { meta, payments };
+  // ✅ Flatten gear payments — each gear order becomes its own row
+  const orders: any[] = [];
+
+  for (const payment of payments) {
+    const p = payment.toObject ? payment.toObject() : payment;
+
+    if (p.paymentType === 'gear') {
+      for (const g of (p.gearOrderIds || []) as any[]) {
+        const sp = p.serviceProviders?.find(
+          (s: any) => s.serviceProviderId?._id?.toString() === g.sellerId?._id?.toString(),
+        );
+        orders.push({
+          paymentId: p._id,
+          transactionId: p.transactionId,
+          paymentType: p.paymentType,
+          paymentStatus: p.paymentStatus,
+          paymentMethod: p.paymentMethod,
+          totalPaymentAmount: p.amount,
+          createdAt: p.createdAt,
+          client: p.userId,
+          // Individual gear order fields
+          orderId: g.orderId,
+          gearOrderId: g._id,
+          orderStatus: g.orderStatus,
+          adminPaid: g.paymentStatus === 'received',
+          gear: g.gearMarketplaceId,
+          seller: g.sellerId,
+          amount: sp?.amount ?? 0,
+          commission: sp?.commission ?? 0,
+          netEarning: sp?.netAmount ?? 0,
+        });
+      }
+    } else {
+      orders.push(p);
+    }
+  }
+
+  return { meta, orders };
 };
 
 const getMyPaymentsStats = async (userId: string) => {
@@ -434,7 +524,7 @@ const getMyPayments = async (userId: string, query: any) => {
   const filter: Record<string, any> = { userId };
 
   // Optional filters
-  if (query.paymentType) filter.paymentType = query.paymentType;
+  if (query.paymentType && query.paymentType !== 'all') filter.paymentType = query.paymentType;
   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
   if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
 
@@ -472,7 +562,7 @@ const getMyPayments = async (userId: string, query: any) => {
       .populate({
         path: 'eventOrderId',
         select:
-          'orderId orderType serviceType date location totalPrice packageId statusTimestamps',
+          'orderId orderType serviceType date location totalPrice couponCode couponDiscount packageId statusTimestamps',
         populate: [
           {
             path: 'packageId',

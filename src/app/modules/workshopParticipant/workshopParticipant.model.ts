@@ -42,6 +42,8 @@ const workshopParticipantSchema = new Schema<IWorkshopParticipant>(
     DIC: { type: String },
     IC_DPH: { type: String },
     name: { type: String },
+    couponCode: { type: String, trim: true },
+    couponDiscount: { type: Number, default: 0 },
     isDeleted: { type: Boolean, default: false },
   },
   {

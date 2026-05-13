@@ -9,13 +9,9 @@ const forbiddenPatterns = [
   /\bcrypto\b|\bBitcoin\b|\bkryptomena\b/i,
   /\bhotovosť\b|\bcash\b|\bpeniaze\b/i,
 
-  // Contact information
+  // Contact information (links allowed — only phone & email blocked)
   /[\w\.-]+@[\w\.-]+\.\w+/i, // emails
   /(\+421|0)\d{8,9}/, // Slovak phone numbers
-  /@[a-zA-Z0-9_]+/, // socials handle
-
-  // URLs
-  /(https?:\/\/[^\s]+)/i
 ];
 
 export const hasForbiddenContent = (text: string): boolean => {

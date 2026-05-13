@@ -1,4 +1,4 @@
-import { Document, Model, Types } from "mongoose";
+import { Document, Model, ObjectId, Types } from "mongoose";
 
 export type OrderStatus = "pending" | "declined" | "accepted" | "inProgress" | "deliveryRequest" | "deliveryRequestDeclined" | "delivered" | "cancelRequest" | "cancelRequestDeclined" | "cancelled";
 
@@ -42,6 +42,7 @@ export interface IEventOrder extends Document {
   title?: string;
   userId: Types.ObjectId;
   serviceProviderId: Types.ObjectId;
+  paymentId?: Types.ObjectId;
   date: Date;
   orderType: "direct" | "custom";
   serviceType: "photography" | "videography"; 
@@ -80,6 +81,8 @@ export interface IEventOrder extends Document {
   statusHistory: IStatusHistory[];
   extensionRequests: IExtensionRequest[];
   description?: string;
+  couponCode?: string;
+  couponDiscount?: number;
   paymentStatus: PaymentStatus;
   isDeleted: boolean;
 }

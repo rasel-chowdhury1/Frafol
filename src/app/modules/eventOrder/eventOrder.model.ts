@@ -45,6 +45,7 @@ const EventOrderSchema = new Schema<IEventOrder>(
 
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     serviceProviderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    paymentId: { type: Schema.Types.ObjectId, ref: "Payment", required: false },
 
     orderType: {
       type: String,
@@ -177,6 +178,8 @@ const EventOrderSchema = new Schema<IEventOrder>(
     },
 
     description: { type: String },
+    couponCode: { type: String, trim: true },
+    couponDiscount: { type: Number, default: 0 },
     paymentStatus: {
        type: String,
        enum: ["Unpaid", "Paid"],

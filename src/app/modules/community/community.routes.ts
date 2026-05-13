@@ -14,7 +14,7 @@ const router = Router();
 router
     .post(
     "/create",
-    auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN),
+    auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     upload.fields([
           { name: 'images', maxCount: 10 },
       ]),
@@ -48,20 +48,20 @@ router
 
    .get(
     "/comments/:id",
-    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN),
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommunityController.getCommentsById
    )
 
    
    .get(
     "/:id",
-    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN),
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommunityController.getCommunityDetails
    )
 
    .patch(
       "/update/:id",
-      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN),
+      auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
       upload.fields([
           { name: 'images', maxCount: 10 },
       ]),
@@ -71,19 +71,19 @@ router
 
   .patch(
     "/approve/:id",
-    auth("admin"), 
+    auth("admin",  USER_ROLE.SUPER_ADMIN), 
     CommunityController.approveCommunity
     )
 
   .patch(
     "/reject/:id",
-    auth("admin"), 
+    auth("admin", USER_ROLE.SUPER_ADMIN), 
     CommunityController.rejectCommunity
     )
 
   .delete(
     "/:id",
-    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN),
+    auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommunityController.deleteCommunity
     );
 
