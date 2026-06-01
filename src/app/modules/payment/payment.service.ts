@@ -433,7 +433,7 @@ const getPayments = async (query: any) => {
   const paymentQuery = new QueryBuilder(
     Payment.find(filter)
       .populate('userId', 'name companyName profileImage email ico dic ic_dph')
-      .populate('eventOrderId', 'orderId serviceType orderType date price priceWithServiceFee vatAmount couponCode couponDiscount totalPrice')
+      .populate('eventOrderId', 'title orderId serviceType orderType date price priceWithServiceFee vatAmount couponCode couponDiscount totalPrice')
       .populate('workshopId', 'orderId title date time price mainPrice vatAmount couponCode couponDiscount')
       .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph')
       .populate('serviceProviders.serviceProviderId', 'name email')
@@ -562,7 +562,7 @@ const getMyPayments = async (userId: string, query: any) => {
       .populate({
         path: 'eventOrderId',
         select:
-          'orderId orderType serviceType date location totalPrice couponCode couponDiscount packageId statusTimestamps',
+          'title orderId orderType serviceType date location totalPrice couponCode couponDiscount packageId statusTimestamps',
         populate: [
           {
             path: 'packageId',
