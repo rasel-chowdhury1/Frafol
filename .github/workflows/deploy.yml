@@ -1,15 +1,29 @@
-name: Test SSH Connection
-uses: appleboy/ssh-action@v1.0.3
-with:
-host: 76.13.133.178
-username: root
-key: ${{ secrets.SSH_PRIVATE_KEY }}
-port: 22
-script: |
-  echo "✅ SSH CONNECTED"
-  whoami
-  hostname
+name: Deploy Backend to VPS
 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 76.13.133.178
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "✅ SSH CONNECTED"
+            whoami
+            hostname
 
 # name: Deploy Backend to VPS
 
