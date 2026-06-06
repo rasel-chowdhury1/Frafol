@@ -13,12 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Debug secrets (presence check only)
-        run: |
-          echo "SSH_PRIVATE_KEY set: ${{ secrets.SSH_PRIVATE_KEY != '' }}"
-          echo "DROPLET_IP set: ${{ secrets.DROPLET_IP != '' }}"
-          echo "SSH_PORT set: ${{ secrets.SSH_PORT != '' }}"
-
       - name: Setup SSH and validate secrets
         uses: webfactory/ssh-agent@v0.7.0
         with:
