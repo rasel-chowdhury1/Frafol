@@ -25,10 +25,10 @@ const contactUs = async (payload: { name: string; email: string; message: string
     `;
 
 
-    console.log("Contact Us Email:", config.admin_email as string);
+    console.log("Contact Us Email:", config.contact_email as string);
     // Send email to admin
     await sendEmail(
-      config.admin_email as string,
+      config.contact_email as string,
       `New Contact Message from ${name}`,
       html
     );

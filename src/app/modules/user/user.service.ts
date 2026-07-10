@@ -830,6 +830,7 @@ const declineProfessionalUserById = async (userId: string, reason?: string) => {
     sentNotificationForProfileDeclined({
       receiverId: user._id as any,
       reason,
+      user: user
     }).catch((err) => console.error('Notification failed:', err));
   }
 
@@ -1900,6 +1901,7 @@ const blockedUser = async (id: string) => {
 };
 
 const getOverviewOfSpecificUser = async (userId: string) => {
+
   if (!Types.ObjectId.isValid(userId)) {
     throw new AppError(400, 'Invalid userId');
   }
@@ -1996,7 +1998,7 @@ const getOverviewOfSpecificUser = async (userId: string) => {
       // Payment stats
       Payment.aggregate([
         { $match: { userId: userObjectId, paymentStatus: 'completed' } },
-        { $group: { _id: null, totalSpent: { $sum: '$totalAmount' } } },
+        { $group: { _id: null, totalSpent: { $sum: '$amount' } } },
       ]),
 
       // Latest notifications
@@ -2125,6 +2127,7 @@ const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
     // ⭐ Reviews count
     Review.countDocuments({
       serviceProviderId: providerObjectId,
+      status: "done",
       isDeleted: false,
     }),
   ]);
@@ -2163,7 +2166,7 @@ const getMyEarnings = async (
       })
         .populate('userId', 'name companyName profileImage email')
         .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph')
-        .populate('eventOrderId', 'serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
+        .populate('eventOrderId', 'title serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
       restQuery,
     )
       .search(['transactionId'])
@@ -2414,9 +2417,30 @@ const getAdminDashboardStats = async (adminId: string) => {
     {
       $group: {
         _id: null,
-        totalUsers: { $sum: 1 },
+        totalUsers: {
+          $sum: { $cond: [{
+                $in: [
+                  '$role',
+                  [
+                    USER_ROLE.USER,
+                    USER_ROLE.COMPANY,
+                    USER_ROLE.PHOTOGRAPHER, 
+                    USER_ROLE.VIDEOGRAPHER,
+                    USER_ROLE.BOTH
+                  ],
+                ],
+              }, 1, 0] },
+        },
         totalRegularUsers: {
-          $sum: { $cond: [{ $eq: ['$role', USER_ROLE.USER] }, 1, 0] },
+          $sum: { $cond: [{
+                $in: [
+                  '$role',
+                  [
+                    USER_ROLE.USER,
+                    USER_ROLE.COMPANY
+                  ],
+                ],
+              }, 1, 0] },
         },
         totalProfessionals: {
           $sum: {
@@ -2637,8 +2661,8 @@ const getDeliveryOrders = async (
       .populate('userId', 'name email profileImage')
       .populate({
         path: 'serviceProviderId',
-        select: 'name email profileImage profileId',
-        populate: { path: 'profileId' },
+        select: 'name email profileImage profileId ',
+        populate: { path: 'profileId', select: 'bankName accountNumber' },
       });
   } else if (type === 'gear') {
     model = GearOrder;
@@ -2653,7 +2677,7 @@ const getDeliveryOrders = async (
       .populate({
         path: 'sellerId',
         select: 'name email profileImage profileId',
-        populate: { path: 'profileId', select: 'bankAccount bankName bankCode' },
+        populate: { path: 'profileId', select: 'bankName accountNumber' },
       })
       .populate('gearMarketplaceId');
   } else if (type === 'workshop') {
@@ -2678,7 +2702,7 @@ const getDeliveryOrders = async (
       .populate({
         path: 'instructorId',
         select: 'name email profileImage profileId',
-        populate: { path: 'profileId', select: 'bankAccount bankName bankCode' },
+        populate: { path: 'profileId', select: 'bankName accountNumber' },
       });
   } else {
     throw new Error('Invalid type. Allowed: professional, gear, workshop');

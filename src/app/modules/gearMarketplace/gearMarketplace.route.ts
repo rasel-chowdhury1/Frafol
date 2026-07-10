@@ -37,11 +37,6 @@ router
         GearMarketplaceController.getPendingGearMarketplace
     )
 
-    .get(
-        "/decline/:id",
-        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
-        GearMarketplaceController.declineGearById
-    )
 
 
       .get(
@@ -65,6 +60,13 @@ router
       auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
       GearMarketplaceController.updateApprovalStatusByAdmin
       )
+
+      
+    .patch(
+        "/decline/:id",
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+        GearMarketplaceController.declineGearById
+    )
 
 
 

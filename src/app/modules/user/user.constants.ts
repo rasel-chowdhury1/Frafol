@@ -5,7 +5,8 @@ export const USER_ROLE = {
   COMPANY: 'company',
   PHOTOGRAPHER: 'photographer',
   VIDEOGRAPHER: 'videographer',
-  BOTH: "both"
+  BOTH: "both",
+  GUEST: 'guest'
 } as const;
 
 export const ADMIN_ROUTE_OPTIONS = [

@@ -187,6 +187,8 @@ const getAllReviews = async () => {
 };
 
 const getMyReviews = async (userId: string, query: Record<string, unknown>) => {
+
+  console.log("get my reviews userId =>>> ", userId, query)
   // Base filter: reviews for this service provider
   const filter = {
     userId,
@@ -224,6 +226,8 @@ const getMyReviews = async (userId: string, query: Record<string, unknown>) => {
 
   const result = await reviewQuery.modelQuery;
   const meta = await reviewQuery.countTotal();
+
+  console.log({meta,result})
 
   return { meta, result };
 };
@@ -290,6 +294,8 @@ const getReviewsByServiceProvider = async (
     isDeleted: false,
   };
 
+
+
   // 2️⃣ Safely destructure with default
   const { rating, ...restQuery } = query || {};
 
@@ -325,7 +331,7 @@ const getReviewsByServiceProvider = async (
   const reviews = await reviewQuery.modelQuery;
   const meta = await reviewQuery.countTotal();
 
-  console.log("reviews ===>>>>> ", reviews)
+
 
   return { meta, reviews };
 };

@@ -9,16 +9,18 @@ import { User } from '../modules/user/user.model';
 
 const auth = (...userRoles: string[]) => {
   return catchAsync(async (req, res, next) => {
-
-
     const token: any = req.headers?.authorization || req?.headers?.token;
+    const isGuestAllowed = userRoles.includes('guest');
+    
 
-    // 1️⃣ Missing Token → 401 Unauthorized
-    if (!token) {
-      throw new AppError(
-        httpStatus.UNAUTHORIZED,
-        'Authorization token is missing',
-      );
+
+    // 1️⃣ No token — allow if guest is permitted, otherwise 401
+    if (!token || token === 'undefined') {
+      if (isGuestAllowed) {
+        req.user = null as any;
+        return next();
+      }
+      throw new AppError(httpStatus.UNAUTHORIZED, 'Authorization token is missing');
     }
 
     // 2️⃣ Invalid or Expired Token → 403 Forbidden
@@ -34,21 +36,17 @@ const auth = (...userRoles: string[]) => {
 
     const { role, userId } = decodeData;
 
+
     // 3️⃣ User Not Found → 404 Not Found
     const isUserExist = await User.IsUserExistById(userId);
-
-    if (!isUserExist || isUserExist.isDeleted ) {
+    if (!isUserExist || isUserExist.isDeleted) {
       throw new AppError(httpStatus.NOT_FOUND, 'User not found');
     }
 
-
-
     // 4️⃣ Role Not Authorized → 403 Forbidden
-    if (userRoles.length && !userRoles.includes(role)) {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        'Access denied. Insufficient privileges',
-      );
+    // Skip role check when guest is allowed — any authenticated user passes
+    if (!isGuestAllowed && userRoles.length && !userRoles.includes(role)) {
+      throw new AppError(httpStatus.FORBIDDEN, 'Access denied. Insufficient privileges');
     }
 
     // ✅ Authorized → Proceed

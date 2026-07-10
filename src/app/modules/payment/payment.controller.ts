@@ -68,6 +68,8 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
         }
 
 
+        console.log("isExist workshop =>>>>> ", isExistWorkshop)
+
         // 🔹 Assign service provider (instructor)
         serviceProviderId = isExistWorkshop.authorId.toString();
 
@@ -230,7 +232,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   
   // Redirect to frontend success page
   return res.redirect(
-    `http://76.13.133.178:3000/success`
+    `${process.env.FRONT_URL}/success`
   );
 
 });

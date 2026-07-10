@@ -46,14 +46,19 @@ const createCommunity = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllApproved = catchAsync(async (req: Request, res: Response) => {
-  const {userId, role} = req.user;
+
+  const userId = req.user?.userId ?? null;
+  const role = req.user?.role ?? null;
+
   const data = await CommunityService.getAllCommunities(userId, role, req.query);
+
   sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Approved community posts fetched successfully",
     data,
   });
+
 });
 
 const getMyPosts = catchAsync(async (req: Request, res: Response) => {
@@ -68,8 +73,10 @@ const getMyPosts = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getCommunityDetails = catchAsync(async (req: Request, res: Response) => {
+  
   const { id } = req.params;          // Community ID from URL
-  const userId = req.user.userId;     // Logged-in user
+  const userId = req.user?.userId ?? null;     // Logged-in user
+
 
   // Call service to get enriched community data
   const community = await CommunityService.getCommunityById(userId, id);
@@ -89,6 +96,7 @@ const getCommunityDetails = catchAsync(async (req: Request, res: Response) => {
     message: "Community details retrieved successfully",
     data: community,
   });
+
 });
 
 const getPendingCommunities = catchAsync(async (req: Request, res: Response) => {

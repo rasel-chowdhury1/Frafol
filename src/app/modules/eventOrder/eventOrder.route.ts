@@ -88,7 +88,7 @@ router.post(
 
     .patch(
         "/decline-request/:orderId",
-        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER), 
+        auth(USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.USER, USER_ROLE.COMPANY), 
         EventOrderController.declineOrderRequest
         )
     

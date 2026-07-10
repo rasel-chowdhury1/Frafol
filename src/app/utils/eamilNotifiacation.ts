@@ -53,9 +53,44 @@ interface SendEmailNotificationParams {
 
 const logoUrl = 'https://res.cloudinary.com/dns84qf2p/image/upload/v1768557807/frafolLogo_vftuvh.png'; // Use Frafol domain
 const primaryColor = '#AD2B08';
-const supportEmail = 'support@frafol.com';
+const supportEmail = 'cvak@frafol.sk';
 
 const clientUrl = process.env.FRONT_URL || "http://76.13.133.178:3000";
+
+
+
+const emailFooter = () => `
+  <div style="background-color: #f5f5f5; padding: 16px 24px; border-top: 1px solid #e0e0e0;">
+    <p style="margin: 0 0 8px 0; text-align: center; font-size: 12px; color: #777;">&copy; ${new Date().getFullYear()} Frafol. All rights reserved.</p>
+    <p style="margin: 0; font-size: 11px; color: #999; line-height: 1.6;">
+      Spracúvanie osobných údajov: Radi by sme Vás informovali, že spracúvame Vaše osobné údaje v súlade s Nariadením Európskeho parlamentu a Rady (EÚ) č. 2016/679 a v súlade s príslušnými slovenskými právnymi predpismi, najmä zákonom č. 18/2018 Z. z. Bližšie informácie nájdete na našej webovej stránke: <a href="${clientUrl}/data-protection" style="color: #999; text-decoration: underline;">GDPR</a>. V prípade ak máte akékoľvek otázky, neváhajte nás kontaktovať na adrese: <a href="mailto:gdpr@frafol.sk" style="color: #999; text-decoration: none;">gdpr@frafol.sk</a>.
+    </p>
+  </div>`;
+
+const policiesSection = () => `
+      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 32px 0;" />
+
+      <p style="font-size: 14px; color: #555;">
+        Please review our policies:
+      </p>
+
+      <ul style="font-size: 14px; color: #555; padding-left: 20px;">
+        <li>
+          <a href="${clientUrl}/terms-of-service-marketplace" style="color: ${primaryColor}; text-decoration: none;">
+            Terms &amp; Conditions (Marketplace)
+          </a>
+        </li>
+        <li>
+          <a href="${clientUrl}/terms-of-service" style="color: ${primaryColor}; text-decoration: none;">
+            Terms &amp; Conditions (Conceptual)
+          </a>
+        </li>
+        <li>
+          <a href="${clientUrl}/data-protection" style="color: ${primaryColor}; text-decoration: none;">
+            GDPR &amp; Data Protection Policy
+          </a>
+        </li>
+      </ul>`;
 
 const otpSendEmail = async ({
   sentTo,
@@ -70,10 +105,10 @@ const otpSendEmail = async ({
 
       <!-- Header -->
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
-        <img 
-          src="${logoUrl}" 
-          alt="Frafol Logo" 
-          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" 
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
           One-Time Password (OTP)
@@ -109,12 +144,14 @@ const otpSendEmail = async ({
         </p>
 
         <p style="margin-top: 24px; font-size: 14px;">
-          If you didn’t request this code or need assistance, please contact our
+          If you didn't request this code or need assistance, please contact our
           support team at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
         </p>
+
+        ${policiesSection()}
 
         <p style="margin-top: 32px;">
           Kind regards,<br />
@@ -123,10 +160,7 @@ const otpSendEmail = async ({
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -168,7 +202,7 @@ export const welcomeEmail = async ({
       <p>
         ${userType === "professional_verified"
           ? "Your profile has been verified! You can now start receiving booking requests."
-          : "Your account has been successfully created. We’re excited to have you on board."}
+          : "Your account has been successfully created. We're excited to have you on board."}
       </p>
       <p>To get started, please review how our platform works:</p>
       <p style="margin: 20px 0;">
@@ -190,7 +224,7 @@ export const welcomeEmail = async ({
 
     <!-- Header -->
     <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
-      <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
+      <img src="${logoUrl}" alt="FRAFOL PROFILE PICTURE" style="max-width: 150px; margin-bottom: 12px;" />
       <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
         Welcome to Frafol 🎉
       </h1>
@@ -202,29 +236,7 @@ export const welcomeEmail = async ({
       <p>Welcome to <strong>Frafol</strong>!</p>
       ${dynamicSection}
 
-      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 32px 0;" />
-
-      <p style="font-size: 14px; color: #555;">
-        Please review our policies:
-      </p>
-
-      <ul style="font-size: 14px; color: #555; padding-left: 20px;">
-        <li>
-          <a href="${clientUrl}/terms-of-service-marketplace" style="color: ${primaryColor}; text-decoration: none;">
-            Terms & Conditions (Marketplace)
-          </a>
-        </li>
-        <li>
-          <a href="${clientUrl}/terms-of-service" style="color: ${primaryColor}; text-decoration: none;">
-            Terms & Conditions (Conceptual)
-          </a>
-        </li>
-        <li>
-          <a href="${clientUrl}/data-protection" style="color: ${primaryColor}; text-decoration: none;">
-            GDPR & Data Protection Policy
-          </a>
-        </li>
-      </ul>
+      ${policiesSection()}
 
       <p style="margin-top: 24px; font-size: 14px;">
         If you have any questions, feel free to contact us at
@@ -239,10 +251,7 @@ export const welcomeEmail = async ({
       </p>
     </div>
 
-    <!-- Footer -->
-    <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-      © ${new Date().getFullYear()} Frafol. All rights reserved.
-    </div>
+    ${emailFooter()}
   </div>
   `;
 
@@ -338,16 +347,15 @@ const profileVerifiedEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>The Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
 
     </div>
   `;
@@ -422,16 +430,97 @@ const profileVerifiedEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, subject, emailBody);
+};
+
+const sendBookingDeclineEmail = async ({
+  sentTo,
+  subject,
+  userName,
+  messageText,
+}: BookingNotificationEmailParams): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Booking Request Declined
+        </h1>
       </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${userName}</strong>,</p>
+
+        <p>We're sorry to inform you that your booking request on <strong>Frafol</strong> has been declined. Please see the details below.</p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border: 1px dashed ${primaryColor};
+          padding: 20px;
+          text-align: center;
+          border-radius: 6px;
+          margin: 24px 0;
+        ">
+          <p style="margin: 0; font-size: 14px; color: #555;">Decline Details</p>
+          <p style="margin: 10px 0 0; font-size: 15px; color: #333333; line-height: 1.6;">
+            ${messageText}
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          Log in to your Frafol account to view more details or explore other options.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Dashboard
+          </a>
+        </div>
+
+        <p style="margin-top: 24px; font-size: 14px;">
+          If you have any questions, please contact our support team at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
     </div>
   `;
 
@@ -487,17 +576,11 @@ const frafolChoiceEmail = async ({
       </table>
       <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
 
-      <!-- Legal -->
-      <p style="font-size:13px;color:#555;margin-bottom:4px;">By completing this purchase you agreed to:</p>
-      <ul style="font-size:13px;color:#555;padding-left:18px;margin-top:4px;">
-        <li><a href="${clientUrl}/terms-of-service-marketplace" style="color:${primaryColor};text-decoration:none;">Terms &amp; Conditions (Marketplace)</a></li>
-        <li><a href="${clientUrl}/terms-of-service" style="color:${primaryColor};text-decoration:none;">Terms &amp; Conditions (Conceptual)</a></li>
-        <li><a href="${clientUrl}/data-protection" style="color:${primaryColor};text-decoration:none;">GDPR &amp; Data Protection Policy</a></li>
-      </ul>
-
       <p style="font-size:13px;color:#777;margin-top:16px;">
         This email serves as your invoice / payment confirmation. Please keep it for your records.
       </p>
+
+      ${policiesSection()}
 
       <p style="margin-top:24px;font-size:14px;">
         Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
@@ -570,10 +653,10 @@ const sendFrafolEmail = ({
 
       <!-- Header (Logo only) -->
       <div style="background-color:${primaryColor}; text-align:center; padding:24px;">
-        <img 
-          src="${logoUrl}" 
-          alt="Frafol Logo" 
-          style="max-width:150px; height:auto; display:block; margin:0 auto;" 
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width:150px; height:auto; display:block; margin:0 auto;"
         />
       </div>
 
@@ -587,16 +670,15 @@ const sendFrafolEmail = ({
           ${message}
         </p>
 
-        <p style="margin-top:32px;">
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color:#f5f5f5; text-align:center; padding:14px; font-size:12px; color:#777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
 
     </div>
   `;
@@ -658,16 +740,15 @@ const profileDeclinedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Best regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -694,11 +775,10 @@ const passwordChangedEmail = async ({
           If you did not make this change, please contact us immediately at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
+        ${policiesSection()}
         <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
       </div>
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
   await sendEmail(sentTo, 'Your Password Has Been Changed', emailBody);
@@ -724,11 +804,10 @@ const forgotPasswordEmail = async ({
           If you did not request this reset, please contact us immediately at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
+        ${policiesSection()}
         <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
       </div>
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
   await sendEmail(sentTo, 'Your Password Has Been Reset', emailBody);
@@ -754,11 +833,10 @@ const bankDetailsChangedEmail = async ({
           If you did not make this change, please contact us immediately at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
+        ${policiesSection()}
         <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
       </div>
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
   await sendEmail(sentTo, 'Bank Account Details Changed', emailBody);
@@ -794,11 +872,10 @@ const accountBlockedEmail = async ({
           If you believe this is a mistake, please reach out to us at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
+        ${policiesSection()}
         <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
       </div>
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
   await sendEmail(sentTo, `Your Frafol Account Has Been ${isDeleted ? 'Deleted' : 'Blocked'}`, emailBody);
@@ -834,11 +911,13 @@ const frafolChoiceRenewalSuccessEmail = async ({
       </table>
       <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
       <p style="font-size:13px;color:#777;">This email serves as your invoice / payment confirmation for the renewal. Please keep it for your records.</p>
-      <p style="font-size:13px;color:#555;">By renewing you continue to agree to our <a href="${clientUrl}/terms-of-service-marketplace" style="color:${primaryColor};text-decoration:none;">Terms &amp; Conditions</a> and <a href="${clientUrl}/data-protection" style="color:${primaryColor};text-decoration:none;">GDPR &amp; Data Protection Policy</a>.</p>
+
+      ${policiesSection()}
+
       <p style="margin-top:24px;font-size:14px;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
       <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
     </div>
-    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+    ${emailFooter()}
   </div>`;
   await sendEmail(sentTo, 'Frafol Choice Renewed – Payment Confirmation', emailBody);
 };
@@ -869,9 +948,10 @@ const frafolChoiceRenewalFailedEmail = async ({
         <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Update Payment Method</a>
       </div>
       <p style="font-size:14px;color:#555;">If you need help, contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.</p>
+      ${policiesSection()}
       <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
     </div>
-    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+    ${emailFooter()}
   </div>`;
   await sendEmail(sentTo, 'Frafol Choice – Payment Failed, Please Update Your Payment Method', emailBody);
 };
@@ -903,9 +983,10 @@ const frafolChoiceExpiringSoonEmail = async ({
         <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
       </div>
       <p style="font-size:14px;color:#555;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      ${policiesSection()}
       <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
     </div>
-    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+    ${emailFooter()}
   </div>`;
   await sendEmail(sentTo, `Your Frafol Choice Expires in ${daysLeft} Day${daysLeft !== 1 ? 's' : ''} – Renew Now`, emailBody);
 };
@@ -939,9 +1020,10 @@ const frafolChoiceExpiredEmail = async ({
         <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
       </div>
       <p style="font-size:14px;color:#555;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      ${policiesSection()}
       <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
     </div>
-    <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">© ${new Date().getFullYear()} Frafol. All rights reserved.</div>
+    ${emailFooter()}
   </div>`;
   await sendEmail(sentTo, 'Your Frafol Choice Has Expired – Renew to Restore Your Benefits', emailBody);
 };
@@ -1023,16 +1105,15 @@ const sendCommentOrReplyEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1097,7 +1178,7 @@ const sendBookingRequestEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
+          <a href="${clientUrl}/dashboard/professional/event-orders" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1118,16 +1199,15 @@ const sendBookingRequestEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1191,7 +1271,7 @@ const sendOrderAcceptedEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
+          <a href="${clientUrl}/dashboard/my-account/orders" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1212,16 +1292,15 @@ const sendOrderAcceptedEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1285,7 +1364,7 @@ const sendPaymentSuccessEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
+          <a href="${clientUrl}/dashboard/professional/event-orders" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1306,16 +1385,15 @@ const sendPaymentSuccessEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1388,16 +1466,15 @@ const sendNewMessageEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1454,7 +1531,7 @@ const sendDeliveryAcceptedEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
+          <a href="${clientUrl}/dashboard/professional/event-orders?tab=delivered" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1475,16 +1552,15 @@ const sendDeliveryAcceptedEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1544,7 +1620,7 @@ const sendCancelRequestDeclinedEmail = async ({
         </div>` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
+          <a href="${clientUrl}/dashboard/my-account/orders?tab=currentOrder" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1565,16 +1641,15 @@ const sendCancelRequestDeclinedEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1634,7 +1709,7 @@ const sendCancelRequestEmail = async ({
         </div>` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
+          <a href="${clientUrl}/dashboard/my-account/orders?tab=cancelRequest" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1655,16 +1730,15 @@ const sendCancelRequestEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol Team</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
@@ -1754,20 +1828,1461 @@ const sendRefundRequiredEmail = async ({
           </a>.
         </p>
 
+        ${policiesSection()}
+
         <p style="margin-top: 32px;">
           Kind regards,<br />
           <strong>Frafol System</strong>
         </p>
       </div>
 
-      <!-- Footer -->
-      <div style="background-color: #f5f5f5; text-align: center; padding: 14px; font-size: 12px; color: #777;">
-        © ${new Date().getFullYear()} Frafol. All rights reserved.
-      </div>
+      ${emailFooter()}
     </div>
   `;
 
   await sendEmail(sentTo, 'Refund Required – Order Cancelled', emailBody);
 };
 
-export { otpSendEmail, sendBookingNotificationEmail, profileVerifiedEmail, profileDeclinedEmail, passwordChangedEmail, forgotPasswordEmail, bankDetailsChangedEmail, accountBlockedEmail, sendEmailAndNotification, sendFrafolEmail, frafolChoiceRenewalSuccessEmail, frafolChoiceRenewalFailedEmail, frafolChoiceExpiringSoonEmail, frafolChoiceExpiredEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail };
+const sendDeliveryRequestEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  orderType,
+  serviceType,
+  packageName,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+}): Promise<void> => {
+  const orderLabel =
+    orderType === 'direct'
+      ? packageName ? `"${packageName}"` : 'your order'
+      : `custom ${serviceType || 'booking'}`;
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Delivery Request Received
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${senderName}</strong> has submitted a delivery for
+          <strong>${orderLabel}</strong>. Please review and confirm.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Action required:</strong> Please review the delivery and confirm or decline it from your dashboard.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/my-account/orders?tab=toConfirm" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Review Delivery
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Delivery Request Received – Action Required', emailBody);
+};
+
+const sendExtensionRequestEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  serviceType,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  serviceType?: string;
+  reason?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Delivery Date Extension Requested
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${senderName}</strong> has requested a delivery date extension
+          for the <strong>${serviceType || 'order'}</strong>.
+        </p>
+
+        ${reason ? `
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason:</strong> ${reason}
+        </div>` : ''}
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/my-account/extension-requests" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Review Request
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Delivery Date Extension Requested', emailBody);
+};
+
+const sendExtensionAcceptedEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  serviceType,
+  newDeliveryDate,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  serviceType?: string;
+  newDeliveryDate?: Date;
+}): Promise<void> => {
+  const dateStr = newDeliveryDate
+    ? new Date(newDeliveryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'the new agreed date';
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Extension Request Accepted
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${senderName}</strong> has accepted your delivery date extension request
+          for the <strong>${serviceType || 'order'}</strong>.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #16a34a;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>New delivery date:</strong> ${dateStr}
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/professional/event-orders" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Order
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Delivery Date Extension Accepted', emailBody);
+};
+
+const sendExtensionRejectedEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  serviceType,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  serviceType?: string;
+  reason?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Extension Request Rejected
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${senderName}</strong> has rejected your delivery date extension request
+          for the <strong>${serviceType || 'order'}</strong>.
+        </p>
+
+        ${reason ? `
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason:</strong> ${reason}
+        </div>` : ''}
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, 'Delivery Date Extension Rejected', emailBody);
+};
+
+const sendOrderDeclinedEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  orderType,
+  serviceType,
+  packageName,
+  status,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+  status: 'declined' | 'deliveryRequestDeclined';
+  reason?: string;
+}): Promise<void> => {
+  const isDeliveryDeclined = status === 'deliveryRequestDeclined';
+
+  const subject = isDeliveryDeclined
+    ? 'Delivery Request Declined'
+    : 'Order Request Declined';
+
+  const orderLabel =
+    orderType === 'direct'
+      ? packageName || serviceType || 'order'
+      : `custom ${serviceType || 'booking'}`;
+
+  const bodyText = isDeliveryDeclined
+    ? `<strong>${senderName}</strong> has declined the delivery request for your <strong>${orderLabel}</strong>. You can revise and resubmit the delivery from your dashboard.`
+    : `<strong>${senderName}</strong> has declined your <strong>${orderLabel}</strong> request.`;
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          ${isDeliveryDeclined ? 'Delivery Request Declined' : 'Order Request Declined'}
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>${bodyText}</p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          ${reason
+            ? `<strong>Reason:</strong> ${reason}`
+            : isDeliveryDeclined
+              ? 'Please review the feedback and update your delivery before resubmitting.'
+              : 'If you have questions or believe this was a mistake, please contact us.'}
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}${isDeliveryDeclined ? '/dashboard/professional/event-orders?tab=inProgress' : ''}" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Go to Dashboard
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, subject, emailBody);
+};
+
+const sendOrderCancelledEmail = async ({
+  sentTo,
+  receiverName,
+  senderName,
+  orderType,
+  serviceType,
+  packageName,
+}: {
+  sentTo: string;
+  receiverName: string;
+  senderName: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+}): Promise<void> => {
+  const orderLabel =
+    orderType === 'direct'
+      ? packageName || serviceType || 'order'
+      : `custom ${serviceType || 'booking'}`;
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Order Cancelled
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${senderName}</strong> has cancelled the
+          <strong>${orderLabel}</strong>.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          If you have any questions about this cancellation, please contact us.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/professional/event-orders?tab=cancelled" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Go to Dashboard
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Order Cancelled: ${orderLabel}`, emailBody);
+};
+
+const sendGearMarketplaceApprovedEmail = async ({
+  sentTo,
+  receiverName,
+  itemName,
+}: {
+  sentTo: string;
+  receiverName: string;
+  itemName: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Gear Item Approved!</h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          Congratulations! Your gear item <strong>"${itemName}"</strong> has been
+          approved by our admin team and is now live on the Frafol marketplace.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #16a34a;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          Your item is now visible to buyers and ready to receive orders.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/professional/gear-marketPlace" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Your Listing
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Gear Item Approved: "${itemName}"`, emailBody);
+};
+
+const sendGearMarketplaceDeclinedEmail = async ({
+  sentTo,
+  receiverName,
+  itemName,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  itemName: string;
+  reason?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Gear Item Declined</h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          We're sorry to inform you that your gear item
+          <strong>"${itemName}"</strong> has been declined by our admin team.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          ${reason ? `<strong>Reason:</strong> ${reason}` : 'Please review our listing guidelines and resubmit if appropriate.'}
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Gear Item Declined: "${itemName}"`, emailBody);
+};
+
+const sendWorkshopDeclinedEmail = async ({
+  sentTo,
+  receiverName,
+  workshopTitle,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  workshopTitle: string;
+  reason: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Workshop Declined
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          We're sorry to inform you that your workshop
+          <strong>"${workshopTitle}"</strong> has been declined by our admin team.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason:</strong> ${reason}
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you believe this decision was made in error or have any questions,
+          please contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Workshop Declined: "${workshopTitle}"`, emailBody);
+};
+
+const sendWorkshopApprovedEmail = async ({
+  sentTo,
+  receiverName,
+  workshopTitle,
+}: {
+  sentTo: string;
+  receiverName: string;
+  workshopTitle: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Workshop Approved!
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          Congratulations! Your workshop <strong>"${workshopTitle}"</strong> has been
+          approved by our admin team and is now live on Frafol.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #16a34a;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          Your workshop is now visible to participants and ready to accept bookings.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Your Workshop
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Workshop Approved: "${workshopTitle}"`, emailBody);
+};
+
+const sendPackageApprovedEmail = async ({
+  sentTo,
+  receiverName,
+  packageTitle,
+}: {
+  sentTo: string;
+  receiverName: string;
+  packageTitle: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Package Approved!
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          Congratulations! Your package <strong>"${packageTitle}"</strong> has been
+          approved by our admin team and is now live on Frafol.
+        </p>
+
+        <div style="
+          background-color: #f0fdf4;
+          border-left: 4px solid #16a34a;
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          Your package is now visible to clients and ready to accept bookings.
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/professional/packages" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            View Your Package
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you have any questions, contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Package Approved: "${packageTitle}"`, emailBody);
+};
+
+const sendPackageDeclinedEmail = async ({
+  sentTo,
+  receiverName,
+  packageTitle,
+  reason,
+}: {
+  sentTo: string;
+  receiverName: string;
+  packageTitle: string;
+  reason: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Package Declined
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Hello <strong>${receiverName}</strong>,</p>
+
+        <p>
+          We're sorry to inform you that your package
+          <strong>"${packageTitle}"</strong> has been declined by our admin team.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <strong>Reason:</strong> ${reason}
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          If you believe this decision was made in error or have any questions,
+          please contact us at
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+
+        ${policiesSection()}
+
+        <p style="margin-top: 32px;">
+          Kind regards,<br />
+          <strong>Frafol Team</strong>
+        </p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Package Declined: "${packageTitle}"`, emailBody);
+};
+
+// ─────────────────────────────────────────────
+// INVOICE EMAILS
+// ─────────────────────────────────────────────
+
+interface EventOrderInvoiceParams {
+  sentTo: string;
+  customerName: string;
+  orderId: string;
+  orderType: 'direct' | 'custom';
+  serviceType: string;
+  packageName?: string;
+  eventDate: string;
+  eventTime?: string;
+  location?: string;
+  price: number;
+  serviceFee: number;
+  vatAmount?: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  totalPrice: number;
+  transactionId: string;
+  paymentMethod: string;
+  paymentDate: string;
+  streetAddress?: string;
+  town?: string;
+  country?: string;
+  isRegisterAsCompany?: boolean;
+  companyName?: string;
+  ICO?: string;
+  DIC?: string;
+  IC_DPH?: string;
+  serviceProviderName?: string;
+}
+
+const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Promise<void> => {
+  const {
+    sentTo, customerName, orderId, orderType, serviceType, packageName,
+    eventDate, eventTime, location, price, serviceFee, vatAmount = 0,
+    couponCode, couponDiscount = 0, totalPrice, transactionId, paymentMethod,
+    paymentDate, streetAddress, town, country, isRegisterAsCompany,
+    companyName, ICO, DIC, IC_DPH, serviceProviderName,
+  } = params;
+
+  const orderLabel = orderType === 'direct'
+    ? `Direct Booking${packageName ? ` – ${packageName}` : ''}`
+    : `Custom ${serviceType.charAt(0).toUpperCase() + serviceType.slice(1)} Booking`;
+
+  const billingRows = isRegisterAsCompany ? `
+    <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Company</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
+    ${ICO ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">ICO</td><td style="padding:4px 8px;font-size:13px;">${ICO}</td></tr>` : ''}
+    ${DIC ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">DIC</td><td style="padding:4px 8px;font-size:13px;">${DIC}</td></tr>` : ''}
+    ${IC_DPH ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IC DPH</td><td style="padding:4px 8px;font-size:13px;">${IC_DPH}</td></tr>` : ''}
+  ` : '';
+
+  const emailBody = `
+    <div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#ffffff;">
+
+      <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">Payment Confirmation &amp; Invoice</h1>
+      </div>
+
+      <div style="padding:28px;color:#333;">
+        <p>Hello <strong>${customerName}</strong>,</p>
+        <p>Your payment has been successfully processed. Please find your invoice below.</p>
+
+        <!-- Invoice Header -->
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
+          <tr>
+            <td style="padding:4px 0;color:#777;">Invoice / Order ID</td>
+            <td style="padding:4px 0;text-align:right;font-weight:bold;">${orderId}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Transaction ID</td>
+            <td style="padding:4px 0;text-align:right;">${transactionId}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Payment Date</td>
+            <td style="padding:4px 0;text-align:right;">${paymentDate}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Payment Method</td>
+            <td style="padding:4px 0;text-align:right;text-transform:capitalize;">${paymentMethod}</td>
+          </tr>
+        </table>
+
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+
+        <!-- Billing Info -->
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Bill To</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Name</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
+          ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Address</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
+          ${billingRows}
+        </table>
+
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+
+        <!-- Order Details -->
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Order Details</p>
+        <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin-bottom:20px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr>
+              <td style="padding:5px 0;color:#777;">Order Type</td>
+              <td style="padding:5px 0;text-align:right;font-weight:bold;">${orderLabel}</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 0;color:#777;">Service Type</td>
+              <td style="padding:5px 0;text-align:right;text-transform:capitalize;">${serviceType}</td>
+            </tr>
+            ${serviceProviderName ? `<tr><td style="padding:5px 0;color:#777;">Service Provider</td><td style="padding:5px 0;text-align:right;">${serviceProviderName}</td></tr>` : ''}
+            <tr>
+              <td style="padding:5px 0;color:#777;">Event Date</td>
+              <td style="padding:5px 0;text-align:right;">${eventDate}${eventTime ? ' at ' + eventTime : ''}</td>
+            </tr>
+            ${location ? `<tr><td style="padding:5px 0;color:#777;">Location</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
+          </table>
+        </div>
+
+        <!-- Price Breakdown -->
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Price Breakdown</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Base Price</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${price.toFixed(2)} EUR</td>
+          </tr>
+          ${serviceFee > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Service Fee</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${serviceFee.toFixed(2)} EUR</td></tr>` : ''}
+          ${vatAmount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">VAT</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${vatAmount.toFixed(2)} EUR</td></tr>` : ''}
+          ${couponDiscount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;">Coupon Discount${couponCode ? ' (' + couponCode + ')' : ''}</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;color:#2e7d32;">-${couponDiscount.toFixed(2)} EUR</td></tr>` : ''}
+          <tr>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Total Paid</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalPrice.toFixed(2)} EUR</td>
+          </tr>
+        </table>
+
+        <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
+
+        ${policiesSection()}
+
+        <p style="margin-top:24px;font-size:14px;">
+          Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
+        </p>
+        <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Invoice – Order ${orderId} | Frafol`, emailBody);
+};
+
+interface WorkshopInvoiceParams {
+  sentTo: string;
+  customerName: string;
+  workshopTitle: string;
+  workshopDate: string;
+  workshopTime: string;
+  location?: string;
+  locationType?: string;
+  basePrice: number;
+  vatPercent?: number;
+  vatAmount: number;
+  totalPrice: number;
+  orderId: string;
+  transactionId: string;
+  paymentDate: string;
+  streetAddress?: string;
+  town?: string;
+  country?: string;
+  isRegisterAsCompany?: boolean;
+  companyName?: string;
+  ICO?: string;
+  DIC?: string;
+  IC_DPH?: string;
+  instructorName?: string;
+}
+
+const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<void> => {
+  const {
+    sentTo, customerName, workshopTitle, workshopDate, workshopTime,
+    location, locationType, basePrice, vatPercent = 0, vatAmount, totalPrice,
+    orderId, transactionId, paymentDate, streetAddress, town, country,
+    isRegisterAsCompany, companyName, ICO, DIC, IC_DPH, instructorName,
+  } = params;
+
+  const billingRows = isRegisterAsCompany ? `
+    <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Company</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
+    ${ICO ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">ICO</td><td style="padding:4px 8px;font-size:13px;">${ICO}</td></tr>` : ''}
+    ${DIC ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">DIC</td><td style="padding:4px 8px;font-size:13px;">${DIC}</td></tr>` : ''}
+    ${IC_DPH ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IC DPH</td><td style="padding:4px 8px;font-size:13px;">${IC_DPH}</td></tr>` : ''}
+  ` : '';
+
+  const emailBody = `
+    <div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#ffffff;">
+
+      <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">Workshop Registration Invoice</h1>
+      </div>
+
+      <div style="padding:28px;color:#333;">
+        <p>Hello <strong>${customerName}</strong>,</p>
+        <p>Your workshop registration is confirmed. Here is your invoice.</p>
+
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
+          <tr>
+            <td style="padding:4px 0;color:#777;">Order ID</td>
+            <td style="padding:4px 0;text-align:right;font-weight:bold;">${orderId}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Transaction ID</td>
+            <td style="padding:4px 0;text-align:right;">${transactionId}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Payment Date</td>
+            <td style="padding:4px 0;text-align:right;">${paymentDate}</td>
+          </tr>
+        </table>
+
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Bill To</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Name</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
+          ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Address</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
+          ${billingRows}
+        </table>
+
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Workshop Details</p>
+        <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin-bottom:20px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr>
+              <td style="padding:5px 0;color:#777;">Workshop</td>
+              <td style="padding:5px 0;text-align:right;font-weight:bold;">${workshopTitle}</td>
+            </tr>
+            ${instructorName ? `<tr><td style="padding:5px 0;color:#777;">Instructor</td><td style="padding:5px 0;text-align:right;">${instructorName}</td></tr>` : ''}
+            <tr>
+              <td style="padding:5px 0;color:#777;">Date &amp; Time</td>
+              <td style="padding:5px 0;text-align:right;">${workshopDate} at ${workshopTime}</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 0;color:#777;">Format</td>
+              <td style="padding:5px 0;text-align:right;text-transform:capitalize;">${locationType || 'In-person'}</td>
+            </tr>
+            ${location ? `<tr><td style="padding:5px 0;color:#777;">Location / Link</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
+          </table>
+        </div>
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Price Breakdown</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Base Price</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${basePrice.toFixed(2)} EUR</td>
+          </tr>
+          ${vatAmount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">VAT${vatPercent > 0 ? ' (' + vatPercent + '%)' : ''}</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${vatAmount.toFixed(2)} EUR</td></tr>` : ''}
+          <tr>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Total Paid</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalPrice.toFixed(2)} EUR</td>
+          </tr>
+        </table>
+
+        <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
+
+        ${policiesSection()}
+
+        <p style="margin-top:24px;font-size:14px;">
+          Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
+        </p>
+        <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Workshop Invoice – ${workshopTitle} | Frafol`, emailBody);
+};
+
+interface GearInvoiceItem {
+  name: string;
+  orderId: string;
+  basePrice: number;
+  vatAmount: number;
+  totalPrice: number;
+  shippingCost: number;
+  condition: string;
+}
+
+interface GearOrderInvoiceParams {
+  sentTo: string;
+  customerName: string;
+  items: GearInvoiceItem[];
+  subtotal: number;
+  totalShipping: number;
+  totalAmount: number;
+  transactionId: string;
+  paymentDate: string;
+  shippingAddress?: string;
+  postCode?: string;
+  town?: string;
+  loginAsCompany?: boolean;
+  companyName?: string;
+  ico?: string;
+  dic?: string;
+  ic_dph?: string;
+}
+
+const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promise<void> => {
+  const {
+    sentTo, customerName, items, subtotal, totalShipping, totalAmount,
+    transactionId, paymentDate, shippingAddress, postCode, town,
+    loginAsCompany, companyName, ico, dic, ic_dph,
+  } = params;
+
+  const itemRows = items.map((item, i) => `
+    <tr style="background-color:${i % 2 === 0 ? '#fafafa' : '#ffffff'};">
+      <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;">
+        <strong>${item.name}</strong><br/>
+        <span style="color:#777;font-size:12px;">Order: ${item.orderId} &bull; Condition: ${item.condition}</span>
+      </td>
+      <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:right;">${item.basePrice.toFixed(2)} EUR</td>
+      <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:right;">${item.vatAmount.toFixed(2)} EUR</td>
+      <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:right;">${item.shippingCost.toFixed(2)} EUR</td>
+      <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:bold;">${item.totalPrice.toFixed(2)} EUR</td>
+    </tr>
+  `).join('');
+
+  const billingRows = loginAsCompany ? `
+    <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Company</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
+    ${ico ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">ICO</td><td style="padding:4px 8px;font-size:13px;">${ico}</td></tr>` : ''}
+    ${dic ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">DIC</td><td style="padding:4px 8px;font-size:13px;">${dic}</td></tr>` : ''}
+    ${ic_dph ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IC DPH</td><td style="padding:4px 8px;font-size:13px;">${ic_dph}</td></tr>` : ''}
+  ` : '';
+
+  const emailBody = `
+    <div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#ffffff;">
+
+      <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">Marketplace Order Invoice</h1>
+      </div>
+
+      <div style="padding:28px;color:#333;">
+        <p>Hello <strong>${customerName}</strong>,</p>
+        <p>Your marketplace purchase is confirmed. Here is your invoice.</p>
+
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
+          <tr>
+            <td style="padding:4px 0;color:#777;">Transaction ID</td>
+            <td style="padding:4px 0;text-align:right;font-weight:bold;">${transactionId}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Payment Date</td>
+            <td style="padding:4px 0;text-align:right;">${paymentDate}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#777;">Items Purchased</td>
+            <td style="padding:4px 0;text-align:right;">${items.length}</td>
+          </tr>
+        </table>
+
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Ship To</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Name</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
+          ${shippingAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Address</td><td style="padding:4px 8px;font-size:13px;">${shippingAddress}${postCode ? ', ' + postCode : ''}${town ? ', ' + town : ''}</td></tr>` : ''}
+          ${billingRows}
+        </table>
+
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Items Ordered</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background-color:#f5f5f5;">
+              <th style="padding:8px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Item</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Base</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">VAT</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Shipping</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+          </tbody>
+        </table>
+
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:16px;">
+          <tr>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Items Subtotal</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${subtotal.toFixed(2)} EUR</td>
+          </tr>
+          ${totalShipping > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Total Shipping</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${totalShipping.toFixed(2)} EUR</td></tr>` : ''}
+          <tr>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Total Paid</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalAmount.toFixed(2)} EUR</td>
+          </tr>
+        </table>
+
+        <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
+
+        ${policiesSection()}
+
+        <p style="margin-top:24px;font-size:14px;">
+          Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
+        </p>
+        <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Marketplace Invoice – ${items.length} Item${items.length !== 1 ? 's' : ''} | Frafol`, emailBody);
+};
+
+export { 
+  otpSendEmail, 
+  sendBookingNotificationEmail, 
+  profileVerifiedEmail, 
+  profileDeclinedEmail, 
+  passwordChangedEmail, 
+  forgotPasswordEmail, 
+  bankDetailsChangedEmail, 
+  accountBlockedEmail, 
+  sendEmailAndNotification, 
+  sendFrafolEmail, 
+  frafolChoiceRenewalSuccessEmail, 
+  frafolChoiceRenewalFailedEmail, 
+  frafolChoiceExpiringSoonEmail, 
+  frafolChoiceExpiredEmail, 
+  sendRefundRequiredEmail, 
+  sendCancelRequestEmail, 
+  sendCancelRequestDeclinedEmail, 
+  sendDeliveryAcceptedEmail, 
+  sendNewMessageEmail, 
+  sendPaymentSuccessEmail, 
+  sendOrderAcceptedEmail, 
+  sendBookingRequestEmail,
+  sendBookingDeclineEmail, 
+  sendCommentOrReplyEmail, 
+  sendDeliveryRequestEmail,
+  sendExtensionRequestEmail,
+  sendExtensionAcceptedEmail,
+  sendExtensionRejectedEmail,
+  sendOrderDeclinedEmail,
+  sendOrderCancelledEmail,
+  sendGearMarketplaceApprovedEmail,
+  sendGearMarketplaceDeclinedEmail,
+  sendWorkshopDeclinedEmail,
+  sendWorkshopApprovedEmail, 
+  sendPackageApprovedEmail, 
+  sendPackageDeclinedEmail, 
+  sendEventOrderInvoiceEmail, 
+  sendWorkshopInvoiceEmail, 
+  sendGearOrderInvoiceEmail 
+};

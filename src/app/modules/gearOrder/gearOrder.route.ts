@@ -36,7 +36,7 @@ router
         // Client accepts delivery request
         .patch(
         "/accept-delivery/:orderId",
-        auth(USER_ROLE.USER, USER_ROLE.COMPANY),
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH),
         GearOrderController.acceptGearDeliveryRequest
         )
 

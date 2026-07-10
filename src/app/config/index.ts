@@ -20,6 +20,12 @@ const smtp = {
   user: process.env.NODEMAILER_HOST_EMAIL,
   pass: process.env.NODEMAILER_HOST_PASS,
   fromName: process.env.NODEMAILER_FROM_NAME,
+
+  region: process.env.AWS_REGION as string,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
+
+  fromEmail: process.env.MAIL_FROM_EMAIL as string,
 }
 
 export default {
@@ -37,6 +43,7 @@ export default {
   admin_email: process.env.ADMIN_EMAIL,
   admin_password: process.env.ADMIN_PASSWORD,
   admin_phone: process.env.ADMIN_PHONE,
+  contact_email: process.env.CONTACT_EMAIL,
   nodemailer_host_email: process.env.NODEMAILER_HOST_EMAIL,
   nodemailer_host_pass: process.env.NODEMAILER_HOST_PASS,
   otp_expire_time: process.env.OTP_EXPIRE_TIME,

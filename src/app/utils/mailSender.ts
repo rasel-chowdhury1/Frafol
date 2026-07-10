@@ -35,7 +35,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
 
 
   try {
-     console.log('mail send started');
+     console.log('mail send started =>>>>>>>>> ');
     await transporter.sendMail({
       from: `"${config.smtp.fromName}" <${config.smtp.user}>`, // sender address
       to, // list of receivers
@@ -43,7 +43,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       html, // html body
     });
 
-    console.log('mail sended successfully');
+    console.log('mail sended successfully =>>>>>>>> ');
     
   } catch (error) {
     console.log('send mail error:', error);

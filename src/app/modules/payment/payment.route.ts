@@ -25,13 +25,13 @@ router.post(
 
 .get(
     "/my", 
-    auth(USER_ROLE.USER),
+    auth(USER_ROLE.USER, USER_ROLE.COMPANY),
     PaymentController.getMyPayments
 )
 
 .get(
     "/my-stats", 
-    auth(USER_ROLE.USER),
+    auth(USER_ROLE.USER, USER_ROLE.COMPANY),
     PaymentController.getMyPaymentsStats
 )
 

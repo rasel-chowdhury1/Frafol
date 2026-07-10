@@ -215,7 +215,7 @@ const getCommunityById = async (userId: string, communityId: string) => {
   const isLiked = stats?.likes?.some((id) => id.toString() === userId) || false;
 
   // 4️⃣ Prepare full comments array with replies
-  const comments = stats?.comments?.map((c) => ({
+  const comments = stats?.comments?.map((c: any) => ({
     _id: c._id,
     user: c.user,
     text: c.text,
@@ -244,11 +244,11 @@ const getCommentsById = async (communityId: string, userId: string) => {
   const stats = await CommunityEngagementStats.findOne({ communityId })
     .populate({
       path: "comments.user",
-      select: "name sureName profileImage",
+      select: "name sureName profileImage role",
     })
     .populate({
       path: "comments.replies.user",
-      select: "name sureName profileImage",
+      select: "name sureName profileImage role",
     })
     .lean();
 
@@ -257,15 +257,16 @@ const getCommentsById = async (communityId: string, userId: string) => {
   }
 
   // ✅ Prepare structured comments
-  const comments = stats.comments?.map((c) => ({
+  const comments = stats.comments?.map((c: any) => ({
     _id: c._id,
     user: c.user,
     text: c.text,
     createdAt: c.createdAt,
-    replies: c.replies?.map((r) => ({
+    replies: c.replies?.map((r: any) => ({
       _id: r._id,
       user: r.user,
       text: r.text,
+      role: r.role,
       createdAt: r.createdAt,
     })) || [],
   })) || [];

@@ -4,6 +4,8 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import { deleteFile } from "../../utils/fileHelper";
 import AppError from "../../error/AppError";
 import mongoose from "mongoose";
+import httpStatus from 'http-status';
+import { sentNotificationForGearMarketplaceApproved, sentNotificationForGearMarketplaceDeclined } from "../../../socketIo";
 
 const createGearMarketplace = async (payload: IGearMarketplace) => {
   return await GearMarketplace.create(payload);
@@ -34,6 +36,8 @@ const getAllGearMarketplaces = async (query: Record<string, unknown>) => {
 };
 
 const getMyGearMarketplaces = async (userId: string, query: Record<string, unknown>) => {
+
+
   const gearQuery = new QueryBuilder(
     GearMarketplace.find({ authorId:userId,isDeleted: false })
       .populate({path: "authorId", select: "name sureName role email" })
@@ -121,12 +125,24 @@ const updateGearMarketplace = async (
   }
 };
 
-const updateApprovalStatusByAdmin = async (id: string, status: string) => {
-  return await GearMarketplace.findOneAndUpdate(
-    { _id: id, isDeleted: false }, // only author can delete
+const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: string) => {
+  const gear = await GearMarketplace.findOneAndUpdate(
+    { _id: id, isDeleted: false },
     { approvalStatus: status },
     { new: true }
   );
+
+  if (gear) {
+    if (status === 'approved') {
+      sentNotificationForGearMarketplaceApproved({ receiverId: gear.authorId as any, itemName: gear.name })
+        .catch((err: any) => console.error('Gear marketplace approved notification failed:', err));
+    } else if (status === 'cancelled') {
+      sentNotificationForGearMarketplaceDeclined({ receiverId: gear.authorId as any, itemName: gear.name, reason })
+        .catch((err: any) => console.error('Gear marketplace declined notification failed:', err));
+    }
+  }
+
+  return gear;
 };
 
 const getPendingGearMarketplace = async (
@@ -158,19 +174,21 @@ const getPendingGearMarketplace = async (
 
 
 const declineGearById = async (gearId: string, reason?: string) => {
-  // Soft delete + mark as declined
   const gear = await GearMarketplace.findByIdAndUpdate(
     gearId,
-    { 
-      isDeleted: true, 
-      approvalStatus: 'cancelled' // optional, could use 'declined' if you add this enum
-    },
+    { isDeleted: true, approvalStatus: 'cancelled' },
     { new: true, runValidators: true }
-  )
+  );
 
   if (!gear) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the gear item or item not found');
   }
+
+  sentNotificationForGearMarketplaceDeclined({
+    receiverId: gear.authorId as any,
+    itemName: gear.name,
+    reason,
+  }).catch((err: any) => console.error('Gear marketplace declined notification failed:', err));
 
   return gear;
 };

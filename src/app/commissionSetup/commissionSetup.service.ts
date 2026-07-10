@@ -24,15 +24,18 @@ const getCommissionSetup = async () => {
 };
 
 const updateCommissionSetup = async (payload: IUpdateCommissionSetup) => {
-  const setup = await CommissionSetup.findOne();
-  if (!setup) throw new AppError(httpStatus.NOT_FOUND, "Commission setup not found");
+  let setup = await CommissionSetup.findOne();
 
-  setup.photoVideoGrapy = payload.photoVideoGrapy ?? setup.photoVideoGrapy;
-  setup.minimumCharge = payload.minimumCharge ?? setup.minimumCharge;
-  setup.gearOrders = payload.gearOrders ?? setup.gearOrders;
-  setup.workShop = payload.workShop ?? setup.workShop;
+  if (!setup) {
+    setup = await CommissionSetup.create(payload);
+  } else {
+    setup.photoVideoGrapy = payload.photoVideoGrapy ?? setup.photoVideoGrapy;
+    setup.minimumCharge = payload.minimumCharge ?? setup.minimumCharge;
+    setup.gearOrders = payload.gearOrders ?? setup.gearOrders;
+    setup.workShop = payload.workShop ?? setup.workShop;
+    await setup.save();
+  }
 
-  await setup.save();
   return setup;
 };
 

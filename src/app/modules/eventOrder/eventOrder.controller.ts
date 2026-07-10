@@ -39,6 +39,7 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
     const basePrice = packageData.price || 0;
     const vatPercent = packageData.vatAmount || 0;
     // auto-fill fields from package
+    req.body.title = packageData.title;
     req.body.serviceProviderId = packageData.authorId;
     req.body.serviceType = packageData.category;
     req.body.packageName = packageData.title;

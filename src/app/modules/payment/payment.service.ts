@@ -13,7 +13,7 @@ import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.
 import QueryBuilder from '../../builder/QueryBuilder';
 import { MySubscription } from '../mySubscription/mySubscription.model';
 import { User } from '../user/user.model';
-import { sendFrafolEmail, sendEmailAndNotification } from '../../utils/eamilNotifiacation';
+import { sendFrafolEmail, sendEmailAndNotification, sendEventOrderInvoiceEmail, sendWorkshopInvoiceEmail, sendGearOrderInvoiceEmail } from '../../utils/eamilNotifiacation';
 import httpStatus from 'http-status';
 
 /**
@@ -87,7 +87,6 @@ const confirmPayment = async (sessionId: string) => {
       dbSession,
     );
 
-    console.log("payment data =>>>>> ", payment)
 
 
 
@@ -105,7 +104,6 @@ const confirmPayment = async (sessionId: string) => {
       await payment.save({ session: dbSession });
 
 
-      console.log("payment data from confirm payment =>>>>> ", payment)
       // ======================================================
       // ✅ EVENT Payment Handling
       // ======================================================
@@ -135,6 +133,52 @@ const confirmPayment = async (sessionId: string) => {
             receiverId: new mongoose.Types.ObjectId(payment.serviceProviderId),
             serviceType: updatedOrder.serviceType,
             packageName: updatedOrder.packageName || undefined,
+          });
+
+          // ✅ Send invoice email (non-blocking)
+          process.nextTick(async () => {
+            try {
+              const [client, provider] = await Promise.all([
+                User.findById(payment.userId).select('name email').lean(),
+                User.findById(payment.serviceProviderId).select('name').lean(),
+              ]);
+              if (client?.email) {
+                const price = updatedOrder.price || 0;
+                const totalPrice = updatedOrder.totalPrice || payment.amount;
+                const serviceFee = (updatedOrder.priceWithServiceFee || 0) - price;
+                await sendEventOrderInvoiceEmail({
+                  sentTo: client.email,
+                  customerName: (client as any).name || payment.name || 'Customer',
+                  orderId: updatedOrder.orderId,
+                  orderType: updatedOrder.orderType as 'direct' | 'custom',
+                  serviceType: updatedOrder.serviceType,
+                  packageName: updatedOrder.packageName || undefined,
+                  eventDate: updatedOrder.date ? new Date(updatedOrder.date).toLocaleDateString('en-GB') : '',
+                  eventTime: updatedOrder.time || undefined,
+                  location: updatedOrder.location || undefined,
+                  price,
+                  serviceFee: serviceFee > 0 ? serviceFee : 0,
+                  vatAmount: updatedOrder.vatAmount || 0,
+                  couponCode: updatedOrder.couponCode || undefined,
+                  couponDiscount: updatedOrder.couponDiscount || 0,
+                  totalPrice,
+                  transactionId: payment.transactionId,
+                  paymentMethod: payment.paymentMethod,
+                  paymentDate: new Date().toLocaleDateString('en-GB'),
+                  streetAddress: payment.streetAddress,
+                  town: payment.town,
+                  country: payment.country,
+                  isRegisterAsCompany: payment.isRegisterAsCompany,
+                  companyName: payment.companyName,
+                  ICO: payment.ICO,
+                  DIC: payment.DIC,
+                  IC_DPH: payment.IC_DPH,
+                  serviceProviderName: (provider as any)?.name || undefined,
+                });
+              }
+            } catch (err) {
+              console.error('❌ Event invoice email failed:', err);
+            }
           });
 
           console.log(
@@ -180,12 +224,61 @@ const confirmPayment = async (sessionId: string) => {
             paymentId: payment._id,
           },
         );
+
+        // ✅ Send gear invoice email (non-blocking)
+        process.nextTick(async () => {
+          try {
+            const populatedOrders = await GearOrder.find({ _id: { $in: payment.gearOrderIds } })
+              .populate('gearMarketplaceId', 'name price vatAmount totalVatAmount mainPrice condition shippingCompany')
+              .lean();
+
+            const client = await User.findById(payment.userId).select('name email').lean();
+            if (!client?.email) return;
+
+            const firstOrder = populatedOrders[0] as any;
+            const items = populatedOrders.map((o: any) => {
+              const gear = o.gearMarketplaceId || {};
+              return {
+                name: gear.name || 'Gear Item',
+                orderId: o.orderId,
+                basePrice: gear.price || 0,
+                vatAmount: gear.vatAmount || 0,
+                totalPrice: gear.mainPrice || 0,
+                shippingCost: gear.shippingCompany?.price || 0,
+                condition: gear.condition || '',
+              };
+            });
+
+            const subtotal = items.reduce((s: number, i: any) => s + i.totalPrice, 0);
+            const totalShipping = items.reduce((s: number, i: any) => s + i.shippingCost, 0);
+
+            await sendGearOrderInvoiceEmail({
+              sentTo: client.email,
+              customerName: (client as any).name || firstOrder?.name || 'Customer',
+              items,
+              subtotal,
+              totalShipping,
+              totalAmount: payment.amount,
+              transactionId: payment.transactionId,
+              paymentDate: new Date().toLocaleDateString('en-GB'),
+              shippingAddress: firstOrder?.shippingAddress,
+              postCode: firstOrder?.postCode,
+              town: firstOrder?.town,
+              loginAsCompany: firstOrder?.loginAsCompany,
+              companyName: firstOrder?.companyName,
+              ico: firstOrder?.ico,
+              dic: firstOrder?.dic,
+              ic_dph: firstOrder?.ic_dph,
+            });
+          } catch (err) {
+            console.error('❌ Gear invoice email failed:', err);
+          }
+        });
       } 
 
       else if (payment.paymentType === 'workshop' && payment.workshopId) {
 
 
-        console.log("==payment  workshop  =>>>>>> ", payment)
         // 1️⃣ Generate custom order ID
         const today = moment().format('YYYYMMDD');
         const prefix = 'WORKSHOP';
@@ -210,7 +303,7 @@ const confirmPayment = async (sessionId: string) => {
               paymentStatus: 'completed',
               instructorPayment: {
                 status: 'pending',
-                amount: payment.netAmount, // from your Payment model
+                amount: payment.netAmount,
                 paidAt: null,
               },
               name: payment.name,
@@ -228,6 +321,50 @@ const confirmPayment = async (sessionId: string) => {
           ],
           { session: dbSession },
         );
+
+        // ✅ Send workshop invoice email (non-blocking)
+        process.nextTick(async () => {
+          try {
+            const [client, workshop, instructor] = await Promise.all([
+              User.findById(payment.userId).select('name email').lean(),
+              Workshop.findById(payment.workshopId).select('title date time locationType location workshopLink price mainPrice vatAmount vatPercent').lean(),
+              User.findById(payment.serviceProviderId).select('name').lean(),
+            ]);
+            if (client?.email && workshop) {
+              const ws = workshop as any;
+              const basePrice = ws.price || 0;
+              const vatAmount = ws.vatAmount || 0;
+              const totalPrice = ws.mainPrice || payment.amount;
+              await sendWorkshopInvoiceEmail({
+                sentTo: (client as any).email,
+                customerName: (client as any).name || payment.name || 'Customer',
+                workshopTitle: ws.title,
+                workshopDate: ws.date ? new Date(ws.date).toLocaleDateString('en-GB') : '',
+                workshopTime: ws.time || '',
+                location: ws.locationType === 'online' ? (ws.workshopLink || '') : (ws.location || ''),
+                locationType: ws.locationType,
+                basePrice,
+                vatPercent: ws.vatPercent || 0,
+                vatAmount,
+                totalPrice,
+                orderId: customOrderId,
+                transactionId: payment.transactionId,
+                paymentDate: new Date().toLocaleDateString('en-GB'),
+                streetAddress: payment.streetAddress,
+                town: payment.town,
+                country: payment.country,
+                isRegisterAsCompany: payment.isRegisterAsCompany,
+                companyName: payment.companyName,
+                ICO: payment.ICO,
+                DIC: payment.DIC,
+                IC_DPH: payment.IC_DPH,
+                instructorName: (instructor as any)?.name || undefined,
+              });
+            }
+          } catch (err) {
+            console.error('❌ Workshop invoice email failed:', err);
+          }
+        });
       } 
       else if (payment.paymentType === 'subscription' && payment.subscriptionDays) {
 
@@ -511,6 +648,7 @@ const getMyPaymentsStats = async (userId: string) => {
       },
     },
   ]);
+
 
   return {
     totalSpent: stats[0]?.totalSpent || 0,

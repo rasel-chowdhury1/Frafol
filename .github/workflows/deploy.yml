@@ -1,3 +1,4 @@
+
 name: Deploy Backend to VPS
 
 on:
@@ -13,73 +14,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy to VPS via SSH
+      - name: Setup SSH and validate secrets
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 76.13.133.178
+          host: ${{ secrets.DROPLET_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
+          port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            echo "✅ SSH CONNECTED"
-            whoami
-            hostname
+            # export PATH=$PATH:/usr/bin:/usr/local/bin:/root/.local/share/fnm/node-versions/v24.12.0/installation/bin
 
-# name: Deploy Backend to VPS
+            # Initialize fnm Node environment
+            export FNM_DIR="/root/.local/share/fnm"
+            export PATH="$FNM_DIR:$PATH"
+            eval "$(fnm env)"
 
-# on:
-#   push:
-#     branches:
-#       - main
-
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
-
-#       - name: Setup SSH and validate secrets
-#         uses: webfactory/ssh-agent@v0.7.0
-#         with:
-#           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-#       - name: Deploy to VPS
-#         uses: appleboy/ssh-action@v1.0.3
-#         with:
-#           host: ${{ secrets.DROPLET_IP }}
-#           username: root
-#           key: ${{ secrets.SSH_PRIVATE_KEY }}
-#           port: ${{ secrets.SSH_PORT || 22 }}
-#           script: |
-#             # export PATH=$PATH:/usr/bin:/usr/local/bin:/root/.local/share/fnm/node-versions/v24.12.0/installation/bin
-
-#             # Initialize fnm Node environment
-#             export FNM_DIR="/root/.local/share/fnm"
-#             export PATH="$FNM_DIR:$PATH"
-#             eval "$(fnm env)"
-
-#             # Verify Node, npm, pm2
-#             node -v
-#             npm -v
-#             pm2 -v
+            # Verify Node, npm, pm2
+            node -v
+            npm -v
+            pm2 -v
 
             
 
-#             cd /applications/Frafol || exit 1
+            cd /applications/Frafol || exit 1
 
-#             git fetch --all
-#             git reset --hard origin/main
+            git fetch --all
+            git reset --hard origin/main
 
-#             npm install
+            npm install
 
-#             if pm2 describe Frafol_Backend > /dev/null 2>&1; then
-#                 pm2 restart Frafol_Backend
-#             else
-#                 pm2 start npm --name "Frafol_Backend" -- run dev
-#             fi
+            if pm2 describe Frafol_Backend > /dev/null 2>&1; then
+                pm2 restart Frafol_Backend
+            else
+                pm2 start npm --name "Frafol_Backend" -- run dev
+            fi
 
-#             pm2 save
+            pm2 save
 
-#             echo "✅ Deployment finished!"
+            echo "✅ Deployment finished!"

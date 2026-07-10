@@ -807,6 +807,7 @@ const declineOrderRequest = async (
       throw new AppError(403, "You are not authorized to decline this order");
     }
 
+
     order.status = "declined";
     order.declineReason = reason;
     order.statusTimestamps.declinedAt = new Date();
@@ -814,6 +815,7 @@ const declineOrderRequest = async (
     if (order.userId.toString() !== clientId) {
       throw new AppError(403, "You are not authorized to decline this order");
     }
+
     order.status = "deliveryRequestDeclined";
     order.deliveryRequestDeclinedReason = reason;
     order.statusTimestamps.deliveryRequestDeclineAt = new Date();
@@ -829,13 +831,22 @@ const declineOrderRequest = async (
   // 6️⃣ Save the order after all updates
   await order.save();
 
+  const receiverId: any =
+  status === "declined"
+    ? new mongoose.Types.ObjectId(order.userId)
+    : status === "deliveryRequestDeclined"
+    ? new mongoose.Types.ObjectId(order.serviceProviderId)
+    : undefined;
+
   // Optionally, notify the service provider (uncomment to enable)
   sentNotificationForOrderDeclined({
     orderType: order.orderType,
     userId: new mongoose.Types.ObjectId(clientId), // sender = client
-    receiverId: new mongoose.Types.ObjectId(order.serviceProviderId), // receiver = service provider
+    receiverId, // receiver = service provider
     serviceType: order.serviceType,
     packageName: order.packageId ? order.packageId.title : undefined,
+    status,
+    reason,
   }).catch((err) => console.error("Notification failed:", err));
 
   return order;
@@ -1231,7 +1242,8 @@ const getServiceProviderCalendar = async (
       $match: {
         serviceProviderId: new Types.ObjectId(serviceProviderId),
         isDeleted: false,
-        // date: { $gte: startDate, $lte: endDate },
+        status: { $in: ["accepted", "inProgress"] },
+        date: { $gte: new Date() },
       },
     },
     {

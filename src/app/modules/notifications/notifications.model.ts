@@ -28,6 +28,8 @@ const NotificationSchema = new Schema<INotification>(
       enum: ['DirectBookingRequest', // user → photographer/videographer
         'CustomBookingRequest', // user → photographer/videographer
         'BookingAccepted', // photographer/videographer → user
+        'DirectBookingAccepted',
+        'CustomBookingAccepted',
         'BookingRejected',
         'BookingPaymentPending',
         'BookingProcessing',
@@ -38,6 +40,7 @@ const NotificationSchema = new Schema<INotification>(
         "DirectBookingInProgress",
         "CustomBookingInProgress",
         'WorkshopAdded',
+        "WorkshopApproved",
         'PackageAdded',
         'GearAdded',
         'AdminNotice',

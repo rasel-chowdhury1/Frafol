@@ -11,7 +11,7 @@ export const messageRoutes = Router();
 messageRoutes
   .post(
     '/send', 
-    auth('user', 'admin'), 
+    auth('user', 'admin', USER_ROLE.COMPANY), 
     messageController.sendMessage
   )
 

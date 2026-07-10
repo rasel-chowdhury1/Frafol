@@ -11,13 +11,19 @@ import { sentNotificationForWorkshopApproved, sentNotificationForWorkshopDecline
 
 const createWorkshop = async (payload: IWorkshop) => {
 
+
+  console.log("workshop payload =>>>>>>>> ", payload)
   // ✅ Keep vatPercent as percentage (e.g., 15 for 15%)
   payload.vatPercent = payload.vatAmount as number;
 
   // ✅ Calculate actual VAT amount based on main price
   payload.vatAmount = (payload.price * payload.vatPercent) / 100;
 
-  return await Workshop.create(payload);
+  console.log("after calculate workshop => ", payload)
+
+  const result = await Workshop.create(payload);
+  console.log({result});
+  return result;
 };
 
 

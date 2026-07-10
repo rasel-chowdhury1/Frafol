@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  # ──────────────────────────────────────────────────────────
+  # Backend — Node.js / Express / TypeScript
+  # ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: frafol_backend
+    restart: unless-stopped
+    ports:
+      - "9010:9010"   # REST API
+      - "9020:9020"   # Socket.IO
+    env_file:
+      - .env          # DATABASE_URL (Atlas) is read from here
+    environment:
+      NODE_ENV: production
+      PORT: 9010
+      SOCKET_PORT: 9020
+    volumes:
+      - uploads:/app/public/uploads   # persists uploaded files across restarts
+      - logs:/app/logs                # persists Winston log files
+
+# ──────────────────────────────────────────────────────────
+# Named volumes
+# ──────────────────────────────────────────────────────────
+volumes:
+  uploads:
+  logs:

@@ -48,7 +48,7 @@ const createGearMarketplace = catchAsync(async (req: Request, res: Response) => 
 const getAllGearMarketplaces = catchAsync(async (req: Request, res: Response) => {
 
 
-  console.log("Query:", req.query);
+  console.log("Query=>>>>>>>>>>>>>>>>>>>> :", req.query);
     // Clean query
   const cleanedQuery: Record<string, any> = {};
   Object.entries(req.query).forEach(([key, value]) => {
@@ -158,8 +158,8 @@ const updateGearMarketplace = catchAsync(async (req: Request, res: Response) => 
 
 const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Response) => {
 
-  const {approvalStatus} = req.body as { approvalStatus: ApprovalStatus };
-  
+  const { approvalStatus, reason } = req.body as { approvalStatus: ApprovalStatus; reason?: string };
+
     if (!approvalStatus) {
       sendResponse(res, {
         statusCode: httpStatus.BAD_REQUEST,
@@ -171,7 +171,8 @@ const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Respons
 
   const result = await GearMarketplaceService.updateApprovalStatusByAdmin(
     req.params.id,
-    approvalStatus
+    approvalStatus,
+    reason
   );
 
   sendResponse(res, {

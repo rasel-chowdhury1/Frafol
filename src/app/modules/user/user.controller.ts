@@ -286,7 +286,7 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 
 const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
 
-
+console.log("======== upload new video =>>>>>>> ", )
   if (req?.file) {
     req.body.introVideo = storeFile('video', req?.file?.filename);
   }
