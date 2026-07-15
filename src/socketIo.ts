@@ -125,6 +125,8 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
           isRead: false,
         });
 
+        emitMessage(socket.user._id.toString());
+
         socket.emit(`notification`, {
               statusCode: 200,
               success: true,
@@ -282,6 +284,39 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
         },
       );
 
+      // ======= read message ====
+      socket.on('readMessage', async (_, callback) => {
+        try {
+
+          console.log("readMessage event hitteeddd =>>>>>>>>>>>>>>>> ");
+console.log("socket user =>>>>>>>>>>> ", socket.user);
+
+          const userId = socket.user?._id;
+
+          console.log({userId})
+          if (!userId) {
+            return callbackFn(callback, { success: false, message: 'Unauthorized' });
+          }
+
+          // Mark ALL unseen messages sent by others to this user as seen
+          const updated = await Message.updateMany(
+            {  receiver: new Types.ObjectId(userId), seen: false },
+            { $set: { seen: true }, $addToSet: { readBy: userId } },
+          );
+
+          callbackFn(callback, {
+            success: true,
+            message: `${updated.modifiedCount} message(s) marked as read`,
+          });
+        } catch (err: any) {
+          console.error('Socket readMessage error:', err);
+          callbackFn(callback, {
+            success: false,
+            message: err.message || 'Failed to mark messages as read',
+          });
+        }
+      });
+
       //----------------------chat list start------------------------//
       socket.on('my-chat-list', async ({}, callback) => {
         try {
@@ -409,7 +444,8 @@ export const emitNotification = async ({
 };
 
 export const emitMessage = async(userId: string) =>{
-      if (!io) {
+
+  if (!io) {
     throw new Error('Socket.IO is not initialized');
   }
 
@@ -417,7 +453,7 @@ export const emitMessage = async(userId: string) =>{
   const userSocket = connectedUsers.get(userId.toString());
 
   const unreadCount = await Message.countDocuments({
-    receiver: userId,
+    receiver: new Types.ObjectId(userId),
     seen: false,
   });
 
@@ -428,7 +464,7 @@ export const emitMessage = async(userId: string) =>{
       // message: userMsg,
       statusCode: 200,
       success: true,
-      unreadCount: unreadCount >= 0 ? unreadCount + 1 : 1,
+      unreadCount: unreadCount >= 0 ? unreadCount : 1,
     });
   }
 }

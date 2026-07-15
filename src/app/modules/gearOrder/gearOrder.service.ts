@@ -341,8 +341,8 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
     GearOrder.find(baseQuery)
-      .populate("clientId", "name  email phone companyName ico dic ic_dph address")
-      .populate("sellerId", "name  email phone companyName ico dic ic_dph address")
+      .populate("clientId", "name  email phone companyName ico dic ic_dph address town zipCode")
+      .populate("sellerId", "name  email phone companyName ico dic ic_dph address town zipCode")
       .populate("gearMarketplaceId", " name price vatAmount totalVatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
       .populate("paymentId", "transactionId paymentMethod"),
     query
@@ -438,8 +438,8 @@ const getMyGearOrders = async (
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
     GearOrder.find(baseQuery)
-      .populate("clientId", "name  email phone companyName ico dic ic_dph address")
-      .populate("sellerId", "name  email phone companyName ico dic ic_dph address")
+      .populate("clientId", "name  email phone companyName ico dic ic_dph address ")
+      .populate("sellerId", "name  email phone companyName ico dic ic_dph address town zipCode")
       .populate("gearMarketplaceId", " name price vatAmount totalVatAmount platformCommission mainPrice description condition shippingCompany gallery status approvalStatus ")
       .populate("paymentId", "transactionId paymentMethod"),
     queryParams

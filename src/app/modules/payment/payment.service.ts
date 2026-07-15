@@ -36,6 +36,7 @@ const createPaymentSession = async (payload: {
   subscriptionDays?: number;
   streetAddress?: string ;
   town?: string, 
+  zipCode?: string;
   country?: string , 
   isRegisterAsCompany?: boolean, 
   companyName?: string, 
@@ -309,6 +310,7 @@ const confirmPayment = async (sessionId: string) => {
               name: payment.name,
               streetAddress: payment.streetAddress,
               town: payment.town,
+              zipCode: payment.zipCode,
               country: payment.country,
               isRegisterAsCompany: payment.isRegisterAsCompany,
               companyName: payment.companyName,
@@ -569,18 +571,18 @@ const getPayments = async (query: any) => {
 
   const paymentQuery = new QueryBuilder(
     Payment.find(filter)
-      .populate('userId', 'name companyName profileImage email ico dic ic_dph')
+      .populate('userId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
       .populate('eventOrderId', 'title orderId serviceType orderType date price priceWithServiceFee vatAmount couponCode couponDiscount totalPrice')
       .populate('workshopId', 'orderId title date time price mainPrice vatAmount couponCode couponDiscount')
-      .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph')
-      .populate('serviceProviders.serviceProviderId', 'name email')
+      .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
+      .populate('serviceProviders.serviceProviderId', 'name email  address town zipCode')
       .populate({
         path: 'gearOrderIds',
         select: 'orderId paymentStatus orderStatus sellerId clientId',
         populate: [
           { path: 'gearMarketplaceId', select: 'name price mainPrice vatAmount totalVatAmount platformCommission shippingCompany' },
-          { path: 'sellerId', select: 'name companyName profileImage email ico dic ic_dph' },
-          { path: 'clientId', select: 'name companyName profileImage email ico dic ic_dph' },
+          { path: 'sellerId', select: 'name companyName profileImage email ico dic ic_dph  address town zipCode' },
+          { path: 'clientId', select: 'name companyName profileImage email ico dic ic_dph  address town zipCode' },
         ],
       }),
     query,

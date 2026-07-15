@@ -95,8 +95,8 @@ const getEventOrders = async (query: Record<string, unknown>) => {
     .fields();
 
   const result = await eventOrderQuery.modelQuery
-    .populate("userId", "name sureName profileImage role switchRole email address ico dic ic_dph")
-    .populate("serviceProviderId", "name sureName profileImage role switchRole email address ico dic ic_dph")
+    .populate("userId", "name sureName profileImage role switchRole email address town zipCode ico dic ic_dph")
+    .populate("serviceProviderId", "name sureName profileImage role switchRole email address town zipCode ico dic ic_dph")
     .populate("packageId", "title description price vatAmount mainPrice")
     .exec();
 
@@ -213,8 +213,8 @@ const getMyEventOrders = async (
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
     EventOrder.find(baseQuery)
-      .populate("userId", "name profileImage email phone companyName ico dic ic_dph address")
-      .populate("serviceProviderId", "name profileImage email phone companyName ico dic ic_dph address")
+      .populate("userId", "name profileImage email phone companyName ico dic ic_dph address town zipCode")
+      .populate("serviceProviderId", "name profileImage email phone companyName ico dic ic_dph address town zipCode")
       .populate({
         path: "packageId",
         select: "title price description",

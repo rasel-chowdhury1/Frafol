@@ -37,7 +37,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
      console.log('mail send started =>>>>>>>>> ');
     await transporter.sendMail({
-      from: `"${config.smtp.fromName}" <${config.smtp.user}>`, // sender address
+      from: `"${config.smtp.fromName}" <${config.smtp.fromEmail}>`, // sender address 
       to, // list of receivers
       subject,
       html, // html body

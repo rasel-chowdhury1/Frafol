@@ -16,7 +16,9 @@ import { Coupon } from "../coupon/coupon.model";
 const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
   
   const userId = (req as any)?.user?.userId;
-  const { paymentType, couponCode,name, streetAddress, town, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH  } = req.body;
+
+  // console.log("create payment session =>>> ", req.body)
+  const { paymentType, couponCode,name, streetAddress, town, zipCode, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH  } = req.body;
 
   if (!paymentType) throw new AppError(400, "paymentType is required");
 
@@ -49,7 +51,6 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     case "workshop": {
         const { workshopId } = req.body;
 
-        console.log("workshop body =>>>> ", req.body)
 
         if (!workshopId) {
           throw new AppError(httpStatus.BAD_REQUEST, "workshopId is required for workshop payment");
@@ -68,7 +69,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
         }
 
 
-        console.log("isExist workshop =>>>>> ", isExistWorkshop)
+        // console.log("isExist workshop =>>>>> ", isExistWorkshop)
 
         // 🔹 Assign service provider (instructor)
         serviceProviderId = isExistWorkshop.authorId.toString();
@@ -191,7 +192,7 @@ const createPaymentSession = catchAsync(async (req: Request, res: Response) => {
     gearOrderId: paymentType === "gear" ? orderReferenceId : undefined,
     subscriptionDays: paymentType === "subscription" ? Number(req.body.days) : undefined,
     name,
-    streetAddress, town, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH
+    streetAddress, town, zipCode, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH
 
   };
 

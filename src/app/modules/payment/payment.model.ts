@@ -98,6 +98,7 @@ const PaymentSchema = new Schema<IPayment>(
     serviceProviderPaidAt: { type: Date },
     streetAddress: { type: String },
     town: { type: String },
+    zipCode: {type: String},
     country: { type: String },
 
     // ✅ Company Info (for custom orders)

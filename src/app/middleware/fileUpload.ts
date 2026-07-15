@@ -15,7 +15,6 @@ const fileUpload = (uploadDirectory: string) => {
     destination: function (req: Request, file, cb) {
       // Set destination based on the provided upload directory
 
-      console.log("field name =>>> ", file.fieldname);
 
       if (file.fieldname === 'introVideo' || file.fieldname === 'video') {
         cb(null, './public/uploads/video');

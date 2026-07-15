@@ -112,7 +112,11 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 // refresh token
 const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
+  console.log("headers =>>> ", req.headers);
+  
   const refreshToken = req.headers?.refreshtoken as string;
+
+  console.log("refresh token =>>> ", refreshToken)
   const result = await authServices.refreshToken(refreshToken);
 
 

@@ -40,6 +40,7 @@ export const createStripePaymentSession = async (payload: {
   name?: string;
   streetAddress?: string ;
   town?: string, 
+  zipCode?: string;
   country?: string , 
   isRegisterAsCompany?: boolean, 
   companyName?: string, 
@@ -65,6 +66,7 @@ export const createStripePaymentSession = async (payload: {
     name,
     streetAddress, 
     town, 
+    zipCode,
     country, 
     isRegisterAsCompany, 
     companyName, 
@@ -178,7 +180,7 @@ export const createStripePaymentSession = async (payload: {
     workshopId,
     subscriptionDays,
     name,
-    streetAddress, town, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH
+    streetAddress, town, zipCode, country, isRegisterAsCompany, companyName, ICO, DIC, IC_DPH
   };
 
   let paymentRecord;
@@ -186,7 +188,7 @@ export const createStripePaymentSession = async (payload: {
   try {
     paymentRecord = await Payment.create(newPayment);
 
-    console.log("payemnt create =>>> ", paymentRecord)
+    // console.log("payemnt create =>>> ", paymentRecord)
   }
   catch (error) {
     console.log("=== error =>>>> ",error)

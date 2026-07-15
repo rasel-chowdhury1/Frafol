@@ -16,6 +16,7 @@ export interface IWorkshopParticipant {
   };
   streetAddress?: string;
   town?: string;
+  zipCode?: string;
   country?: string;
   isRegisterAsCompany?: boolean;
   companyName?: string;

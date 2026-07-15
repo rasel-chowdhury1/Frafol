@@ -12,17 +12,16 @@ import { sentNotificationForWorkshopApproved, sentNotificationForWorkshopDecline
 const createWorkshop = async (payload: IWorkshop) => {
 
 
-  console.log("workshop payload =>>>>>>>> ", payload)
   // ✅ Keep vatPercent as percentage (e.g., 15 for 15%)
   payload.vatPercent = payload.vatAmount as number;
 
   // ✅ Calculate actual VAT amount based on main price
   payload.vatAmount = (payload.price * payload.vatPercent) / 100;
 
-  console.log("after calculate workshop => ", payload)
+
 
   const result = await Workshop.create(payload);
-  console.log({result});
+
   return result;
 };
 
@@ -143,7 +142,7 @@ const getMyRegisteredWorkshops = async (userId: string, query: Record<string, un
         path: "workshopId",
         populate: {
           path: "authorId",
-          select: "name companyName sureName address role profileImage ico dic ic_dph",
+          select: "name companyName sureName address town zipCode role profileImage ico dic ic_dph  ",
         },
       }),
     query
@@ -193,8 +192,8 @@ const getPendingWorkshops = async (
 const getParticipantsByWorkshop = async (workshopId: string) => {
 
   const participants = await WorkshopParticipant.find({workshopId,isDeleted: false})
-                                                .populate('clientId', 'name email profileImage')
-                                                .populate('instructorId', 'name email profileImage ico dic ic_dph')
+                                                .populate('clientId', 'name email profileImage address town zipCode')
+                                                .populate('instructorId', 'name companyName email profileImage ico dic ic_dph address town zipCode')
                                                 .populate('workshopId', 'title date time price mainPrice vatAmount');
 
 

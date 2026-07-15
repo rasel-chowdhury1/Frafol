@@ -2164,9 +2164,9 @@ const getMyEarnings = async (
         paymentType: 'event',
         paymentStatus: 'completed',
       })
-        .populate('userId', 'name companyName profileImage email')
-        .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph')
-        .populate('eventOrderId', 'title serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
+        .populate('userId', 'name companyName profileImage email  address town zipCode')
+        .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
+        .populate('eventOrderId', 'orderId title serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
       restQuery,
     )
       .search(['transactionId'])
@@ -2198,8 +2198,8 @@ const getMyEarnings = async (
         isDeleted: false,
       })
         .populate({ path: 'gearMarketplaceId', select: 'name price mainPrice vatAmount totalVatAmount platformCommission shippingCompany' })
-        .populate('clientId', 'name companyName profileImage email')
-        .populate('sellerId', 'name companyName profileImage email ico dic ic_dph')
+        .populate('clientId', 'name companyName profileImage email  address town zipCode')
+        .populate('sellerId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
         ,
       restQuery,
     )
@@ -2232,8 +2232,8 @@ const getMyEarnings = async (
         isDeleted: false,
       })
         .populate({ path: 'workshopId', select: 'title date time price mainPrice vatAmount' })
-        .populate('clientId', 'name email profileImage')
-        .populate('instructorId', 'name email profileImage ico dic ic_dph'),
+        .populate('clientId', 'name email profileImage  address town zipCode')
+        .populate('instructorId', 'name email profileImage ico dic ic_dph  address town zipCode'),
       restQuery,
     )
       .search(['orderId'])

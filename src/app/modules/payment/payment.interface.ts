@@ -35,6 +35,7 @@ export interface IPayment {
   workshopId?: Types.ObjectId;
   streetAddress?: string;
   town?: string;
+  zipCode?: string;
   country?: string;
   isRegisterAsCompany?: boolean;
   companyName?: string;

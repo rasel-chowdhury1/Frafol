@@ -106,6 +106,8 @@ const getMyGearOrders = catchAsync(async (req: Request, res: Response) => {
     rest
   );
 
+  
+
   sendResponse(res, {
     success: true,
     statusCode: 200,
