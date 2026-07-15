@@ -2841,12 +2841,11 @@ const createAdmin = async ({
     throw new AppError(httpStatus.CONFLICT, 'An account with this email already exists');
   }
 
-  const hashedPassword = await bcrypt.hash(password, Number(config.bcrypt_salt_rounds));
 
   const admin = await User.create({
     name,
     email,
-    password: hashedPassword,
+    password: password,
     phone,
     address,
     role: USER_ROLE.ADMIN,
