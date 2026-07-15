@@ -2880,7 +2880,7 @@ const deleteAdmin = async (adminId: string) => {
   const admin = await User.findOne({ _id: adminId, role: USER_ROLE.ADMIN });
   if (!admin) throw new AppError(httpStatus.NOT_FOUND, 'Admin not found');
 
-  return User.findByIdAndUpdate(adminId, { isDeleted: true }, { new: true }).select('-password');
+  return User.findByIdAndDelete(adminId).select('-password');
 };
 
 const updateAdmin = async (
