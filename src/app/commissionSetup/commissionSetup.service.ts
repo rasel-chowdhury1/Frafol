@@ -1,7 +1,5 @@
 import { CommissionSetup } from "./commissionSetup.model";
 import { ICommissionSetup, IUpdateCommissionSetup } from "./commissionSetup.interface";
-import httpStatus from "http-status";
-import AppError from "../error/AppError";
 
 const createOrUpdateCommissionSetup = async (payload: ICommissionSetup) => {
   let setup = await CommissionSetup.findOne();
@@ -18,8 +16,15 @@ const createOrUpdateCommissionSetup = async (payload: ICommissionSetup) => {
 };
 
 const getCommissionSetup = async () => {
-  const setup = await CommissionSetup.findOne();
-  if (!setup) throw new AppError(httpStatus.NOT_FOUND, "Commission setup not found");
+  let setup = await CommissionSetup.findOne();
+  if (!setup) {
+    setup = await CommissionSetup.create({
+      photoVideoGrapy: 0,
+      minimumCharge: 0,
+      gearOrders: 0,
+      workShop: 0,
+    });
+  }
   return setup;
 };
 
