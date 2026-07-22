@@ -13,7 +13,7 @@ router
   )
   .get(
     "/",
-    // auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     CommissionSetupController.getCommission
   )
   .patch(
