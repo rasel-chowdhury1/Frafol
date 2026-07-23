@@ -640,7 +640,7 @@ const getMyPaymentsStats = async (userId: string) => {
   if (!userId) throw new Error('userId is required');
 
   const stats = await Payment.aggregate([
-    { $match: { userId: new Types.ObjectId(userId) } },
+    { $match: { userId: new Types.ObjectId(userId), paymentStatus: "completed" } },
 
     {
       $group: {
