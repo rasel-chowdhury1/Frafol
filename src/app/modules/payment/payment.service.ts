@@ -661,7 +661,7 @@ const getMyPaymentsStats = async (userId: string) => {
 const getMyPayments = async (userId: string, query: any) => {
   if (!userId) throw new Error('userId is required');
 
-  const filter: Record<string, any> = { userId };
+  const filter: Record<string, any> = { userId, paymentStatus: "completed" };
 
   // Optional filters
   if (query.paymentType && query.paymentType !== 'all') filter.paymentType = query.paymentType;
