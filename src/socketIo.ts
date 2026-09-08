@@ -10,7 +10,7 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearPaymentReceivedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
@@ -237,11 +237,12 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
               images,
               time,
               messageId: newMessage._id,
+              approvalStatus: newMessage.approvalStatus
             };
 
             // âœ… Emit to sender (local message)
             socket.emit(`message_received::${chatId}`, messagePayload);
-              socket.emit('newMessage', messagePayload);
+            socket.emit('newMessage', messagePayload);
             // âœ… Emit only if receivers exist
             if (receiverSocketIds.length > 0) {
 
@@ -252,18 +253,21 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
               );
             }
 
-            // // ðŸ”” FIRE-AND-FORGET NOTIFICATIONS (NO WAIT)
-              for (const receiverId of receivers) {
-                sendNotificationForNewMessage({
-                  senderId: new mongoose.Types.ObjectId(socket.user?._id),
-                  receiverId: new mongoose.Types.ObjectId(receiverId.toString()),
-                  messageText: text || 'ðŸ“· Sent an image',
-                }).catch((err) => {
-                  console.error('Notification failed:', err);
-                });
-              }
+            if(newMessage.approvalStatus === 'approved') {
+                           // // ðŸ”” FIRE-AND-FORGET NOTIFICATIONS (NO WAIT)
+                for (const receiverId of receivers) {
+                  sendNotificationForNewMessage({
+                    senderId: new mongoose.Types.ObjectId(socket.user?._id),
+                    receiverId: new mongoose.Types.ObjectId(receiverId.toString()),
+                    messageText: text || 'ðŸ“· Sent an image',
+                  }).catch((err) => {
+                    console.error('Notification failed:', err);
+                  });
+                }
 
-            emitMessage(receivers[0].toString());
+              emitMessage(receivers[0].toString());
+            }
+
 
 
             // âœ… Reply callback
@@ -441,6 +445,7 @@ export const emitNotification = async ({
 
   // Save notification to the database
   await Notification.create(newNotification);
+  
 };
 
 export const emitMessage = async(userId: string) =>{
@@ -782,6 +787,46 @@ export const sentNotificationForDeliveryAccepted = async ({
 
 };
 
+export const sentNotificationForReviewRequest = async ({
+  customerId,
+  serviceProviderId,
+  serviceType,
+  packageName,
+}: {
+  customerId: mongoose.Types.ObjectId;
+  serviceProviderId: mongoose.Types.ObjectId;
+  serviceType?: string;
+  packageName?: string;
+}) => {
+  const serviceProvider = await User.findById(serviceProviderId).select('name profileImage');
+  const customer = await User.findById(customerId).select('name email emailNotificationsEnabled');
+
+  if (!serviceProvider || !customer) return;
+
+  const text = `Your order with ${serviceProvider.name} has been delivered. Please leave a review to share your experience.`;
+
+  const notificationPayload = {
+    userId: serviceProviderId, // actor = service provider whose order was delivered
+    receiverId: customerId, // receiver = customer who should leave the review
+    userMsg: { image: serviceProvider.profileImage || '', text, photos: [] },
+    type: 'ReviewRequest',
+  };
+
+  emitNotification(notificationPayload).catch((err) =>
+    console.error('Socket notification failed:', err),
+  );
+
+  if (customer.email && customer.emailNotificationsEnabled !== false) {
+    sendReviewRequestEmail({
+      sentTo: customer.email,
+      receiverName: customer.name || '',
+      serviceProviderName: serviceProvider.name || '',
+      serviceType,
+      packageName,
+    }).catch((err) => console.error('Email notification failed:', err));
+  }
+};
+
 export const sentNotificationForOrderDeclined = async ({
   orderType,
   userId, // sender = client
@@ -1078,10 +1123,18 @@ export const sentNotificationForCommentOrReply = async ({
   isReply: boolean;
   commentText: string;
 }) => {
+
+  console.log("sent notification =>>>> ", {
+  actorId,
+  receiverId,
+  communityTitle,
+  isReply,
+  commentText,
+})
   if (actorId.toString() === receiverId.toString()) return;
 
   const actor = await User.findById(actorId).select('name profileImage');
-  const receiver = await User.findById(receiverId).select('name email');
+  const receiver = await User.findById(receiverId).select('name email emailNotificationsEnabled');
 
   if (!actor || !receiver) return;
 
@@ -1100,13 +1153,23 @@ export const sentNotificationForCommentOrReply = async ({
     type: isReply ? 'CommentReply' : 'NewComment',
   };
 
+  console.log({
+  actorId,
+  receiverId,
+  communityTitle,
+  isReply,
+  commentText,
+})
+  console.log("payload of sent notificatio=>>> ", payload)
+
   await emitNotification(payload).catch((err) =>
     console.error('Socket error:', err),
   );
 
-  if (receiver.email) {
+  if (receiver.email && receiver.emailNotificationsEnabled !== false) {
     sendCommentOrReplyEmail({
       sentTo: receiver.email,
+      receiverId: receiver._id.toString(),
       receiverName: receiver.name || '',
       actorName: actor.name || '',
       communityTitle,
@@ -1348,6 +1411,225 @@ export const sentNotificationForGearMarketplaceDeclined = async ({
   }
 };
 
+export const sentNotificationForGearPaymentReceived = async ({
+  sellerId,
+  clientId,
+  itemName,
+}: {
+  sellerId: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  itemName?: string;
+}) => {
+  const seller = await User.findById(sellerId).select('name email');
+  const client = await User.findById(clientId).select('name');
+
+  if (!seller || !client) return;
+
+  const text = `Payment from ${client.name} has been received for your gear order${itemName ? ` "${itemName}"` : ''}. The order is now in progress.`;
+
+  const payload = {
+    userId: clientId,
+    receiverId: sellerId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'GearPaymentReceived',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (seller.email) {
+    sendGearPaymentReceivedEmail({
+      sentTo: seller.email,
+      receiverName: seller.name || '',
+      clientName: client.name || '',
+      itemName,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForGearDeliveryRequest = async ({
+  sellerId,
+  clientId,
+  itemName,
+}: {
+  sellerId: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  itemName?: string;
+}) => {
+  const seller = await User.findById(sellerId).select('name profileImage');
+  const client = await User.findById(clientId).select('name email');
+
+  if (!seller || !client) return;
+
+  const text = `${seller.name} has marked your gear order${itemName ? ` "${itemName}"` : ''} as delivered. Please confirm receipt.`;
+
+  const payload = {
+    userId: sellerId,
+    receiverId: clientId,
+    userMsg: { image: seller.profileImage || '', text, photos: [] },
+    type: 'GearDeliveryRequest',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (client.email) {
+    sendGearDeliveryRequestEmail({
+      sentTo: client.email,
+      receiverName: client.name || '',
+      senderName: seller.name || '',
+      itemName,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForGearDeliveryAccepted = async ({
+  sellerId,
+  clientId,
+  itemName,
+}: {
+  sellerId: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  itemName?: string;
+}) => {
+  const seller = await User.findById(sellerId).select('name email');
+  const client = await User.findById(clientId).select('name profileImage');
+
+  if (!seller || !client) return;
+
+  const text = `${client.name} has confirmed receipt of the gear order${itemName ? ` "${itemName}"` : ''}.`;
+
+  const payload = {
+    userId: clientId,
+    receiverId: sellerId,
+    userMsg: { image: client.profileImage || '', text, photos: [] },
+    type: 'GearDeliveryAccepted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (seller.email) {
+    sendGearDeliveryAcceptedEmail({
+      sentTo: seller.email,
+      receiverName: seller.name || '',
+      clientName: client.name || '',
+      itemName,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForGearDeliveryDeclined = async ({
+  sellerId,
+  clientId,
+  itemName,
+  reason,
+}: {
+  sellerId: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  itemName?: string;
+  reason?: string;
+}) => {
+  const seller = await User.findById(sellerId).select('name email');
+  const client = await User.findById(clientId).select('name profileImage');
+
+  if (!seller || !client) return;
+
+  const text = `${client.name} has declined the delivery for the gear order${itemName ? ` "${itemName}"` : ''}${reason ? `. Reason: "${reason}"` : '.'}`;
+
+  const payload = {
+    userId: clientId,
+    receiverId: sellerId,
+    userMsg: { image: client.profileImage || '', text, photos: [] },
+    type: 'GearDeliveryDeclined',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (seller.email) {
+    sendGearDeliveryDeclinedEmail({
+      sentTo: seller.email,
+      receiverName: seller.name || '',
+      clientName: client.name || '',
+      itemName,
+      reason,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForGearOrderCancelled = async ({
+  cancelledBy,
+  clientId,
+  itemName,
+  reason,
+}: {
+  cancelledBy: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  itemName?: string;
+  reason?: string;
+}) => {
+  const canceller = await User.findById(cancelledBy).select('name profileImage');
+  const client = await User.findById(clientId).select('name email');
+
+  if (!canceller || !client) return;
+
+  const text = `${canceller.name} has cancelled your gear order${itemName ? ` "${itemName}"` : ''}${reason ? `. Reason: "${reason}"` : '.'}`;
+
+  const payload = {
+    userId: cancelledBy,
+    receiverId: clientId,
+    userMsg: { image: canceller.profileImage || '', text, photos: [] },
+    type: 'GearOrderCancelled',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (client.email) {
+    sendGearOrderCancelledEmail({
+      sentTo: client.email,
+      receiverName: client.name || '',
+      cancelledByName: canceller.name || '',
+      itemName,
+      reason,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForGearOrderSold = async ({
+  sellerId,
+  clientId,
+  items,
+}: {
+  sellerId: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
+  items: { orderId: string; itemName: string; price: number }[];
+}) => {
+  const seller = await User.findById(sellerId).select('name email');
+  const client = await User.findById(clientId).select('name profileImage');
+
+  if (!seller || !client || !items.length) return;
+
+  const itemNames = items.map((i) => i.itemName).join(', ');
+  const text = items.length > 1
+    ? `${client.name} purchased ${items.length} of your gear items: ${itemNames}.`
+    : `${client.name} purchased your gear item "${itemNames}".`;
+
+  const payload = {
+    userId: clientId,
+    receiverId: sellerId,
+    userMsg: { image: client.profileImage || '', text, photos: [] },
+    type: 'GearOrderSold',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (seller.email) {
+    sendGearOrderSoldEmail({
+      sentTo: seller.email,
+      receiverName: seller.name || '',
+      clientName: client.name || '',
+      items,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
 export const sentNotificationForWorkshopApproved = async ({
   receiverId,
   workshopTitle,
@@ -1483,6 +1765,8 @@ export const sentNotificationForPackageDeclined = async ({
     type: 'PackageDeclined',
   };
 
+  console.log("payload =>>> ", payload);
+
   await emitNotification(payload).catch((err) =>
     console.error('Socket error:', err),
   );
@@ -1500,19 +1784,28 @@ export const sentNotificationForPackageDeclined = async ({
 
 export const sentNotificationForRefundRequired = async ({
   cancelledBy,
+  customerId,
   orderId,
   serviceType,
+  paidAmount,
 }: {
   cancelledBy: mongoose.Types.ObjectId;
+  customerId: mongoose.Types.ObjectId;
   orderId: mongoose.Types.ObjectId;
   serviceType?: string;
+  paidAmount?: number;
 }) => {
   const canceller = await User.findById(cancelledBy).select('name role companyName profileImage');
-  const admins = await User.find({ role: USER_ROLE.ADMIN, isDeleted: false }).select('_id name email');
+  const customer = await User.findById(customerId).select('email');
+  const admins = await User.find({ role: {
+    $in: [USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN],
+  }, isDeleted: false }).select('_id name email');
 
   if (!canceller || !admins.length) return;
 
-  const text = `Order #${orderId} for ${serviceType || 'a service'} has been cancelled by ${canceller.name}. A refund may be required.`;
+  const amountText = paidAmount !== undefined ? ` Paid amount: ${paidAmount.toFixed(2)} EUR.` : '';
+  const customerEmailText = customer?.email ? ` Customer: ${customer.email}.` : '';
+  const text = `Order #${orderId} for ${serviceType || 'a service'} has been cancelled by ${canceller.name}. A refund may be required.${customerEmailText}${amountText}`;
 
   await Promise.all(
     admins.map(async (admin) => {
@@ -1538,6 +1831,8 @@ export const sentNotificationForRefundRequired = async ({
           cancellerName: canceller.name || '',
           orderId: orderId.toString(),
           serviceType,
+          customerEmail: customer?.email,
+          paidAmount,
         }).catch((err) => console.error('Email failed:', err));
       }
     }),
@@ -1556,7 +1851,7 @@ export const sendNotificationForNewMessage = async ({
 }) => {
   // ðŸ”¹ Fetch sender & receiver
   const sender = await User.findById(senderId).select('name profileImage');
-  const receiver = await User.findById(receiverId).select('name email');
+  const receiver = await User.findById(receiverId).select('name email emailNotificationsEnabled');
 
   if (!sender || !receiver) {
     throw new AppError(404, 'User not found for message notification');
@@ -1568,9 +1863,10 @@ export const sendNotificationForNewMessage = async ({
   );
 
   // âœ‰ï¸ Send email
-  if (receiver.email) {
+  if (receiver.email && receiver.emailNotificationsEnabled !== false) {
     sendNewMessageEmail({
       sentTo: receiver.email,
+      receiverId: receiver._id.toString(),
       receiverName: receiver.name || '',
       senderName: sender.name || '',
       messageText,

@@ -6,7 +6,9 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
 import { Review } from "../review/review.model";
 import { Payment } from "../payment/payment.model";
-import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired } from "../../../socketIo";
+import { User } from "../user/user.model";
+import { sendEventOrderInvoiceEmail } from "../../utils/eamilNotifiacation";
+import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired, sentNotificationForReviewRequest } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -21,7 +23,9 @@ const createEventOrder = async (payload: IEventOrder) => {
     packageName: payload?.packageName, // only for direct order
     serviceType: payload?.serviceType, // only for custom order
   }).catch((err) => {
+
     console.error("Failed to send booking notification:", err.message);
+    
   });
 
   return result;
@@ -773,6 +777,86 @@ try {
     console.error("Failed to send delivery accepted notification:", err)
   );
 
+  // ⭐ Ask the customer to leave a review for the delivered order
+  sentNotificationForReviewRequest({
+    customerId: order.userId,
+    serviceProviderId: order.serviceProviderId,
+    serviceType: order.serviceType,
+    packageName,
+  }).catch((err) =>
+    console.error("Failed to send review request notification:", err)
+  );
+
+  // 🧾 Send the invoice to both the client and the professional
+  (async () => {
+    try {
+      if (!order.paymentId) return;
+
+      const [client, provider, payment] = await Promise.all([
+        User.findById(order.userId).select("name email").lean(),
+        User.findById(order.serviceProviderId).select("name email").lean(),
+        Payment.findById(order.paymentId).lean(),
+      ]);
+
+      if (!payment) return;
+
+      const price = order.price || 0;
+      const totalPrice = order.totalPrice || payment.amount;
+      const serviceFee = (order.priceWithServiceFee || 0) - price;
+
+      const invoiceBase = {
+        invoiceType: 'completed' as const,
+        orderId: order.orderId,
+        orderType: order.orderType,
+        serviceType: order.serviceType,
+        packageName,
+        eventDate: order.date ? new Date(order.date).toLocaleDateString("en-GB") : "",
+        eventTime: order.time || undefined,
+        location: order.location || undefined,
+        price,
+        serviceFee: serviceFee > 0 ? serviceFee : 0,
+        vatAmount: order.vatAmount || 0,
+        couponCode: order.couponCode || undefined,
+        couponDiscount: order.couponDiscount || 0,
+        totalPrice,
+        transactionId: payment.transactionId,
+        paymentMethod: payment.paymentMethod,
+        paymentDate: payment.createdAt
+          ? new Date(payment.createdAt).toLocaleDateString("en-GB")
+          : new Date().toLocaleDateString("en-GB"),
+        streetAddress: order.streetAddress,
+        town: order.town,
+        country: order.country,
+        isRegisterAsCompany: order.isRegisterAsCompany,
+        companyName: order.companyName,
+        ICO: order.ICO,
+        DIC: order.DIC,
+        IC_DPH: order.IC_DPH,
+      };
+
+      if (client?.email) {
+        await sendEventOrderInvoiceEmail({
+          ...invoiceBase,
+          sentTo: client.email,
+          customerName: client.name || "Customer",
+          serviceProviderName: provider?.name || undefined,
+        });
+      }
+
+      if (provider?.email) {
+        await sendEventOrderInvoiceEmail({
+          ...invoiceBase,
+          sentTo: provider.email,
+          customerName: client?.name || "Customer",
+          recipientName: provider.name || undefined,
+          serviceProviderName: provider.name || undefined,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send delivery invoice email:", err);
+    }
+  })();
+
   return order;
 };
 
@@ -1030,8 +1114,10 @@ const cancelOrder = async (orderId: string, userId: string) => {
 
   sentNotificationForRefundRequired({
     cancelledBy: new mongoose.Types.ObjectId(userId),
+    customerId: order.userId,
     orderId: order._id as mongoose.Types.ObjectId,
     serviceType: order.serviceType,
+    paidAmount: order.totalPrice,
   }).catch((err) => console.error('Admin refund notification failed:', err));
 
   return order;

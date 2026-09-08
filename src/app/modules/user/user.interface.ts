@@ -51,6 +51,7 @@ export interface TUserCreate {
   routingNumber: string;
   isBlocked: boolean;
   isDeleted: boolean;
+  emailNotificationsEnabled?: boolean;
   acceptTerms: boolean;
   allowedRoutes?: string[];
   deleteRequestStatus?: 'none' | 'pending' | 'approved' | 'rejected';

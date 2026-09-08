@@ -8,6 +8,14 @@ import { createGearStripePaymentSession } from '../payment/payment.utils';
 import QueryBuilder from '../../builder/QueryBuilder';
 import mongoose from 'mongoose';
 import { Payment } from '../payment/payment.model';
+import {
+  sentNotificationForGearPaymentReceived,
+  sentNotificationForGearDeliveryRequest,
+  sentNotificationForGearDeliveryAccepted,
+  sentNotificationForGearDeliveryDeclined,
+  sentNotificationForGearOrderCancelled,
+  sentNotificationForRefundRequired,
+} from '../../../socketIo';
 
 const createGearOrder = async (payload: IGearOrder) => {
   const order = await GearOrder.create(payload);
@@ -181,6 +189,14 @@ const completePaymentGearOrderById = async (gearOrderId: string) => {
     await session.commitTransaction();
     session.endSession();
 
+    // 🔔 Notify the seller that payment has been received
+    const gearItem = await GearMarketplace.findById(order.gearMarketplaceId).select('name').catch(() => null);
+    sentNotificationForGearPaymentReceived({
+      sellerId: order.sellerId,
+      clientId: order.clientId,
+      itemName: gearItem?.name,
+    }).catch((err) => console.error('Gear payment received notification failed:', err));
+
     return {
       message: "Payment completed successfully",
       gearOrder: order,
@@ -224,6 +240,13 @@ const requestGearMarketplaceDelivery = async (
 
   await order.save();
 
+  // 🔔 Notify the client that delivery has been requested
+  sentNotificationForGearDeliveryRequest({
+    sellerId,
+    clientId: order.clientId,
+    itemName: (order.gearMarketplaceId as any)?.name,
+  }).catch((err) => console.error('Gear delivery request notification failed:', err));
+
   return order;
 };
 
@@ -258,6 +281,13 @@ const acceptDeliveryRequestByClient = async (
   };
 
   await order.save();
+
+  // 🔔 Notify the seller that the client accepted the delivery
+  sentNotificationForGearDeliveryAccepted({
+    sellerId: order.sellerId,
+    clientId,
+    itemName: (order.gearMarketplaceId as any)?.name,
+  }).catch((err) => console.error('Gear delivery accepted notification failed:', err));
 
   return order;
 };
@@ -296,6 +326,14 @@ const declineDeliveryRequestByClient = async (
 
   await order.save();
 
+  // 🔔 Notify the seller that the client declined the delivery
+  sentNotificationForGearDeliveryDeclined({
+    sellerId: order.sellerId,
+    clientId,
+    itemName: (order.gearMarketplaceId as any)?.name,
+    reason,
+  }).catch((err) => console.error('Gear delivery declined notification failed:', err));
+
   return order;
 };
 
@@ -310,7 +348,7 @@ const cancelGearOrderBySeller = async (
   if (role !== "admin") query.sellerId = sellerId;
 
   // 🔹 Fetch the order
-  const order = await GearOrder.findOne(query);
+  const order = await GearOrder.findOne(query).populate("gearMarketplaceId", "name mainPrice");
   if (!order) throw new AppError(404, "Gear order not found or unauthorized");
 
   // 🔹 Prevent invalid cancellations
@@ -327,6 +365,27 @@ const cancelGearOrderBySeller = async (
   });
 
   await order.save();
+
+  const gearItem = order.gearMarketplaceId as any;
+
+  // 🔔 Notify the client that their order was cancelled
+  sentNotificationForGearOrderCancelled({
+    cancelledBy: sellerId,
+    clientId: order.clientId,
+    itemName: gearItem?.name,
+    reason,
+  }).catch((err) => console.error('Gear order cancelled notification failed:', err));
+
+  // 🔔 Notify admins that a refund may be required
+  if (order.paymentStatus === "received") {
+    sentNotificationForRefundRequired({
+      cancelledBy: sellerId,
+      customerId: order.clientId,
+      orderId: order._id as mongoose.Types.ObjectId,
+      serviceType: "gear item",
+      paidAmount: gearItem?.mainPrice,
+    }).catch((err) => console.error('Admin refund notification failed:', err));
+  }
 
   return order;
 };

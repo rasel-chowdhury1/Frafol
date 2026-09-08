@@ -2,7 +2,7 @@ import AppError from '../../error/AppError';
 import { Payment } from './payment.model';
 import { createStripePaymentSession, stripe } from './payment.utils';
 import { GetPaymentsQuery, IPayment } from './payment.interface';
-import { sentNotificationForPaymentSuccess } from '../../../socketIo';
+import { sentNotificationForPaymentSuccess, sentNotificationForGearOrderSold } from '../../../socketIo';
 import mongoose, { Types } from 'mongoose';
 import { EventOrder } from '../eventOrder/eventOrder.model';
 import { GearOrder } from '../gearOrder/gearOrder.model';
@@ -275,7 +275,41 @@ const confirmPayment = async (sessionId: string) => {
             console.error('❌ Gear invoice email failed:', err);
           }
         });
-      } 
+
+        // ✅ Notify each seller their item(s) sold (non-blocking)
+        process.nextTick(async () => {
+          try {
+            const populatedOrders = await GearOrder.find({ _id: { $in: payment.gearOrderIds } })
+              .populate('gearMarketplaceId', 'name mainPrice')
+              .lean();
+
+            const bySeller = new Map<string, { orderId: string; itemName: string; price: number }[]>();
+            for (const o of populatedOrders as any[]) {
+              const gear = o.gearMarketplaceId || {};
+              const sellerKey = o.sellerId.toString();
+              const items = bySeller.get(sellerKey) || [];
+              items.push({
+                orderId: o.orderId,
+                itemName: gear.name || 'Gear Item',
+                price: gear.mainPrice || 0,
+              });
+              bySeller.set(sellerKey, items);
+            }
+
+            await Promise.all(
+              Array.from(bySeller.entries()).map(([sellerId, items]) =>
+                sentNotificationForGearOrderSold({
+                  sellerId: new mongoose.Types.ObjectId(sellerId),
+                  clientId: new mongoose.Types.ObjectId(payment.userId),
+                  items,
+                }).catch((err) => console.error('Gear order sold notification failed:', err))
+              ),
+            );
+          } catch (err) {
+            console.error('❌ Gear order sold notification failed:', err);
+          }
+        });
+      }
 
       else if (payment.paymentType === 'workshop' && payment.workshopId) {
 

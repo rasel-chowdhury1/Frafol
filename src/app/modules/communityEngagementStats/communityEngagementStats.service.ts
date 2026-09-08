@@ -3,7 +3,8 @@ import { CommunityEngagementStats } from "./communityEngagementStats.model";
 import AppError from "../../error/AppError";
 import { Community } from "../community/community.model";
 import { sentNotificationForCommentOrReply } from "../../../socketIo";
-
+import httpStatus from 'http-status';
+import test from "node:test";
 
 const likeCommunity = async (communityId: string, userId: string) => {
   return await CommunityEngagementStats.findOneAndUpdate(
@@ -21,34 +22,116 @@ const unlikeCommunity = async (communityId: string, userId: string) => {
   );
 };
 
-const addCommentOrReply = async (communityId: string, userId: string, text: string, commentId?: string) => {
+const addCommentOrReply = async (
+  communityId: string,
+  userId: string,
+  text: string,
+  commentId?: string
+) => {
+  const community = await Community.findById(communityId)
+    .select("authorId title")
+    .lean();
 
+  if (!community) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Community not found"
+    );
+  }
+
+  const actorId = new Types.ObjectId(userId);
+
+  let receiverId = community.authorId;
+  let isReply = false;
   let result;
+
+  // =========================
+  // REPLY
+  // =========================
   if (commentId) {
+    const targetCommentId = new Types.ObjectId(commentId);
+
     result = await CommunityEngagementStats.findOneAndUpdate(
-      { communityId, "comments._id": commentId },
-      { $push: { "comments.$.replies": { user: userId, text } } },
-      { upsert: true, new: true }
+      {
+        communityId: new Types.ObjectId(communityId),
+        "comments._id": targetCommentId,
+      },
+      {
+        $push: {
+          "comments.$.replies": {
+            user: actorId,
+            text,
+          },
+        },
+      },
+      {
+        new: true,
+      }
+    ).lean();
+
+    if (!result) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Comment not found"
+      );
+    }
+
+    // Find the comment that received the reply
+    const comment = result.comments.find(
+      (comment) => comment._id.toString() === commentId
     );
-  } else {
-    result = await CommunityEngagementStats.findOneAndUpdate(
-      { communityId },
-      { $push: { comments: { user: userId, text } } },
-      { upsert: true, new: true }
-    );
+
+    if (!comment) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Comment not found"
+      );
+    }
+
+    // Reply notification goes to comment owner
+    receiverId = comment.user;
+    isReply = true;
   }
 
-  // 🔔 Notify the community author
-  const community = await Community.findById(communityId).select("authorId title");
-  if (community) {
-    sentNotificationForCommentOrReply({
-      actorId: new Types.ObjectId(userId),
-      receiverId: community.authorId,
-      communityTitle: community.title,
-      isReply: !!commentId,
-      commentText: text,
-    }).catch((err) => console.error("Notification failed:", err));
+  // =========================
+  // NEW COMMENT
+  // =========================
+  else {
+    result = await CommunityEngagementStats.findOneAndUpdate(
+      {
+        communityId: new Types.ObjectId(communityId),
+      },
+      {
+        $push: {
+          comments: {
+            user: actorId,
+            text,
+          },
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+      }
+    ).lean();
+
+    // New comment notification goes to community owner
+    receiverId = community.authorId;
   }
+
+  // =========================
+  // NOTIFICATION
+  // =========================
+
+  await sentNotificationForCommentOrReply({
+    actorId,
+    receiverId,
+    communityTitle: community.title,
+    isReply,
+    commentText: text,
+  }).catch((err) => {
+    console.error("Notification failed:", err);
+  });
 
   return result;
 };

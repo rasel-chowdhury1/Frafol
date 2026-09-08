@@ -162,7 +162,7 @@ const getMessagesForChat = async (
 
   // Use QueryBuilder for pagination, sorting, filtering
   const messageQuery = new QueryBuilder(
-    Message.find({ chat: chatId }).populate("sender", "name profileImage"),
+    Message.find({ chat: chatId, approvalStatus: "approved" }).populate("sender", "name profileImage"),
     query
   )
     .sort() // will default to '-createdAt' if no sort param is passed

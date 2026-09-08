@@ -30,17 +30,23 @@ transporter.verify((err, success) => {
 });  
 
 
-export const sendEmail = async (to: string, subject: string, html: string) => {
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  html: string,
+  headers?: Record<string, string>,
+) => {
 
 
 
   try {
      console.log('mail send started =>>>>>>>>> ');
     await transporter.sendMail({
-      from: `"${config.smtp.fromName}" <${config.smtp.fromEmail}>`, // sender address 
+      from: `"${config.smtp.fromName}" <${config.smtp.fromEmail}>`, // sender address
       to, // list of receivers
       subject,
       html, // html body
+      headers, // optional custom headers (e.g. List-Unsubscribe)
     });
 
     console.log('mail sended successfully =>>>>>>>> ');
