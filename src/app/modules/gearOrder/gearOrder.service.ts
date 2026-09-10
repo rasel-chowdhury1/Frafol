@@ -9,7 +9,7 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import mongoose from 'mongoose';
 import { Payment } from '../payment/payment.model';
 import {
-  sentNotificationForGearPaymentReceived,
+  sentNotificationForGearOrderPayoutCompleted,
   sentNotificationForGearDeliveryRequest,
   sentNotificationForGearDeliveryAccepted,
   sentNotificationForGearDeliveryDeclined,
@@ -189,13 +189,23 @@ const completePaymentGearOrderById = async (gearOrderId: string) => {
     await session.commitTransaction();
     session.endSession();
 
-    // 🔔 Notify the seller that payment has been received
-    const gearItem = await GearMarketplace.findById(order.gearMarketplaceId).select('name').catch(() => null);
-    sentNotificationForGearPaymentReceived({
-      sellerId: order.sellerId,
-      clientId: order.clientId,
-      itemName: gearItem?.name,
-    }).catch((err) => console.error('Gear payment received notification failed:', err));
+    // 🔔 Notify the seller that their payment/payout has been processed
+    Promise.all([
+      GearMarketplace.findById(order.gearMarketplaceId).select('name'),
+      Payment.findOne({ paymentType: 'gear', gearOrderIds: order._id, 'serviceProviders.serviceProviderId': order.sellerId }),
+    ])
+      .then(([gearItem, payment]) => {
+        const breakdown = payment?.serviceProviders?.find(
+          (sp) => sp.serviceProviderId.toString() === order.sellerId.toString(),
+        );
+        return sentNotificationForGearOrderPayoutCompleted({
+          sellerId: order.sellerId,
+          orderId: order.orderId,
+          itemName: gearItem?.name,
+          netAmount: breakdown?.netAmount,
+        });
+      })
+      .catch((err) => console.error('Gear payout completed notification failed:', err));
 
     return {
       message: "Payment completed successfully",
@@ -394,8 +404,10 @@ const cancelGearOrderBySeller = async (
 
 const getAllGearOrders = async (query: Record<string, unknown>) => {
 
+  console.log({query})
+
     // 🎯 Base query (non-deleted only)
-  const baseQuery: any = { isDeleted: false, status: { $ne: "delivered" } };
+  const baseQuery: any = { isDeleted: false, orderStatus: { $ne: "delivered" } };
 
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
@@ -406,6 +418,7 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
       .populate("paymentId", "transactionId paymentMethod"),
     query
   )
+    .filter()
     .sort()
     .paginate()
     .fields();

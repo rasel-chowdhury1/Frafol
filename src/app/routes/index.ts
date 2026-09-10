@@ -28,6 +28,7 @@ import { SubscriptionRoutes } from "../modules/subscription/subscription.route";
 import { TownRoutes } from "../modules/town/town.route";
 import { WorkshopParticipantRoutes } from "../modules/workshopParticipant/workshopParticipant.route";
 import { EmailUnsubscribeRoutes } from "../modules/emailUnsubscribe/emailUnsubscribe.route";
+import { MySubscriptionRoutes } from "../modules/mySubscription/mySubscription.route";
 
 const router = Router();
 
@@ -132,6 +133,11 @@ const moduleRoutes = [
    {
       path: "/subscription",
       route: SubscriptionRoutes
+   },
+
+   {
+      path: "/my-subscription",
+      route: MySubscriptionRoutes
    },
 
    {

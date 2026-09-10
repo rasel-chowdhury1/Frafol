@@ -161,6 +161,12 @@ userRoutes
   )
 
   .get(
+    "/cancelled-orders",
+    auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+    userController.getAllCancelledOrders
+  )
+
+  .get(
     "/towns/categories",
     userController.getTownAndIndividualCategoriesOptimized
   )

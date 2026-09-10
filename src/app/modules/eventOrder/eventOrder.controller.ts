@@ -381,7 +381,9 @@ const requestOrderDelivery = catchAsync(async (req: Request, res: Response) => {
     throw new AppError(401, "Unauthorized: User ID is missing");
   }
 
-  const result = await EventOrderService.requestOrderDelivery(orderId, userId);
+  const { deliveryLink, deliveryMessage } = req.body;
+
+  const result = await EventOrderService.requestOrderDelivery(orderId, userId,{deliveryLink,deliveryMessage,},);
   sendResponse(res, {
     statusCode: 200,
     success: true,

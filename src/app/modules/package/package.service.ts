@@ -88,7 +88,7 @@ export const getUserPackageAndReviewStats = async (authorId: string) => {
 
 
   // 2️⃣ Get all reviews received by this user serviceProviderId
-  const reviews = await Review.find({ serviceProviderId: authorId, isDeleted: false });
+  const reviews = await Review.find({ serviceProviderId: authorId, status: "done", isDeleted: false });
 
 
   const totalReviews = reviews.length;

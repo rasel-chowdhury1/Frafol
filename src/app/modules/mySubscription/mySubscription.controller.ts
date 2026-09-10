@@ -49,8 +49,40 @@ const cancelSubscription = async (req: Request, res: Response) => {
   });
 };
 
+const cancelSubscriptionByAdmin = async (req: Request, res: Response) => {
+  const adminId = req.user._id;
+  const { userId } = req.params;
+  const { reason } = req.body;
+
+  const result = await MySubscriptionService.cancelSubscriptionByAdmin(
+    userId as any,
+    adminId,
+    reason,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Subscription cancelled successfully',
+    data: result,
+  });
+};
+
+const getAllSubscriptions = async (req: Request, res: Response) => {
+  const result = await MySubscriptionService.getAllSubscriptions(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Subscriptions retrieved successfully',
+    data: result,
+  });
+};
+
 export const MySubscriptionController = {
   createMySubscription,
   getMySubscription,
   cancelSubscription,
+  cancelSubscriptionByAdmin,
+  getAllSubscriptions,
 };

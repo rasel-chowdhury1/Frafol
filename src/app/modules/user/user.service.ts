@@ -21,6 +21,7 @@ import { generateOptAndExpireTime } from '../otp/otp.utils';
 import { TPurposeType } from '../otp/otp.interface';
 import {
   accountBlockedEmail,
+  accountDeleteRejectedEmail,
   bankDetailsChangedEmail,
   otpSendEmail,
   profileVerifiedEmail,
@@ -32,7 +33,7 @@ import Profile from '../profile/profile.model';
 import Notification from '../notifications/notifications.model';
 import mongoose, { Types } from 'mongoose';
 import { getAdminId } from '../../DB/adminStrore';
-import { emitNotification, sentNotificationForProfileDeclined } from '../../../socketIo';
+import { emitNotification, sentNotificationForAccountDeleteRequest, sentNotificationForProfileDeclined } from '../../../socketIo';
 import { USER_ROLE, UserRole } from './user.constants';
 import fs from 'fs';
 import path from 'path';
@@ -1788,6 +1789,12 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Delete request failed');
   }
 
+  // 🔔 Notify admins that an account deletion request needs review
+  sentNotificationForAccountDeleteRequest({
+    userId: new Types.ObjectId(id),
+    reason: payload.reason,
+  }).catch((err) => console.error('Account delete request notification failed:', err));
+
   return { message: 'Delete request submitted. An admin will review and process it.' };
 };
 
@@ -1839,6 +1846,16 @@ const approveDeleteAccount = async (userId: string, adminId: string) => {
     isDeleted: true,
   }).catch((err) => console.error('Account deleted email failed:', err));
 
+  emitNotification({
+    userId: new Types.ObjectId(adminId),
+    receiverId: new Types.ObjectId(userId),
+    userMsg: {
+      image: '',
+      text: 'Your account deletion request has been approved. Your account has been deleted.',
+    },
+    type: 'AccountDeleteApproved',
+  } as any).catch((err) => console.error('Account delete approved notification failed:', err));
+
   return deleted;
 };
 
@@ -1859,6 +1876,24 @@ const rejectDeleteAccount = async (userId: string, adminId: string, reason: stri
     },
     { new: true },
   ).select('-password');
+
+  emitNotification({
+    userId: new Types.ObjectId(adminId),
+    receiverId: new Types.ObjectId(userId),
+    userMsg: {
+      image: '',
+      text: `Your account deletion request has been declined.${reason ? ` Reason: "${reason}"` : ''}`,
+    },
+    type: 'AccountDeleteRejected',
+  } as any).catch((err) => console.error('Account delete rejected notification failed:', err));
+
+  if ((user as any).email) {
+    accountDeleteRejectedEmail({
+      sentTo: (user as any).email,
+      name: (user as any).name || 'User',
+      reason,
+    }).catch((err) => console.error('Account delete rejected email failed:', err));
+  }
 
   return updated;
 };
@@ -2039,7 +2074,7 @@ const getOverviewOfSpecificUser = async (userId: string) => {
     actionRequired: {
       totalPaymentPending: event.totalPaymentPending + gear.totalPaymentPending,
       totalDeliveryConfirmation:
-        event.totalDeliveryConfirmation + gear.totalDeliveryConfirmation,
+        event.totalDeliveryConfirmation,
       totalCancelRequestConfirmation:
         event.totalCancelRequestConfirmation +
         gear.totalCancelRequestConfirmation,
@@ -2728,7 +2763,71 @@ const getDeliveryOrders = async (
   return { meta, orders };
 };
 
+const getAllCancelledOrders = async (query: Record<string, unknown> = {}) => {
+  const { page = '1', limit = '10' } = query as { page?: string; limit?: string };
 
+  const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit as string, 10) || 10);
+
+  // ⚠️ Workshops have no cancellation concept in the current data model —
+  // WorkshopParticipant has no "cancelled" status, so there is nothing to include for it.
+  const [eventOrders, gearOrders] = await Promise.all([
+    EventOrder.find({ status: 'cancelled', isDeleted: false })
+      .populate('userId', 'name email profileImage')
+      .populate('serviceProviderId', 'name email profileImage')
+      .populate('packageId', 'title')
+      .lean(),
+    GearOrder.find({ orderStatus: 'cancelled', isDeleted: false })
+      .populate('clientId', 'name email profileImage')
+      .populate('sellerId', 'name email profileImage')
+      .populate('gearMarketplaceId', 'name mainPrice')
+      .lean(),
+  ]);
+
+  const normalizedEvent = (eventOrders as any[]).map((o) => ({
+    orderType: 'event' as const,
+    _id: o._id,
+    orderId: o.orderId,
+    buyer: o.userId,
+    seller: o.serviceProviderId,
+    itemName: o.packageId?.title || o.serviceType,
+    amount: o.totalPrice,
+    paymentStatus: o.paymentStatus,
+    cancelReason: o.cancelReason,
+    cancelledBy: o.cancelledBy,
+    cancelledAt: o.statusTimestamps?.cancelledAt || o.updatedAt,
+    createdAt: o.createdAt,
+  }));
+
+  const normalizedGear = (gearOrders as any[]).map((o) => ({
+    orderType: 'gear' as const,
+    _id: o._id,
+    orderId: o.orderId,
+    buyer: o.clientId,
+    seller: o.sellerId,
+    itemName: o.gearMarketplaceId?.name,
+    amount: o.gearMarketplaceId?.mainPrice,
+    paymentStatus: o.paymentStatus,
+    cancelReason: o.cancelReason,
+    cancelledBy: o.cancelledBy,
+    cancelledAt: o.statusTimestamps?.cancelledAt || o.updatedAt,
+    createdAt: o.createdAt,
+  }));
+
+  const combined = [...normalizedEvent, ...normalizedGear].sort(
+    (a, b) => new Date(b.cancelledAt).getTime() - new Date(a.cancelledAt).getTime(),
+  );
+
+  const total = combined.length;
+  const start = (pageNum - 1) * limitNum;
+  const paginated = combined.slice(start, start + limitNum);
+
+  return {
+    meta: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+    counts: { event: normalizedEvent.length, gear: normalizedGear.length, workshop: 0 },
+    data: paginated,
+  };
+};
 
 const imageExtensions = [
   '.jpg', '.jpeg', '.png', '.gif', '.webp',
@@ -2953,6 +3052,7 @@ export const userService = {
   getOrderManagementStats,
   getOrders,
   getDeliveryOrders,
+  getAllCancelledOrders,
   getRandomGalleryImages,
   getTownAndIndividualCategoriesOptimized,
   createAdmin,

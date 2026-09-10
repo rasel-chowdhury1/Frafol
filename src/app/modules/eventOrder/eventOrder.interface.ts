@@ -34,7 +34,10 @@ export interface IStatusHistory {
 }
 
 
-
+export interface RequestOrderDeliveryPayload {
+  deliveryLink: string;
+  deliveryMessage?: string;
+}
 
 
 export interface IEventOrder extends Document {
@@ -56,6 +59,12 @@ export interface IEventOrder extends Document {
   packageName?: string;
   deliveryDate?: Date;
   lastDeliveryDate?: Date;
+    /**
+   * Delivery information submitted by the service provider
+   * when requesting delivery approval.
+   */
+  deliveryLink?: string;
+  deliveryMessage?: string;
   budget_range?: string;
   duration?: string;
   streetAddress?: string;

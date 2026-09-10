@@ -591,6 +591,17 @@ const getDeliveryOrders = catchAsync(async (req, res) => {
   });
 });
 
+const getAllCancelledOrders = catchAsync(async (req: Request, res: Response) => {
+  const result = await userService.getAllCancelledOrders(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Cancelled orders retrieved successfully",
+    data: result,
+  });
+});
+
 
 const getLatestGalleryImages = catchAsync(async (_req, res) => {
   const images = await userService.getRandomGalleryImages();
@@ -741,6 +752,7 @@ export const userController = {
   getOrderManagementStats,
   getOrders,
   getDeliveryOrders,
+  getAllCancelledOrders,
   getLatestGalleryImages,
   getTownAndIndividualCategoriesOptimized,
   createAdmin,

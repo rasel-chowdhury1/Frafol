@@ -35,6 +35,7 @@ export const sendEmail = async (
   subject: string,
   html: string,
   headers?: Record<string, string>,
+  attachments?: { filename: string; content: Buffer; contentType?: string }[],
 ) => {
 
 
@@ -47,6 +48,7 @@ export const sendEmail = async (
       subject,
       html, // html body
       headers, // optional custom headers (e.g. List-Unsubscribe)
+      attachments, // optional file attachments (e.g. PDF invoice)
     });
 
     console.log('mail sended successfully =>>>>>>>> ');

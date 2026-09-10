@@ -23,6 +23,8 @@ const auth = (...userRoles: string[]) => {
       throw new AppError(httpStatus.UNAUTHORIZED, 'Authorization token is missing');
     }
 
+    console.log("token =>> ", token)
+
     // 2️⃣ Invalid or Expired Token → 403 Forbidden
     let decodeData;
     try {

@@ -2,7 +2,7 @@ import AppError from '../../error/AppError';
 import { Payment } from './payment.model';
 import { createStripePaymentSession, stripe } from './payment.utils';
 import { GetPaymentsQuery, IPayment } from './payment.interface';
-import { sentNotificationForPaymentSuccess, sentNotificationForGearOrderSold } from '../../../socketIo';
+import { sentNotificationForPaymentSuccess, sentNotificationForGearOrderSold, sentNotificationForWorkshopNewParticipant } from '../../../socketIo';
 import mongoose, { Types } from 'mongoose';
 import { EventOrder } from '../eventOrder/eventOrder.model';
 import { GearOrder } from '../gearOrder/gearOrder.model';
@@ -152,6 +152,7 @@ const confirmPayment = async (sessionId: string) => {
                   customerName: (client as any).name || payment.name || 'Customer',
                   orderId: updatedOrder.orderId,
                   orderType: updatedOrder.orderType as 'direct' | 'custom',
+                  title: updatedOrder.title as string,
                   serviceType: updatedOrder.serviceType,
                   packageName: updatedOrder.packageName || undefined,
                   eventDate: updatedOrder.date ? new Date(updatedOrder.date).toLocaleDateString('en-GB') : '',
@@ -397,11 +398,23 @@ const confirmPayment = async (sessionId: string) => {
                 instructorName: (instructor as any)?.name || undefined,
               });
             }
+
+            // ✅ Notify the instructor that a new participant joined
+            if (workshop) {
+              const ws = workshop as any;
+              sentNotificationForWorkshopNewParticipant({
+                instructorId: new mongoose.Types.ObjectId(payment.serviceProviderId),
+                participantId: new mongoose.Types.ObjectId(payment.userId),
+                workshopTitle: ws.title,
+                workshopDate: ws.date ? new Date(ws.date).toLocaleDateString('en-GB') : undefined,
+                workshopTime: ws.time || undefined,
+              }).catch((err) => console.error('Workshop new participant notification failed:', err));
+            }
           } catch (err) {
             console.error('❌ Workshop invoice email failed:', err);
           }
         });
-      } 
+      }
       else if (payment.paymentType === 'subscription' && payment.subscriptionDays) {
 
 
@@ -472,6 +485,15 @@ const confirmPayment = async (sessionId: string) => {
           currency: 'EUR',
           purchaseDate: new Date().toLocaleDateString('en-GB'),
           expiryDate: expireDate.toLocaleDateString('en-GB'),
+          transactionId: payment.transactionId,
+          paymentMethod: payment.paymentMethod,
+          companyName: payment.companyName,
+          ICO: payment.ICO,
+          DIC: payment.DIC,
+          IC_DPH: payment.IC_DPH,
+          streetAddress: payment.streetAddress,
+          town: payment.town,
+          country: payment.country,
         });
 
       console.log('✅ Subscription activated successfully', {

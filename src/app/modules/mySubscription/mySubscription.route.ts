@@ -38,4 +38,16 @@ router.delete(
   MySubscriptionController.cancelSubscription
 );
 
+router.get(
+  '/admin/all',
+  // auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+  MySubscriptionController.getAllSubscriptions
+);
+
+router.patch(
+  '/admin/cancel/:userId',
+  auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+  MySubscriptionController.cancelSubscriptionByAdmin
+);
+
 export const MySubscriptionRoutes = router;

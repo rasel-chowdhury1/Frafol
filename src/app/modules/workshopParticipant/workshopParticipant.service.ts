@@ -3,6 +3,7 @@ import AppError from '../../error/AppError';
 import { Workshop } from '../workshop/workshop.model';
 import { IWorkshopParticipant } from './workshopParticipant.interface';
 import { WorkshopParticipant } from './workshopParticipant.model';
+import { sentNotificationForWorkshopPayoutCompleted } from '../../../socketIo';
 
 import httpStatus from 'http-status';
 
@@ -78,6 +79,19 @@ const completeInstructorPayment = async (participantId: string) => {
   participant.instructorPayment.paidAt = new Date();
 
   await participant.save();
+
+  // 🔔 Notify the instructor that their payment/payout has been processed
+  Workshop.findById(participant.workshopId)
+    .select('title')
+    .then((workshop) =>
+      sentNotificationForWorkshopPayoutCompleted({
+        instructorId: participant.instructorId,
+        orderId: participant.orderId,
+        workshopTitle: workshop?.title,
+        amount: participant.instructorPayment.amount,
+      }),
+    )
+    .catch((err) => console.error('Workshop payout completed notification failed:', err));
 
   return participant;
 };

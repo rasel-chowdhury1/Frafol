@@ -38,6 +38,24 @@ const mySubscriptionSchema = new Schema<TMySubscription>(
       type: Boolean,
       default: true,
     },
+
+    cancelSource: {
+      type: String,
+      enum: ['user', 'admin', 'expired'],
+    },
+
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+
+    cancelledAt: {
+      type: Date,
+    },
+
+    cancelReason: {
+      type: String,
+    },
   },
   {
     timestamps: true,

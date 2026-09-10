@@ -10,7 +10,7 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearPaymentReceivedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
@@ -690,15 +690,22 @@ export const sentNotificationForDeliveryRequest = async ({
   receiverId, // receiver = client
   serviceType,
   packageName,
+  deliveryLink,
+  deliveryMessage,
 }: {
   orderType: 'direct' | 'custom';
   userId: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
   serviceType?: string;
   packageName?: string;
+  deliveryLink: string;
+  deliveryMessage?: string;
 }) => {
-  const sender = await User.findById(userId).select('name profileImage');
-  const receiver = await User.findById(receiverId).select('name email');
+
+  const [sender, receiver] = await Promise.all([
+      User.findById(userId).select('name profileImage'),
+      User.findById(receiverId).select('name email'),
+    ]);
 
   console.log("receiver email =>>> ", receiver)
 
@@ -714,7 +721,7 @@ export const sentNotificationForDeliveryRequest = async ({
     userId, // sender = service provider
     receiverId, // receiver = client
     userMsg: { image: sender.profileImage || '', text, photos: [] },
-    type: 'DeliveryRequest',
+    type: 'DeliveryRequest'
   };
 
   // ðŸ”” Emit socket notification
@@ -731,6 +738,8 @@ export const sentNotificationForDeliveryRequest = async ({
       orderType,
       serviceType,
       packageName,
+      deliveryLink, 
+      deliveryMessage
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
@@ -952,7 +961,7 @@ export const sentNotificationForCancelRequest = async ({
   reason?: string;
 }) => {
   const sender = await User.findById(requestedBy).select('name profileImage');
-  const receiver = await User.findById(receiverId).select('name email');
+  const receiver = await User.findById(receiverId).select('name email role');
 
   if (!sender || !receiver) return;
 
@@ -983,6 +992,7 @@ export const sentNotificationForCancelRequest = async ({
       requesterName: sender.name || '',
       serviceType,
       reason,
+      receiverRole: receiver.role
     }).catch((err) => console.error('Email failed:', err));
   }
 };
@@ -1022,6 +1032,87 @@ export const sentNotificationForProfileDeclined = async ({
     await profileDeclinedEmail({
       sentTo: user.email,
       name: user.name || '',
+      reason,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForAccountDeleteRequest = async ({
+  userId,
+  reason,
+}: {
+  userId: mongoose.Types.ObjectId;
+  reason?: string;
+}) => {
+  const user = await User.findById(userId).select('name profileImage');
+  const admins = await User.find({ role: { $in: [ USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN]},isDeleted: false }).select('_id email');
+
+  console.log("admins =>> ", admins)
+  if (!user || !admins.length) return;
+
+  const text = `${user.name} has requested to delete their account.${reason ? ` Reason: "${reason}"` : ''}`;
+
+
+   await Promise.all(
+    admins.map(async (admin) => {
+      // 🔔 In-app/socket notification
+      await emitNotification({
+        userId,
+        receiverId: admin._id as any,
+        userMsg: {
+          image: user.profileImage || '',
+          text,
+          photos: [],
+        },
+        type: 'AccountDeleteRequest',
+      }).catch((err) =>
+        console.error('Socket notification failed:', err),
+      );
+
+      // 📧 Email notification
+      if (admin.email) {
+        console.log("admin email ==>>> ", admin.email)
+        await accountDeleteRequestAdminEmail({
+          sentTo: admin.email,
+          name: user.name ,
+          reason,
+        }).catch((err) =>
+          console.error(
+            `Account delete request email failed for ${admin.email}:`,
+            err,
+          ),
+        );
+      }
+    }),
+  );
+};
+
+export const sentNotificationForSubscriptionCancelledByAdmin = async ({
+  userId,
+  reason,
+}: {
+  userId: mongoose.Types.ObjectId;
+  reason?: string;
+}) => {
+  const user = await User.findById(userId).select('name email');
+
+  if (!user) return;
+
+  const text = `Your Frafol Choice subscription has been cancelled by our admin team.${reason ? ` Reason: "${reason}"` : ''}`;
+
+  const payload = {
+    userId,
+    receiverId: userId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'AdminNotice',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (user.email) {
+    frafolChoiceCancelledByAdminEmail({
+      sentTo: user.email,
+      name: user.name || 'User',
       reason,
     }).catch((err) => console.error('Email failed:', err));
   }
@@ -1411,37 +1502,123 @@ export const sentNotificationForGearMarketplaceDeclined = async ({
   }
 };
 
-export const sentNotificationForGearPaymentReceived = async ({
+export const sentNotificationForGearOrderPayoutCompleted = async ({
   sellerId,
-  clientId,
+  orderId,
   itemName,
+  netAmount,
 }: {
   sellerId: mongoose.Types.ObjectId;
-  clientId: mongoose.Types.ObjectId;
+  orderId: string;
   itemName?: string;
+  netAmount?: number;
 }) => {
   const seller = await User.findById(sellerId).select('name email');
-  const client = await User.findById(clientId).select('name');
 
-  if (!seller || !client) return;
+  if (!seller) return;
 
-  const text = `Payment from ${client.name} has been received for your gear order${itemName ? ` "${itemName}"` : ''}. The order is now in progress.`;
+  const text = `Your payment for the gear order${itemName ? ` "${itemName}"` : ''} (Order ID: ${orderId}) has been processed and marked as completed.`;
 
   const payload = {
-    userId: clientId,
+    userId: sellerId,
     receiverId: sellerId,
     userMsg: { image: '', text, photos: [] },
-    type: 'GearPaymentReceived',
+    type: 'GearOrderPayoutCompleted',
   };
 
   await emitNotification(payload).catch((err) => console.error('Socket error:', err));
 
   if (seller.email) {
-    sendGearPaymentReceivedEmail({
+    sendGearOrderPayoutCompletedEmail({
       sentTo: seller.email,
       receiverName: seller.name || '',
-      clientName: client.name || '',
+      orderId,
       itemName,
+      netAmount,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForWorkshopPayoutCompleted = async ({
+  instructorId,
+  orderId,
+  workshopTitle,
+  amount,
+}: {
+  instructorId: mongoose.Types.ObjectId;
+  orderId: string;
+  workshopTitle?: string;
+  amount?: number;
+}) => {
+  const instructor = await User.findById(instructorId).select('name email');
+
+  if (!instructor) return;
+
+  const text = `Your payment for the workshop${workshopTitle ? ` "${workshopTitle}"` : ''} (Order ID: ${orderId}) has been processed and marked as completed.`;
+
+  const payload = {
+    userId: instructorId,
+    receiverId: instructorId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'WorkshopPayoutCompleted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (instructor.email) {
+    sendWorkshopPayoutCompletedEmail({
+      sentTo: instructor.email,
+      receiverName: instructor.name || '',
+      orderId,
+      workshopTitle,
+      amount,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForEventOrderPayoutCompleted = async ({
+  serviceProviderId,
+  orderId,
+  orderType,
+  serviceType,
+  packageName,
+  netAmount,
+}: {
+  serviceProviderId: mongoose.Types.ObjectId;
+  orderId: string;
+  orderType: 'direct' | 'custom';
+  serviceType?: string;
+  packageName?: string;
+  netAmount?: number;
+}) => {
+  const serviceProvider = await User.findById(serviceProviderId).select('name email');
+
+  if (!serviceProvider) return;
+
+  const orderLabel = orderType === 'direct'
+    ? packageName || serviceType || 'order'
+    : `custom ${serviceType || 'booking'}`;
+
+  const text = `Your payment for the ${orderLabel} (Order ID: ${orderId}) has been processed and marked as completed.`;
+
+  const payload = {
+    userId: serviceProviderId,
+    receiverId: serviceProviderId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'EventOrderPayoutCompleted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (serviceProvider.email) {
+    sendEventOrderPayoutCompletedEmail({
+      sentTo: serviceProvider.email,
+      receiverName: serviceProvider.name || '',
+      orderId,
+      orderType,
+      serviceType,
+      packageName,
+      netAmount,
     }).catch((err) => console.error('Email failed:', err));
   }
 };
@@ -1696,6 +1873,47 @@ export const sentNotificationForWorkshopDeclined = async ({
       receiverName: receiver.name || '',
       workshopTitle,
       reason,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForWorkshopNewParticipant = async ({
+  instructorId,
+  participantId,
+  workshopTitle,
+  workshopDate,
+  workshopTime,
+}: {
+  instructorId: mongoose.Types.ObjectId;
+  participantId: mongoose.Types.ObjectId;
+  workshopTitle: string;
+  workshopDate?: string;
+  workshopTime?: string;
+}) => {
+  const instructor = await User.findById(instructorId).select('name email');
+  const participant = await User.findById(participantId).select('name profileImage');
+
+  if (!instructor || !participant) return;
+
+  const text = `${participant.name} has joined your workshop "${workshopTitle}" as a participant.`;
+
+  const payload = {
+    userId: participantId,
+    receiverId: instructorId,
+    userMsg: { image: participant.profileImage || '', text, photos: [] },
+    type: 'WorkshopNewParticipant',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (instructor.email) {
+    sendWorkshopNewParticipantEmail({
+      sentTo: instructor.email,
+      receiverName: instructor.name || '',
+      participantName: participant.name || '',
+      workshopTitle,
+      workshopDate,
+      workshopTime,
     }).catch((err) => console.error('Email failed:', err));
   }
 };

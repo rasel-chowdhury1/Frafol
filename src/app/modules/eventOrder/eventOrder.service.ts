@@ -1,14 +1,14 @@
 
 import mongoose, { Types } from "mongoose";
 import { EventOrder } from "./eventOrder.model";
-import { IEventOrder } from "./eventOrder.interface";
+import { IEventOrder, RequestOrderDeliveryPayload } from "./eventOrder.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
 import AppError from "../../error/AppError";
 import { Review } from "../review/review.model";
 import { Payment } from "../payment/payment.model";
 import { User } from "../user/user.model";
 import { sendEventOrderInvoiceEmail } from "../../utils/eamilNotifiacation";
-import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired, sentNotificationForReviewRequest } from "../../../socketIo";
+import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForEventOrderPayoutCompleted, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired, sentNotificationForReviewRequest } from "../../../socketIo";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
@@ -41,7 +41,7 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
 
   try {
     // 1️⃣ Find the event order within the session
-    const eventOrder = await EventOrder.findById(eventOrderId).session(session);
+    const eventOrder = await EventOrder.findById(eventOrderId).populate("packageId", "title").session(session);
 
     if (!eventOrder) {
       throw new AppError(404, "Event order not found");
@@ -72,6 +72,25 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
     // 4️⃣ Commit transaction
     await session.commitTransaction();
     session.endSession();
+
+    // 🔔 Notify the service provider that their payment/payout has been processed
+    const packageName =
+      eventOrder.packageId && (eventOrder.packageId as any).title
+        ? (eventOrder.packageId as any).title
+        : undefined;
+
+    Payment.findOne({ eventOrderId: eventOrder._id })
+      .then((payment) =>
+        sentNotificationForEventOrderPayoutCompleted({
+          serviceProviderId: eventOrder.serviceProviderId,
+          orderId: eventOrder.orderId,
+          orderType: eventOrder.orderType,
+          serviceType: eventOrder.serviceType,
+          packageName,
+          netAmount: payment?.netAmount,
+        }),
+      )
+      .catch((err) => console.error("Failed to send payment completed notification:", err));
 
     return {
       message: "Payment completed successfully and service provider marked as paid",
@@ -652,7 +671,29 @@ const acceptCustomOrder = async (
 
 const requestOrderDelivery = async (
   orderId: string,
-  serviceProviderId: mongoose.Types.ObjectId) => {
+  serviceProviderId: mongoose.Types.ObjectId,
+  payload: RequestOrderDeliveryPayload
+) => {
+
+  const { deliveryLink, deliveryMessage } = payload;
+
+  // Validate delivery link
+  if (!deliveryLink?.trim()) {
+    throw new AppError(400, 'Delivery link is required');
+  }
+
+  // Validate URL
+  try {
+    const url = new URL(deliveryLink);
+
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error();
+    }
+  } catch {
+    throw new AppError(400, 'Please provide a valid delivery link');
+  }
+
+
   // 🔹 Find the order
   const order = await EventOrder.findOne({
     _id: orderId,
@@ -668,16 +709,22 @@ const requestOrderDelivery = async (
   // if (order.status !== "inProgress") {
   //   throw new AppError(400, "You can only send a delivery request for an order that is in progress");
   // }
+  const now = new Date();
+
+  // Update delivery information
+  order.deliveryLink = deliveryLink.trim();
+  order.deliveryMessage = deliveryMessage?.trim();
+
 
   // 🔹 Update order status
   order.status = "deliveryRequest";
   order.statusTimestamps = {
     ...order.statusTimestamps,
-    deliveryRequestAt: new Date(),
+    deliveryRequestAt: now,
   };
   order.statusHistory.push({
     status: "deliveryRequest",
-    changedAt: new Date(),
+    changedAt: now,
   });
 
   await order.save();
@@ -688,13 +735,16 @@ const requestOrderDelivery = async (
       ? (order.packageId as any).title
       : undefined;
 
+  console.log('orders =>>> ', order)
   // 🔹 Send notification to client
    sentNotificationForDeliveryRequest({
     userId: order.serviceProviderId, // sender = service provider
     receiverId: order.userId, // receiver = client
     orderType: order.orderType,
     serviceType: order.serviceType,
-    packageName
+    packageName,
+    deliveryLink: order.deliveryLink,
+    deliveryMessage: order.deliveryMessage,
   }).catch((err) =>
     console.error("Failed to send delivery request notification:", err)
   );;

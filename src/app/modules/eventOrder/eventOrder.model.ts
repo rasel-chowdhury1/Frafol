@@ -72,6 +72,44 @@ const EventOrderSchema = new Schema<IEventOrder>(
     deliveryDate: { type: Date },
     lastDeliveryDate: { type: Date },
 
+        /**
+     * URL provided by the service provider for the delivered
+     * photos/videos/files.
+     *
+     * Example:
+     * https://drive.google.com/...
+     */
+    deliveryLink: {
+      type: String,
+      trim: true,
+
+      validate: {
+        validator: function (value: string) {
+          if (!value) return true;
+
+          try {
+            const url = new URL(value);
+
+            return ['http:', 'https:'].includes(url.protocol);
+          } catch {
+            return false;
+          }
+        },
+
+        message: 'Delivery link must be a valid HTTP or HTTPS URL',
+      },
+    },
+
+    /**
+     * Optional message from the service provider to the customer
+     * when submitting the delivery request.
+     */
+    deliveryMessage: {
+      type: String,
+      trim: true,
+    },
+
+
     budget_range: { type: String },
     duration: { type: String },
     streetAddress: { type: String },
