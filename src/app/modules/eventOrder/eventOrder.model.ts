@@ -125,6 +125,21 @@ const EventOrderSchema = new Schema<IEventOrder>(
     IC_DPH: { type: String },
     name: { type: String },
     sureName: { type: String },
+    termsAndConditionsAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    earlyServiceCommencementAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    withdrawalRightAcknowledgementAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
 
     // ✅ Order Status
     status: {

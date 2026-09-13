@@ -45,6 +45,22 @@ const workshopParticipantSchema = new Schema<IWorkshopParticipant>(
     name: { type: String },
     couponCode: { type: String, trim: true },
     couponDiscount: { type: Number, default: 0 },
+    termsAndConditionsAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    earlyServiceCommencementAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    withdrawalRightAcknowledgementAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+
     isDeleted: { type: Boolean, default: false },
   },
   {

@@ -116,6 +116,11 @@ const gearOrderSchema = new Schema<IGearOrder>(
       type: Schema.Types.ObjectId, 
       ref: 'Payment' 
     },
+    termsAndConditionsAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
 
     isDeleted: { 
       type: Boolean, 

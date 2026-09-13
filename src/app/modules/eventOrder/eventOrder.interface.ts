@@ -78,6 +78,9 @@ export interface IEventOrder extends Document {
   IC_DPH?: string;
   name?: string;
   sureName?: string;
+  termsAndConditionsAccepted: boolean;
+  earlyServiceCommencementAccepted: boolean;
+  withdrawalRightAcknowledgementAccepted: boolean;
   status: OrderStatus;
   declineReason?: string;
   deliveryRequestDeclinedReason?: string;

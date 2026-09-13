@@ -157,7 +157,7 @@ const getMyChatList = async (userId: string, query: any) => {
     }
 
     // Find the latest message (no populate)
-    const message: any = await Message.findOne({ chat: chatId })
+    const message: any = await Message.findOne({ chat: chatId, approvalStatus: "approved" })
       .sort({ updatedAt: -1 })
       .select('text sender updatedAt');
 

@@ -405,7 +405,7 @@ export const emitNotification = async ({
 }: {
   userId: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
-  userMsg?: { image: string; text: string; photos?: string[] };
+  userMsg?: { image: string; text: string; photos?: string[], type?: string  };
   type?: string;
 }): Promise<void> => {
   if (!io) {
@@ -421,11 +421,14 @@ export const emitNotification = async ({
     isRead: false, // Filter by unread notifications
   });
 
+
+
   // Notify the specific user
   if (userMsg && userSocket) {
     io.to(userSocket.socketID).emit(`notification`, {
       // userId,
       message: userMsg,
+      type,
       statusCode: 200,
       success: true,
       unreadCount: unreadCount >= 0 ? unreadCount + 1 : 1,

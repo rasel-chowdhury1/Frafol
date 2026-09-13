@@ -56,6 +56,11 @@ const mySubscriptionSchema = new Schema<TMySubscription>(
     cancelReason: {
       type: String,
     },
+    termsAndConditionsAccepted: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
   },
   {
     timestamps: true,

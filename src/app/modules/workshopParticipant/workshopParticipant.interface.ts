@@ -26,6 +26,9 @@ export interface IWorkshopParticipant {
   name?: string;
   couponCode?: string;
   couponDiscount?: number;
+  termsAndConditionsAccepted: boolean;
+  earlyServiceCommencementAccepted: boolean;
+  withdrawalRightAcknowledgementAccepted: boolean;
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

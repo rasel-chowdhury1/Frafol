@@ -429,6 +429,8 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
     queryBuilder.countTotal(),
   ]);
 
+  console.log({result, meta})
+
     // ✅ Return paginated result with meta
   return {
     meta,

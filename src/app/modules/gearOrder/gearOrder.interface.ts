@@ -36,6 +36,7 @@ export interface IGearOrder {
   paymentMethod?: string;
   transactionId?: string;
   paymentId?: Types.ObjectId;
+  termsAndConditionsAccepted: boolean;
   isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

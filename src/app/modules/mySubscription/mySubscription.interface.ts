@@ -13,6 +13,7 @@ export type TMySubscription = {
   cancelledBy?: Types.ObjectId;
   cancelledAt?: Date;
   cancelReason?: string;
+  termsAndConditionsAccepted: boolean;
 };
 
 export type MySubscriptionModel = Model<TMySubscription>;
