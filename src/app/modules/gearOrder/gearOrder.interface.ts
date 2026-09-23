@@ -28,6 +28,8 @@ export interface IGearOrder {
   dic?: string;
   ic_dph?: string;
   companyAddress?: string;
+  companyPostCode?: string;
+  companyTown?: string;
   deliveryNote?: string;
   deliveryRequestDeclinedReason?: string;
   cancelReason?: string;
@@ -57,5 +59,7 @@ export interface ICreateGearOrderPayload {
   dic?: string;
   ic_dph?: string;
   companyAddress?: string;
+  companyPostCode?: string;
+  companyTown?: string;
   deliveryNote?: string;
 }

@@ -8,6 +8,7 @@ import { createGearStripePaymentSession } from '../payment/payment.utils';
 import QueryBuilder from '../../builder/QueryBuilder';
 import mongoose from 'mongoose';
 import { Payment } from '../payment/payment.model';
+import { User } from '../user/user.model';
 import {
   sentNotificationForGearOrderPayoutCompleted,
   sentNotificationForGearDeliveryRequest,
@@ -23,6 +24,7 @@ const createGearOrder = async (payload: IGearOrder) => {
 };
 
 const createGearOrders = async (payload: ICreateGearOrderPayload) => {
+
   const {
     userId,
     gearMarketPlaceIds,
@@ -38,12 +40,15 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
     dic = "",
     ic_dph = "",
     companyAddress = "",
+    companyPostCode = "",
+    companyTown = "",
     deliveryNote = "",
   } = payload;
 
   if (!gearMarketPlaceIds?.length) {
     throw new AppError(httpStatus.BAD_REQUEST, "No gear marketplace IDs provided.");
   }
+
 
   // ✅ Fetch valid gear items
   const gearItems = await GearMarketplace.find({
@@ -96,6 +101,8 @@ const createGearOrders = async (payload: ICreateGearOrderPayload) => {
       dic,
       ic_dph,
       companyAddress,
+      companyPostCode,
+      companyTown,
       deliveryNote,
       statusTimestamps: {
         createdAt: new Date(), // Initialize createdAt
@@ -409,6 +416,38 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
     // 🎯 Base query (non-deleted only)
   const baseQuery: any = { isDeleted: false, orderStatus: { $ne: "delivered" } };
 
+  // 🔎 Search across GearOrder's own fields, the linked gear item's name,
+  // and the client/seller User accounts' name, email, and phone
+  const searchTerm = (query.searchTerm || query.search) as string | undefined;
+  if (searchTerm) {
+    const [matchingGearItems, matchingUsers] = await Promise.all([
+      GearMarketplace.find({
+        name: { $regex: searchTerm, $options: 'i' },
+      }).select('_id'),
+      User.find({
+        $or: [
+          { name: { $regex: searchTerm, $options: 'i' } },
+          { email: { $regex: searchTerm, $options: 'i' } },
+          { phone: { $regex: searchTerm, $options: 'i' } },
+        ],
+      }).select('_id'),
+    ]);
+
+    const matchingUserIds = matchingUsers.map((u) => u._id);
+
+    baseQuery.$or = [
+      { orderId: { $regex: searchTerm, $options: 'i' } },
+      { name: { $regex: searchTerm, $options: 'i' } },
+      { town: { $regex: searchTerm, $options: 'i' } },
+      { email: { $regex: searchTerm, $options: 'i' } },
+      { mobileNumber: { $regex: searchTerm, $options: 'i' } },
+      { companyName: { $regex: searchTerm, $options: 'i' } },
+      { gearMarketplaceId: { $in: matchingGearItems.map((g) => g._id) } },
+      { clientId: { $in: matchingUserIds } },
+      { sellerId: { $in: matchingUserIds } },
+    ];
+  }
+
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(
     GearOrder.find(baseQuery)
@@ -429,7 +468,6 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
     queryBuilder.countTotal(),
   ]);
 
-  console.log({result, meta})
 
     // ✅ Return paginated result with meta
   return {
@@ -508,6 +546,22 @@ const getMyGearOrders = async (
     //   throw new AppError(400, "Invalid role type — must be 'user' or 'professional'");
   }
 
+  // 🔎 Search across GearOrder's own fields AND the linked gear item's name
+  const searchTerm = queryParams.searchTerm as string | undefined;
+  if (searchTerm) {
+    const matchingGearItems = await GearMarketplace.find({
+      name: { $regex: searchTerm, $options: 'i' },
+    }).select('_id');
+
+    baseQuery.$or = [
+      { orderId: { $regex: searchTerm, $options: 'i' } },
+      { name: { $regex: searchTerm, $options: 'i' } },
+      { town: { $regex: searchTerm, $options: 'i' } },
+      { email: { $regex: searchTerm, $options: 'i' } },
+      { companyName: { $regex: searchTerm, $options: 'i' } },
+      { gearMarketplaceId: { $in: matchingGearItems.map((g) => g._id) } },
+    ];
+  }
 
   // 🧠 Initialize QueryBuilder
   const queryBuilder = new QueryBuilder(

@@ -32,7 +32,6 @@ const verifyToken = ({
 }: VerifyTokenParams): JwtPayload => {
   try {
 
-    console.log({token, access_secret})
     return jwt.verify(token, access_secret) as JwtPayload;
   } catch (err) {
     console.error('JWT verification failed:', err);

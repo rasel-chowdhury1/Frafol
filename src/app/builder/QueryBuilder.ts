@@ -12,7 +12,7 @@ class QueryBuilder<T> {
   }
 
   search(searchableFields: string[]) {
-    const searchTerm = this?.query?.searchTerm;
+    const searchTerm = this?.query?.searchTerm || this?.query?.search;
     if (searchTerm) {
       this.modelQuery = this.modelQuery.find({
         $or: searchableFields.map(
@@ -29,7 +29,7 @@ class QueryBuilder<T> {
 filter() {
   const queryObj = { ...this.query } as Record<string, any>;
 
-  const excludeFields = ['searchTerm', 'sort', 'limit', 'page', 'fields'];
+  const excludeFields = ['searchTerm', 'search', 'sort', 'limit', 'page', 'fields'];
   excludeFields.forEach((el) => delete queryObj[el]);
 
   // ===== PRICE FILTER =====

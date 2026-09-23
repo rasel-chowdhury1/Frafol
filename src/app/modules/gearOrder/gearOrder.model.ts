@@ -91,7 +91,16 @@ const gearOrderSchema = new Schema<IGearOrder>(
         type: String,
         default: ""
     },
+    
     companyAddress: {
+        type: String,
+        default: ""
+    },
+    companyPostCode: {
+        type: String,
+        default: ""
+    },
+    companyTown: {
         type: String,
         default: ""
     },

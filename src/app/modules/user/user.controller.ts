@@ -628,8 +628,8 @@ const getTownAndIndividualCategoriesOptimized = catchAsync(async (_req, res) => 
 })
 
 
-const getDeleteAccountRequests = catchAsync(async (_req: Request, res: Response) => {
-  const result = await userService.getDeleteAccountRequests();
+const getDeleteAccountRequests = catchAsync(async (req: Request, res: Response) => {
+  const result = await userService.getDeleteAccountRequests(req.query);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

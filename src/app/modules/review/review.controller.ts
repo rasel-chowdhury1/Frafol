@@ -88,7 +88,6 @@ const getMyPendingReviews = catchAsync(async (req, res) => {
 
 const getReviewsByServiceProvider = catchAsync(async (req: Request, res: Response) => {
   const { serviceProviderId } = req.params;
-  console.log("serviceProviderId =>> ",serviceProviderId)
   const result = await ReviewService.getReviewsByServiceProvider(serviceProviderId, req.query);
   sendResponse(res, {
     statusCode: 200,

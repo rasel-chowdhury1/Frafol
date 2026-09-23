@@ -858,6 +858,7 @@ try {
         invoiceType: 'completed' as const,
         orderId: order.orderId,
         orderType: order.orderType,
+        title: order.title as string,
         serviceType: order.serviceType,
         packageName,
         eventDate: order.date ? new Date(order.date).toLocaleDateString("en-GB") : "",

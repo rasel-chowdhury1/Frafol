@@ -108,7 +108,7 @@ const getMyWorkshops = async (userId: string, query: Record<string, unknown>) =>
       .populate({path: "authorId", select: "name sureName role profileImage" }),
     query
   )
-    .search(["name", "description"]) // searchable fields
+    .search(["name", "title", "locationType", "location",  "description"]) // searchable fields
     .filter()
     .sort()
     .paginate()

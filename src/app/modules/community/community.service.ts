@@ -1,12 +1,13 @@
 
 import { Community } from "./community.model";
+import { User } from "../user/user.model";
 import { ICommunity } from "./community.interface";
 import { hasForbiddenContent } from "./community.utils";
 import AppError from "../../error/AppError";
 import { deleteFile } from "../../utils/fileHelper";
 import { CommunityEngagementStats } from "../communityEngagementStats/communityEngagementStats.model";
 import QueryBuilder from "../../builder/QueryBuilder";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { sentNotificationForCommunityDeleted, sentNotificationForCommunityRejected } from "../../../socketIo";
 
 const createCommunity = async (payload: ICommunity) => {
@@ -79,8 +80,14 @@ const getAllCommunities = async (userId: string, role: string, query: Record<str
 };
 
 const getMyPosts = async (userId: string, query: Record<string, any> = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid userId");
+  }
+
+  const authorObjectId = new mongoose.Types.ObjectId(userId);
+
   // Base query: only current user's posts
-  const baseQuery = Community.find({ authorId: userId, isDeleted: false })
+  const baseQuery = Community.find({ authorId: authorObjectId, isDeleted: false })
     .populate({
       path: "authorId",
       select: "name sureName role profileImage",
@@ -132,8 +139,30 @@ const getMyPosts = async (userId: string, query: Record<string, any> = {}) => {
 
 
 const adminGetAll = async (query: Record<string, any> = {}) => {
-    // Base query: only current user's posts
-  const baseQuery = Community.find({  isDeleted: false })
+  const baseFilter: any = { isDeleted: false };
+
+  // 🔎 Search by post title/text AND the author's name/email
+  // (author name/email live on the populated User doc, so a plain regex
+  // find() on Community can't reach them — resolve matching IDs first)
+  const searchTerm = (query.searchTerm || query.search) as string | undefined;
+  if (searchTerm) {
+    const matchingAuthors = await User.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { sureName: { $regex: searchTerm, $options: 'i' } },
+        { companyName: { $regex: searchTerm, $options: 'i' } },
+        { role: { $regex: searchTerm, $options: 'i' } },
+      ],
+    }).select('_id');
+
+    baseFilter.$or = [
+      { title: { $regex: searchTerm, $options: 'i' } },
+      { text: { $regex: searchTerm, $options: 'i' } },
+      { authorId: { $in: matchingAuthors.map((a) => a._id) } },
+    ];
+  }
+
+  const baseQuery = Community.find(baseFilter)
     .populate({
       path: "authorId",
       select: "name sureName role profileImage",
@@ -141,7 +170,6 @@ const adminGetAll = async (query: Record<string, any> = {}) => {
 
   // Wrap in QueryBuilder
   const qb = new QueryBuilder(baseQuery, query)
-    .search(["title", "text"])  // searchable fields
     .filter()
     .sort()
     .paginate()

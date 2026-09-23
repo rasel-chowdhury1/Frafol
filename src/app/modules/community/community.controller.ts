@@ -63,7 +63,8 @@ const getAllApproved = catchAsync(async (req: Request, res: Response) => {
 
 const getMyPosts = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
-  const data = await CommunityService.getMyPosts(userId);
+
+  const data = await CommunityService.getMyPosts(userId, req.query);
   sendResponse(res, {
     statusCode: 200,
     success: true,
@@ -165,7 +166,7 @@ payload.deleteImages = payload.deleteImages ?? [];
 });
 
 const adminGetAll = catchAsync(async (req: Request, res: Response) => {
-  const data = await CommunityService.adminGetAll();
+  const data = await CommunityService.adminGetAll(req.query);
   sendResponse(res, {
     statusCode: 200,
     success: true,

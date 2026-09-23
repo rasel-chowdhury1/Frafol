@@ -1542,7 +1542,7 @@ const getAllUserQuery = async (
 
   // Build query with QueryBuilder
   const userQuery = new QueryBuilder(User.find(filter), rest)
-    .search(['fullName'])
+    .search(['name', 'sureName', 'companyName', 'email'])
     .filter()
     .sort()
     .paginate()
@@ -1798,15 +1798,22 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
   return { message: 'Delete request submitted. An admin will review and process it.' };
 };
 
-const getDeleteAccountRequests = async () => {
-  const requests = await User.find({
-    deleteRequestStatus: 'pending',
-    isDeleted: false,
-  }).select('-password').lean();
+const getDeleteAccountRequests = async (query: Record<string, unknown> = {}) => {
+  const queryBuilder = new QueryBuilder(
+    User.find({
+      deleteRequestStatus: 'pending',
+      isDeleted: false,
+    }),
+    query,
+  )
+    .search(['name', 'sureName', 'companyName', 'email'])
+    .filter();
+
+  const requests = await queryBuilder.modelQuery.lean();
 
   // Attach pending order counts for each user
   const enriched = await Promise.all(
-    requests.map(async (user) => {
+    requests.map(async ({ password, ...user }: any) => {
       const activeEventOrders = await EventOrder.countDocuments({
         $or: [{ userId: user._id }, { serviceProviderId: user._id }],
         status: { $in: ['pending', 'accepted', 'inProgress', 'deliveryRequest', 'cancelRequest'] },
@@ -2193,18 +2200,47 @@ const getMyEarnings = async (
   const providerObjId = new Types.ObjectId(serviceProviderId);
 
   if (type === 'event') {
+    const eventPaymentQuery: any = {
+      serviceProviderId: providerObjId,
+      paymentType: 'event',
+      paymentStatus: 'completed',
+    };
+
+    // 🔎 Search by client name, event name, and order type
+    // (these live on populated User/EventOrder docs, so a plain regex
+    // find() on Payment can't reach them — resolve matching IDs first)
+    const searchTerm = restQuery.searchTerm as string | undefined;
+    if (searchTerm) {
+      const [matchingClients, matchingEventOrders] = await Promise.all([
+        User.find({
+          $or: [
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { sureName: { $regex: searchTerm, $options: 'i' } },
+            { companyName: { $regex: searchTerm, $options: 'i' } },
+          ],
+        }).select('_id'),
+        EventOrder.find({
+          $or: [
+            { title: { $regex: searchTerm, $options: 'i' } },
+            { orderType: { $regex: searchTerm, $options: 'i' } },
+          ],
+        }).select('_id'),
+      ]);
+
+      eventPaymentQuery.$or = [
+        { transactionId: { $regex: searchTerm, $options: 'i' } },
+        { userId: { $in: matchingClients.map((c) => c._id) } },
+        { eventOrderId: { $in: matchingEventOrders.map((o) => o._id) } },
+      ];
+    }
+
     const earningsQuery = new QueryBuilder(
-      Payment.find({
-        serviceProviderId: providerObjId,
-        paymentType: 'event',
-        paymentStatus: 'completed',
-      })
+      Payment.find(eventPaymentQuery)
         .populate('userId', 'name companyName profileImage email  address town zipCode')
         .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
         .populate('eventOrderId', 'orderId title serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
       restQuery,
     )
-      .search(['transactionId'])
       .filter()
       .sort()
       .paginate()
@@ -2226,19 +2262,45 @@ const getMyEarnings = async (
   }
 
   if (type === 'gear') {
+    const gearOrderQuery: any = {
+      sellerId: providerObjId,
+      orderStatus: 'delivered',
+      isDeleted: false,
+    };
+
+    // 🔎 Search by client name and gear item name
+    // (these live on populated User/GearMarketplace docs, so a plain regex
+    // find() on GearOrder can't reach them — resolve matching IDs first)
+    const gearSearchTerm = restQuery.searchTerm as string | undefined;
+    if (gearSearchTerm) {
+      const [matchingClients, matchingGearItems] = await Promise.all([
+        User.find({
+          $or: [
+            { name: { $regex: gearSearchTerm, $options: 'i' } },
+            { sureName: { $regex: gearSearchTerm, $options: 'i' } },
+            { companyName: { $regex: gearSearchTerm, $options: 'i' } },
+          ],
+        }).select('_id'),
+        GearMarketplace.find({
+          name: { $regex: gearSearchTerm, $options: 'i' },
+        }).select('_id'),
+      ]);
+
+      gearOrderQuery.$or = [
+        { orderId: { $regex: gearSearchTerm, $options: 'i' } },
+        { clientId: { $in: matchingClients.map((c) => c._id) } },
+        { gearMarketplaceId: { $in: matchingGearItems.map((g) => g._id) } },
+      ];
+    }
+
     const earningsQuery = new QueryBuilder(
-      GearOrder.find({
-        sellerId: providerObjId,
-        orderStatus: 'delivered',
-        isDeleted: false,
-      })
+      GearOrder.find(gearOrderQuery)
         .populate({ path: 'gearMarketplaceId', select: 'name price mainPrice vatAmount totalVatAmount platformCommission shippingCompany' })
         .populate('clientId', 'name companyName profileImage email  address town zipCode')
         .populate('sellerId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
         ,
       restQuery,
     )
-      .search(['orderId'])
       .filter()
       .sort()
       .paginate()
@@ -2260,18 +2322,44 @@ const getMyEarnings = async (
   }
 
   if (type === 'workshop') {
+    const workshopParticipantQuery: any = {
+      instructorId: providerObjId,
+      paymentStatus: 'completed',
+      isDeleted: false,
+    };
+
+    // 🔎 Search by client name and workshop title
+    // (these live on populated User/Workshop docs, so a plain regex
+    // find() on WorkshopParticipant can't reach them — resolve matching IDs first)
+    const workshopSearchTerm = restQuery.searchTerm as string | undefined;
+    if (workshopSearchTerm) {
+      const [matchingClients, matchingWorkshops] = await Promise.all([
+        User.find({
+          $or: [
+            { name: { $regex: workshopSearchTerm, $options: 'i' } },
+            { sureName: { $regex: workshopSearchTerm, $options: 'i' } },
+            { companyName: { $regex: workshopSearchTerm, $options: 'i' } },
+          ],
+        }).select('_id'),
+        Workshop.find({
+          title: { $regex: workshopSearchTerm, $options: 'i' },
+        }).select('_id'),
+      ]);
+
+      workshopParticipantQuery.$or = [
+        { orderId: { $regex: workshopSearchTerm, $options: 'i' } },
+        { clientId: { $in: matchingClients.map((c) => c._id) } },
+        { workshopId: { $in: matchingWorkshops.map((w) => w._id) } },
+      ];
+    }
+
     const earningsQuery = new QueryBuilder(
-      WorkshopParticipant.find({
-        instructorId: providerObjId,
-        paymentStatus: 'completed',
-        isDeleted: false,
-      })
+      WorkshopParticipant.find(workshopParticipantQuery)
         .populate({ path: 'workshopId', select: 'title date time price mainPrice vatAmount' })
         .populate('clientId', 'name email profileImage  address town zipCode')
         .populate('instructorId', 'name email profileImage ico dic ic_dph  address town zipCode'),
       restQuery,
     )
-      .search(['orderId'])
       .filter()
       .sort()
       .paginate()

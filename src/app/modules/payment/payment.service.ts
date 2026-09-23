@@ -625,6 +625,45 @@ const getPayments = async (query: any) => {
     if (query.endDate) filter.createdAt.$lte = new Date(query.endDate);
   }
 
+  // 🔎 Search across orderId, user/service-provider name, event/workshop title,
+  // payment type, payment method, and transactionId. Most of these live on
+  // populated User/EventOrder/GearOrder/Workshop docs, which a plain regex
+  // find() on Payment can't reach — resolve matching IDs first.
+  const searchTerm = (query.searchTerm || query.search) as string | undefined;
+  if (searchTerm) {
+    const regex = { $regex: searchTerm, $options: 'i' };
+
+    const [matchingUsers, matchingEventOrders, matchingGearOrdersById, matchingGearItems, matchingWorkshops] = await Promise.all([
+      User.find({ $or: [{ name: regex }, { companyName: regex }] }).select('_id'),
+      EventOrder.find({ $or: [{ orderId: regex }, { title: regex }] }).select('_id'),
+      GearOrder.find({ orderId: regex }).select('_id'),
+      GearMarketplace.find({ name: regex }).select('_id'),
+      Workshop.find({ title: regex }).select('_id'),
+    ]);
+
+    // Gear orders can match either by their own orderId, or by the
+    // marketplace item's name (e.g. "Canon 24-70mm Lens")
+    const matchingGearOrdersByItem = matchingGearItems.length
+      ? await GearOrder.find({ gearMarketplaceId: { $in: matchingGearItems.map((g) => g._id) } }).select('_id')
+      : [];
+    const matchingGearOrders = [...matchingGearOrdersById, ...matchingGearOrdersByItem];
+
+    const matchingUserIds = matchingUsers.map((u) => u._id);
+
+    filter.$or = [
+      { transactionId: regex },
+      { mainOrderIdForGear: regex },
+      { paymentType: regex },
+      { paymentMethod: regex },
+      { userId: { $in: matchingUserIds } },
+      { serviceProviderId: { $in: matchingUserIds } },
+      { 'serviceProviders.serviceProviderId': { $in: matchingUserIds } },
+      { eventOrderId: { $in: matchingEventOrders.map((o) => o._id) } },
+      { gearOrderIds: { $in: matchingGearOrders.map((o) => o._id) } },
+      { workshopId: { $in: matchingWorkshops.map((w) => w._id) } },
+    ];
+  }
+
   const paymentQuery = new QueryBuilder(
     Payment.find(filter)
       .populate('userId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
@@ -643,7 +682,6 @@ const getPayments = async (query: any) => {
       }),
     query,
   )
-    .search(['transactionId', 'userId.name', 'serviceProviderId.name'])
     .filter()
     .sort()
     .paginate()
