@@ -2,15 +2,15 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catchAsync";
 import { CategoryService } from "./category.service";
 import sendResponse from "../../utils/sendResponse";
-import { deleteFile, storeFile } from "../../utils/fileHelper";
+import { deleteFileFromS3, uploadFileToS3 } from "../../helpers/s3FileHelper";
 import { CategoryType, IUpdateCategory } from "./category.interface";
 import { Category } from "./category.model";
 
 
 const createCategory = catchAsync(async (req: Request, res: Response) => {
-  
+
   if (req?.file) {
-      req.body.image = storeFile('category', req?.file?.filename);
+      req.body.image = await uploadFileToS3(req.file, 'category');
     }
 
   req.body.createdBy = req.user.userId;
@@ -64,22 +64,24 @@ const getCategoryById = catchAsync(async (req: Request, res: Response) => {
 const updateCategory = catchAsync(async (req: Request, res: Response) => {
 
   const payload: IUpdateCategory = req.body;
+  let oldImageKey: string | undefined;
 
   if (req?.file) {
-
-    // Retrieve the current category to check if an image exists
+    // Retrieve the current category to know which image to remove afterward
     const currentCategory = await Category.findById(req.params.id);
+    oldImageKey = currentCategory?.image;
 
-    if (currentCategory?.image) {
-      // Delete the old image before updating
-      // This function can either delete from a local folder or cloud storage
-      deleteFile(currentCategory.image);
-    }
-
-      payload.image = storeFile('category', req?.file?.filename);
-    }
+    payload.image = await uploadFileToS3(req.file, 'category');
+  }
 
   const result = await CategoryService.updateCategory(req.params.id, payload);
+
+  // Only remove the old S3 object once the new one is uploaded and saved
+  if (oldImageKey) {
+    deleteFileFromS3(oldImageKey).catch((err) =>
+      console.error('Failed to delete old category image from S3:', err),
+    );
+  }
 
   sendResponse(res, {
     statusCode: 200,

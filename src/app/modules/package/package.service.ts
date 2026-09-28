@@ -1,7 +1,7 @@
 import { Package } from "./package.model";
 import { IPackage, IUpdatePackage } from "./package.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
-import { deleteFile } from "../../utils/fileHelper";
+import { deleteFileFromS3, resolveFileUrl } from "../../helpers/s3FileHelper";
 import AppError from "../../error/AppError";
 import mongoose from "mongoose";
 import { Review } from "../review/review.model";
@@ -25,17 +25,26 @@ const getAllPackages = async (query: Record<string, any> = {}) => {
     .paginate()
     .fields();
 
-  const result = await packageQuery.modelQuery;
+  const packages = await packageQuery.modelQuery.lean();
   const meta = await packageQuery.countTotal();
+
+  const result = await Promise.all(
+    packages.map(async (p: any) => ({ ...p, thumbnailImage: await resolveFileUrl(p.thumbnailImage) })),
+  );
 
   return { meta, result };
 };
 
 const getPackageById = async (id: string) => {
-  return await Package.findOne({ _id: id, isDeleted: false }).populate({
-    path: "authorId",
-    select: "name sureName role profileImage",
-  });
+  const pkg = await Package.findOne({ _id: id, isDeleted: false })
+    .populate({
+      path: "authorId",
+      select: "name sureName role profileImage",
+    })
+    .lean();
+
+  if (!pkg) return pkg;
+  return { ...pkg, thumbnailImage: await resolveFileUrl((pkg as any).thumbnailImage) };
 };
 
 const getMyPackages = async (userId: string, query: Record<string, unknown>) => {
@@ -52,8 +61,12 @@ const getMyPackages = async (userId: string, query: Record<string, unknown>) => 
     .paginate()
     .fields();
 
-  const result = await packageQuery.modelQuery;
+  const packages = await packageQuery.modelQuery.lean();
   const meta = await packageQuery.countTotal();
+
+  const result = await Promise.all(
+    packages.map(async (p: any) => ({ ...p, thumbnailImage: await resolveFileUrl(p.thumbnailImage) })),
+  );
 
   return { meta, result };
 };
@@ -71,8 +84,12 @@ const getPendingPackages = async (query: Record<string, any> = {}) => {
     .paginate()
     .fields();
 
-  const result = await packageQuery.modelQuery;
+  const packages = await packageQuery.modelQuery.lean();
   const meta = await packageQuery.countTotal();
+
+  const result = await Promise.all(
+    packages.map(async (p: any) => ({ ...p, thumbnailImage: await resolveFileUrl(p.thumbnailImage) })),
+  );
 
   return { meta, result };
 };
@@ -120,6 +137,8 @@ export const getUserPackageAndReviewStats = async (authorId: string) => {
 
 const updatePackage = async (id: string, userId: string, payload: IUpdatePackage) => {
   // Replace old thumbnail if a new one is uploaded
+  let oldThumbnailKey: string | undefined;
+
   if (payload.thumbnailImage) {
     const existing = await Package.findOne({
       _id: id,
@@ -131,16 +150,23 @@ const updatePackage = async (id: string, userId: string, payload: IUpdatePackage
       throw new Error("Package not found or you don't have permission");
     }
 
-    if (existing.thumbnailImage) {
-      deleteFile(existing.thumbnailImage);
-    }
+    oldThumbnailKey = existing.thumbnailImage;
   }
 
-  return Package.findOneAndUpdate(
+  const updated = await Package.findOneAndUpdate(
     { _id: id, authorId: userId, isDeleted: false },
     payload,
     { new: true }
   );
+
+  // Only remove the old S3 object once the new one is saved
+  if (oldThumbnailKey) {
+    deleteFileFromS3(oldThumbnailKey).catch((err) =>
+      console.error('Failed to delete old package thumbnail from S3:', err),
+    );
+  }
+
+  return updated;
 };
 
 const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: string) => {

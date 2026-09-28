@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../../utils/catchAsync';
-import { storeFile } from '../../utils/fileHelper';
 import sendResponse from '../../utils/sendResponse';
 import { ChatService } from './chat.service';
 

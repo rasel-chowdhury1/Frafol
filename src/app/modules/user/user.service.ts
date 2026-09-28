@@ -35,8 +35,7 @@ import mongoose, { Types } from 'mongoose';
 import { getAdminId } from '../../DB/adminStrore';
 import { emitNotification, sentNotificationForAccountDeleteRequest, sentNotificationForProfileDeclined } from '../../../socketIo';
 import { USER_ROLE, UserRole } from './user.constants';
-import fs from 'fs';
-import path from 'path';
+import { deleteFileFromS3, deleteFilesFromS3, resolveFileUrl, resolveFileUrls } from '../../helpers/s3FileHelper';
 import { getUserPackageAndReviewStats } from '../package/package.service';
 import { GearOrder } from '../gearOrder/gearOrder.model';
 import { EventOrder } from '../eventOrder/eventOrder.model';
@@ -565,14 +564,8 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     }
   }
 
-  // Delete previous profile image if a new one is uploaded
-  if (payload.profileImage && user.profileImage) {
-    const oldFilePath = path.join(process.cwd(), 'public', user.profileImage); // include public folder
-    if (fs.existsSync(oldFilePath)) {
-      fs.unlinkSync(oldFilePath);
-      console.log(`Deleted previous profile image: ${oldFilePath}`);
-    }
-  }
+  // Track the old profile image so it can be removed after the new one is saved
+  const oldProfileImage = payload.profileImage ? user.profileImage : undefined;
 
   // Merge rest fields with profileImage if present
   const updateData = {
@@ -586,6 +579,13 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
   const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
     new: true,
   });
+
+  // Only remove the old S3 object once the new image is saved
+  if (oldProfileImage && oldProfileImage !== payload.profileImage) {
+    deleteFileFromS3(oldProfileImage).catch((err) =>
+      console.error('Failed to delete old profile image from S3:', err),
+    );
+  }
 
 
   console.log('updatedUser ->>> ', updatedUser);
@@ -628,8 +628,10 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
     expity_time: config.jwt_refresh_expires_in as string,
   });
 
+  const userObj = updatedUser.toObject();
+
   return {
-    user: updatedUser,
+    user: { ...userObj, profileImage: await resolveFileUrl(userObj.profileImage) },
     accessToken,
     refreshToken,
   };
@@ -648,22 +650,13 @@ const updateGallery = async (
   }
 
   let newGallery = (existingUser as any).gallery || [];
+  const keysToDelete = updateData.deleteGallery;
 
   // Remove images if deleteGallery is provided
-  if (updateData.deleteGallery && updateData.deleteGallery.length > 0) {
-    updateData.deleteGallery.forEach((imgPath) => {
-      // Convert relative path to absolute server path
-      const fullPath = path.join(process.cwd(), 'public', imgPath); // process.cwd() gives root of project
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      } else {
-        console.log(`File not found: ${fullPath}`);
-      }
-    });
-
+  if (keysToDelete && keysToDelete.length > 0) {
     // Remove deleted images from gallery array
     newGallery = (newGallery as string[]).filter(
-      (img) => !updateData.deleteGallery?.includes(img),
+      (img) => !keysToDelete.includes(img),
     );
   }
   // Append new images if provided
@@ -683,7 +676,16 @@ const updateGallery = async (
     { new: true },
   );
 
-  return updatedBusiness;
+  // Only remove the S3 objects once the DB update has succeeded
+  if (keysToDelete?.length) {
+    deleteFilesFromS3(keysToDelete).catch((err) =>
+      console.error('Failed to delete gallery images from S3:', err),
+    );
+  }
+
+  if (!updatedBusiness) return updatedBusiness;
+  const obj = updatedBusiness.toObject();
+  return { ...obj, gallery: await resolveFileUrls(obj.gallery) };
 };
 
 
@@ -700,24 +702,14 @@ const updateBannerImages = async (
 
 
   let updatedBannerImages = existingUser.bannerImages || [];
-
-
+  const keysToDelete = updateData.deleteGallery;
 
   // 🗑️ Remove images
-  if (updateData.deleteGallery?.length) {
-    updateData.deleteGallery.forEach((imgPath) => {
-      const fullPath = path.join(process.cwd(), 'public', imgPath);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    });
-
+  if (keysToDelete?.length) {
     updatedBannerImages = updatedBannerImages.filter(
-      (img) => !updateData.deleteGallery?.includes(img),
+      (img) => !keysToDelete.includes(img),
     );
   }
-
-
 
   // ➕ Add new images
   if (updateData.bannerImages?.length) {
@@ -727,8 +719,6 @@ const updateBannerImages = async (
     ];
   }
 
-  
-
   // ✅ Save to bannerImages field
   const updatedUser = await User.findByIdAndUpdate(
     userId,
@@ -736,7 +726,16 @@ const updateBannerImages = async (
     { new: true },
   );
 
-  return updatedUser;
+  // Only remove the S3 objects once the DB update has succeeded
+  if (keysToDelete?.length) {
+    deleteFilesFromS3(keysToDelete).catch((err) =>
+      console.error('Failed to delete banner images from S3:', err),
+    );
+  }
+
+  if (!updatedUser) return updatedUser;
+  const obj = updatedUser.toObject();
+  return { ...obj, bannerImages: await resolveFileUrls(obj.bannerImages) };
 };
 
 const updateIntroVideo = async (
@@ -750,15 +749,7 @@ const updateIntroVideo = async (
     throw new Error('User not found');
   }
 
-
-  if(existingUser.introVideo){
-    const oldFilePath = path.join(process.cwd(), 'public', existingUser.introVideo); // include public folder
-    if (fs.existsSync(oldFilePath)) {
-      fs.unlinkSync(oldFilePath);
-      console.log(`Deleted previous profile image: ${oldFilePath}`);
-    }
-  }
-
+  const oldIntroVideo = existingUser.introVideo;
 
   const updatedBusiness = await User.findByIdAndUpdate(
     userId,
@@ -766,7 +757,16 @@ const updateIntroVideo = async (
     { new: true },
   );
 
-  return updatedBusiness;
+  // Only remove the old S3 object once the new video is saved
+  if (oldIntroVideo) {
+    deleteFileFromS3(oldIntroVideo).catch((err) =>
+      console.error('Failed to delete old intro video from S3:', err),
+    );
+  }
+
+  if (!updatedBusiness) return updatedBusiness;
+  const obj = updatedBusiness.toObject();
+  return { ...obj, introVideo: await resolveFileUrl(obj.introVideo) };
 };
 
 const verifyProfessionalUserById = async (userId: string, status?: string) => {
@@ -1676,11 +1676,11 @@ const getUserById = async (id: string) => {
 };
 
 const getUserGalleryById = async (id: string) => {
-  const result = await User.findById(id).select('gallery');
+  const result = await User.findById(id).select('gallery').lean();
   if (!result) {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
   }
-  return result;
+  return { ...result, gallery: await resolveFileUrls(result.gallery) };
 };
 
 const getUserDetailsById = async (userId: string) => {
@@ -1713,9 +1713,16 @@ const getUserDetailsById = async (userId: string) => {
 // Optimized the function to improve performance, reducing the processing time to 235 milliseconds.
 const getMyProfile = async (id: string) => {
 
-  const result = await User.findById(id).populate('profileId');
+  const result = await User.findById(id).populate('profileId').lean();
+  if (!result) return result;
 
-  return result;
+  return {
+    ...result,
+    profileImage: await resolveFileUrl(result.profileImage),
+    introVideo: await resolveFileUrl(result.introVideo),
+    gallery: await resolveFileUrls(result.gallery),
+    bannerImages: await resolveFileUrls(result.bannerImages),
+  };
 };
 
 const getAdminProfile = async (id: string) => {
@@ -2981,7 +2988,11 @@ const getRandomGalleryImages = async () => {
   }
 
   // <-- shuffle final result across users
-  return shuffleArray(images).slice(0, 12);
+  const finalImages = shuffleArray(images).slice(0, 12);
+
+  return Promise.all(
+    finalImages.map(async (img) => ({ ...img, image: await resolveFileUrl(img.image) as string })),
+  );
 };
 
 

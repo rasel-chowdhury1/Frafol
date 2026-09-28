@@ -1,7 +1,7 @@
 import { Workshop } from "./workshop.model";
 import { IWorkshop, IUpdateWorkshop } from "./workshop.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
-import { deleteFile } from "../../utils/fileHelper";
+import { deleteFileFromS3, resolveFileUrl } from "../../helpers/s3FileHelper";
 import AppError from "../../error/AppError";
 import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
 import httpStatus from 'http-status';
@@ -53,6 +53,7 @@ const getAllWorkshops = async (query: Record<string, any> = {}) => {
 
       return {
         ...workshop.toObject(),
+        image: await resolveFileUrl(workshop.image),
         totalParticipants,
       };
     })
@@ -87,6 +88,7 @@ const getAllWorkshopsForAdmin = async (query: Record<string, any> = {}) => {
 
       return {
         ...workshop.toObject(),
+        image: await resolveFileUrl(workshop.image),
         totalParticipants,
       };
     })
@@ -96,10 +98,15 @@ const getAllWorkshopsForAdmin = async (query: Record<string, any> = {}) => {
 };
 
 const getWorkshopById = async (id: string) => {
-  return await Workshop.findOne({ _id: id, isDeleted: false }).populate({
-    path: "authorId",
-    select: "name sureName role profileImage",
-  });
+  const workshop = await Workshop.findOne({ _id: id, isDeleted: false })
+    .populate({
+      path: "authorId",
+      select: "name sureName role profileImage",
+    })
+    .lean();
+
+  if (!workshop) return workshop;
+  return { ...workshop, image: await resolveFileUrl((workshop as any).image) };
 };
 
 const getMyWorkshops = async (userId: string, query: Record<string, unknown>) => {
@@ -127,6 +134,7 @@ const getMyWorkshops = async (userId: string, query: Record<string, unknown>) =>
 
       return {
         ...workshop.toObject(),
+        image: await resolveFileUrl(workshop.image),
         totalParticipants,
       };
     })
@@ -182,8 +190,12 @@ const getPendingWorkshops = async (
     .paginate()
     .fields();
 
-  const result = await userQuery.modelQuery;
+  const workshops = await userQuery.modelQuery.lean();
   const meta = await userQuery.countTotal();
+
+  const result = await Promise.all(
+    workshops.map(async (w: any) => ({ ...w, image: await resolveFileUrl(w.image) })),
+  );
 
   return { meta, result };
 };
@@ -208,6 +220,8 @@ const updateWorkshop = async (
   userId: string,
   payload: IUpdateWorkshop
 ) => {
+  let oldImageKey: string | undefined;
+
   // ✅ Case 1: If new image provided → fetch old workshop first
   if (payload.image) {
     const existing = await Workshop.findOne({
@@ -220,17 +234,23 @@ const updateWorkshop = async (
       throw new Error("Workshop not found or you don't have permission");
     }
 
-    if (existing.image) {
-      deleteFile(existing.image);
-    }
+    oldImageKey = existing.image;
   }
 
-  // ✅ Case 2: If no new image → directly update
-  return Workshop.findOneAndUpdate(
+  const updated = await Workshop.findOneAndUpdate(
     { _id: id, authorId: userId, isDeleted: false },
     payload,
     { new: true }
   );
+
+  // Only remove the old S3 object once the new one is saved
+  if (oldImageKey) {
+    deleteFileFromS3(oldImageKey).catch((err) =>
+      console.error('Failed to delete old workshop image from S3:', err),
+    );
+  }
+
+  return updated;
 };
 
 const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: string) => {

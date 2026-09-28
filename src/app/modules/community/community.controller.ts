@@ -2,25 +2,16 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { CommunityService } from "./community.service";
-import { storeFiles } from "../../utils/fileHelper";
+import { uploadFilesToS3 } from "../../helpers/s3FileHelper";
 import httpStatus from 'http-status';
 
 const createCommunity = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
 
-  if (req.files) {
+  const files = req.files as { [fieldName: string]: Express.Multer.File[] } | undefined;
+  if (files?.images?.length) {
     try {
-      // Use storeFiles to process all uploaded files
-      const filePaths = storeFiles(
-        'community',
-        req.files as { [fieldName: string]: Express.Multer.File[] },
-      );
-
-      // Set photos (multiple files)
-      if (filePaths.images && filePaths.images.length > 0) {
-        req.body.images = filePaths.images; // Assign full array of photos
-      }
-
+      req.body.images = await uploadFilesToS3(files.images, 'community');
     } catch (error: any) {
       console.error('Error processing files:', error.message);
       return sendResponse(res, {
@@ -139,15 +130,9 @@ const updateCommunity = catchAsync(async (req: any, res: any) => {
 payload.deleteImages = payload.deleteImages ?? [];
 
   // ✅ Handle uploaded images (if provided)
-  if (req.files) {
-    const filePaths = storeFiles(
-      "community",
-      req.files as { [fieldName: string]: Express.Multer.File[] }
-    );
-
-    if (filePaths.images?.length) {
-      payload.images = filePaths.images;
-    }
+  const files = req.files as { [fieldName: string]: Express.Multer.File[] } | undefined;
+  if (files?.images?.length) {
+    payload.images = await uploadFilesToS3(files.images, 'community');
   }
 
   const result = await CommunityService.updateCommunity(

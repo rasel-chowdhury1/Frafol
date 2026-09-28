@@ -32,7 +32,6 @@ async function main() {
 
     // console.log('config.database_url', config.database_url);
 
-
     // Connect to MongoDB with a timeout
     await mongoose.connect(config.database_url as string, {
       connectTimeoutMS: 10000, // 10 seconds timeout

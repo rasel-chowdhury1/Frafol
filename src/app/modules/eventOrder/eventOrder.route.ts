@@ -8,11 +8,12 @@ import { USER_ROLE } from "../user/user.constants";
 const router = Router();
 
 
-router.post(
-    "/create", 
-    auth(USER_ROLE.USER, USER_ROLE.COMPANY), 
-    EventOrderController.createEventOrder
-   )
+router
+    .post(
+        "/create", 
+        auth(USER_ROLE.USER, USER_ROLE.COMPANY), 
+        EventOrderController.createEventOrder
+    )
 
     .patch(
         "/custom/accept/:orderId", 

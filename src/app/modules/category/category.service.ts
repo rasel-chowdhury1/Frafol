@@ -1,5 +1,6 @@
 import { CategoryType, ICategory } from "./category.interface";
 import { Category } from "./category.model";
+import { resolveFileUrl } from "../../helpers/s3FileHelper";
 
 
 const createCategory = async (payload: ICategory) => {
@@ -18,15 +19,23 @@ const createCategory = async (payload: ICategory) => {
 };
 
 const getAllCategories = async () => {
-  return await Category.find({ isDeleted: false });
+  const categories = await Category.find({ isDeleted: false }).lean();
+  return Promise.all(
+    categories.map(async (c: any) => ({ ...c, image: await resolveFileUrl(c.image) })),
+  );
 };
 
 const getSpecificCategories = async (type: CategoryType) => {
-  return await Category.find({type, isDeleted: false }).sort({ order: 1 });
+  const categories = await Category.find({ type, isDeleted: false }).sort({ order: 1 }).lean();
+  return Promise.all(
+    categories.map(async (c: any) => ({ ...c, image: await resolveFileUrl(c.image) })),
+  );
 };
 
 const getCategoryById = async (id: string) => {
-  return await Category.findOne({ _id: id, isDeleted: false });
+  const category = await Category.findOne({ _id: id, isDeleted: false }).lean();
+  if (!category) return category;
+  return { ...category, image: await resolveFileUrl((category as any).image) };
 };
 
 const updateCategory = async (id: string, payload: Partial<ICategory>) => {

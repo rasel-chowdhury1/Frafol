@@ -5,6 +5,7 @@ import Message from './message.model';
 import Chat from '../chat/chat.model';
 import { Types } from 'mongoose';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { resolveFileUrls } from '../../helpers/s3FileHelper';
 
 const sendMessage = async (data: any) => {
   console.log({data})
@@ -169,12 +170,16 @@ const getMessagesForChat = async (
     .paginate();
 
   // Execute query and count total messages for pagination metadata
-  const messages = await messageQuery.modelQuery;
+  const messages = await messageQuery.modelQuery.lean();
   const meta = await messageQuery.countTotal();
+
+  const data = await Promise.all(
+    messages.map(async (m: any) => ({ ...m, images: await resolveFileUrls(m.images) })),
+  );
 
   return {
     meta,
-    data: messages,
+    data,
   };
 };
 

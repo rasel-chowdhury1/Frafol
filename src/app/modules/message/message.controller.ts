@@ -7,7 +7,7 @@ import { IChat } from '../chat/chat.interface';
 import Chat from '../chat/chat.model';
 import AppError from '../../error/AppError';
 import { ChatService } from '../chat/chat.service';
-import { storeFiles } from '../../utils/fileHelper';
+import { uploadFilesToS3 } from '../../helpers/s3FileHelper';
 
 const sendMessage = catchAsync(async (req: Request, res: Response) => {
   const {text, images, chatId} = req.body;
@@ -122,19 +122,10 @@ const fileUpload = catchAsync(async (req: Request, res: Response) => {
 
     let result;
 
-      if (req.files) {
+  const files = req.files as { [fieldName: string]: Express.Multer.File[] } | undefined;
+  if (files?.images?.length) {
     try {
-      // Use storeFiles to process all uploaded files
-      const filePaths = storeFiles(
-        'chat',
-        req.files as { [fieldName: string]: Express.Multer.File[] },
-      );
-
-      // Set photos (multiple files)
-      if (filePaths.images && filePaths.images.length > 0) {
-        result = filePaths.images; // Assign full array of photos
-      }
-
+      result = await uploadFilesToS3(files.images, 'chat');
     } catch (error: any) {
       console.error('Error processing files:', error.message);
       return sendResponse(res, {

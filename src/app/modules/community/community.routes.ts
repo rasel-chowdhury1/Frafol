@@ -6,7 +6,7 @@ import auth from "../../middleware/auth";
 import { USER_ROLE } from "../user/user.constants";
 import fileUpload from "../../middleware/fileUpload";
 import parseData from "../../middleware/parseData";
-const upload = fileUpload('./public/uploads/community');
+const upload = fileUpload();
 
 const router = Router();
 

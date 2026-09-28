@@ -4,7 +4,7 @@ import { User } from "../user/user.model";
 import { ICommunity } from "./community.interface";
 import { hasForbiddenContent } from "./community.utils";
 import AppError from "../../error/AppError";
-import { deleteFile } from "../../utils/fileHelper";
+import { deleteFilesFromS3, resolveFileUrls } from "../../helpers/s3FileHelper";
 import { CommunityEngagementStats } from "../communityEngagementStats/communityEngagementStats.model";
 import QueryBuilder from "../../builder/QueryBuilder";
 import mongoose, { Types } from "mongoose";
@@ -68,13 +68,16 @@ const getAllCommunities = async (userId: string, role: string, query: Record<str
   });
 
   // Merge totals into communities
-  const result = communities.map((c: any) => ({
-    ...c,
-    totalLikes: engagementMap.get(c._id.toString())?.totalLikes || 0,
-    totalViewers: engagementMap.get(c._id.toString())?.totalViewers || 0,
-    totalComments: engagementMap.get(c._id.toString())?.totalComments || 0,
-    isLiked: engagementMap.get(c._id.toString())?.isLiked || false,
-  }));
+  const result = await Promise.all(
+    communities.map(async (c: any) => ({
+      ...c,
+      images: await resolveFileUrls(c.images),
+      totalLikes: engagementMap.get(c._id.toString())?.totalLikes || 0,
+      totalViewers: engagementMap.get(c._id.toString())?.totalViewers || 0,
+      totalComments: engagementMap.get(c._id.toString())?.totalComments || 0,
+      isLiked: engagementMap.get(c._id.toString())?.isLiked || false,
+    })),
+  );
 
   return { meta, result };
 };
@@ -123,16 +126,19 @@ const getMyPosts = async (userId: string, query: Record<string, any> = {}) => {
   });
 
   // Merge data into response
-  const result = communities.map((c: any) => {
-    const stats = engagementMap.get(c._id.toString());
-    return {
-      ...c,
-      totalLikes: stats?.totalLikes || 0,
-      totalViewers: stats?.totalViewers || 0,
-      totalComments: stats?.totalComments || 0,
-      isLiked: stats?.isLiked || false,
-    };
-  });
+  const result = await Promise.all(
+    communities.map(async (c: any) => {
+      const stats = engagementMap.get(c._id.toString());
+      return {
+        ...c,
+        images: await resolveFileUrls(c.images),
+        totalLikes: stats?.totalLikes || 0,
+        totalViewers: stats?.totalViewers || 0,
+        totalComments: stats?.totalComments || 0,
+        isLiked: stats?.isLiked || false,
+      };
+    }),
+  );
 
   return { meta, result };
 };
@@ -194,12 +200,15 @@ const adminGetAll = async (query: Record<string, any> = {}) => {
   });
 
   // Merge totals into communities
-  const result = communities.map((c: any) => ({
-    ...c,
-    totalLikes: engagementMap.get(c._id.toString())?.totalLikes || 0,
-    totalViewers: engagementMap.get(c._id.toString())?.totalViewers || 0,
-    totalComments: engagementMap.get(c._id.toString())?.totalComments || 0,
-  }));
+  const result = await Promise.all(
+    communities.map(async (c: any) => ({
+      ...c,
+      images: await resolveFileUrls(c.images),
+      totalLikes: engagementMap.get(c._id.toString())?.totalLikes || 0,
+      totalViewers: engagementMap.get(c._id.toString())?.totalViewers || 0,
+      totalComments: engagementMap.get(c._id.toString())?.totalComments || 0,
+    })),
+  );
 
   return { meta, result };
 };
@@ -253,8 +262,10 @@ const getCommunityById = async (userId: string, communityId: string) => {
 
 
   // 6️⃣ Return enriched object
+  const communityObj = community.toObject();
   return {
-    ...community.toObject(),
+    ...communityObj,
+    images: await resolveFileUrls(communityObj.images),
     totalLikes,
     totalViewers,
     totalComments,
@@ -370,14 +381,10 @@ const updateCommunity = async (
       { new: true }
     );
 
-    // Remove physical files
-    for (const filePath of deleteImages) {
-      try {
-        await deleteFile(filePath);
-      } catch (err) {
-        console.error("Failed to delete file:", filePath, err);
-      }
-    }
+    // Remove the objects from S3 now that the DB update succeeded
+    deleteFilesFromS3(deleteImages).catch((err) =>
+      console.error("Failed to delete community images from S3:", err),
+    );
   }
 
   return updatedDoc;

@@ -4,7 +4,7 @@ import sendResponse from '../../utils/sendResponse';
 import { userService } from './user.service';
 
 import httpStatus from 'http-status';
-import { storeFile, storeFiles } from '../../utils/fileHelper';
+import { uploadFileToS3, uploadFilesToS3 } from '../../helpers/s3FileHelper';
 import AppError from '../../error/AppError';
 
 
@@ -268,10 +268,22 @@ const getProfessionalUsersByCategory = catchAsync(async (req: Request, res: Resp
 
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   
-
+console.log("file =>>> ", req.file)
   if (req?.file) {
-    // console.log("req file =>>>> ",req.file)
-    req.body.profileImage = storeFile('profile', req?.file?.filename);
+
+    try {
+      console.log("result before process")
+          const result = await uploadFileToS3(req.file, 'profile')
+          
+    console.log("result =>>> ", result)
+    req.body.profileImage = result;
+    } catch (error) {
+      console.log("error =>>> ", error)
+    }
+
+
+
+    console.log("body of update my profile =>>> ", req.body.profileImage)
   }
 
 
@@ -285,13 +297,9 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
-
-console.log("======== upload new video =>>>>>>> ", )
   if (req?.file) {
-    req.body.introVideo = storeFile('video', req?.file?.filename);
+    req.body.introVideo = await uploadFileToS3(req.file, 'video');
   }
-
-
 
   const result = await userService.updateIntroVideo(req?.user?.userId, req.body.introVideo);
   
@@ -312,12 +320,11 @@ const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
   // Handle file uploads if any
   if (req.files && Object.keys(req.files).length > 0) {
     const files = req.files as { [fieldName: string]: Express.Multer.File[] };
-    const uploadedFiles = storeFiles('profile', files);
-
-    if (uploadedFiles.gallery) {
+    if (files.gallery?.length) {
+      const uploadedKeys = await uploadFilesToS3(files.gallery, 'profile');
       updateData.gallery = updateData.gallery
-        ? [...updateData.gallery, ...uploadedFiles.gallery]
-        : uploadedFiles.gallery;
+        ? [...updateData.gallery, ...uploadedKeys]
+        : uploadedKeys;
     }
   }
 
@@ -352,11 +359,8 @@ const updateBannerImages = catchAsync(async (req: Request, res: Response) => {
   // Handle file uploads
   if (req.files && Object.keys(req.files).length > 0) {
     const files = req.files as { [fieldName: string]: Express.Multer.File[] };
-    const uploadedFiles = storeFiles('profile', files);
-
-    // ✅ bannerImages upload
-    if (uploadedFiles.gallery?.length) {
-      updateData.bannerImages = uploadedFiles.gallery;
+    if (files.gallery?.length) {
+      updateData.bannerImages = await uploadFilesToS3(files.gallery, 'profile');
     }
   }
 

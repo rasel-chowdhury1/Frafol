@@ -1,7 +1,7 @@
 import { GearMarketplace } from "./gearMarketplace.model";
 import { IGearMarketplace, IUpdateGearMarketplace } from "./gearMarketplace.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
-import { deleteFile } from "../../utils/fileHelper";
+import { deleteFilesFromS3, resolveFileUrls } from "../../helpers/s3FileHelper";
 import AppError from "../../error/AppError";
 import mongoose from "mongoose";
 import httpStatus from 'http-status';
@@ -29,8 +29,12 @@ const getAllGearMarketplaces = async (query: Record<string, unknown>) => {
     .paginate()
     .fields();
 
-  const result = await gearQuery.modelQuery;
+  const items = await gearQuery.modelQuery.lean();
   const meta = await gearQuery.countTotal();
+
+  const result = await Promise.all(
+    items.map(async (item: any) => ({ ...item, gallery: await resolveFileUrls(item.gallery) })),
+  );
 
   return { meta, result };
 };
@@ -50,17 +54,25 @@ const getMyGearMarketplaces = async (userId: string, query: Record<string, unkno
     .paginate()
     .fields();
 
-  const result = await gearQuery.modelQuery;
+  const items = await gearQuery.modelQuery.lean();
   const meta = await gearQuery.countTotal();
+
+  const result = await Promise.all(
+    items.map(async (item: any) => ({ ...item, gallery: await resolveFileUrls(item.gallery) })),
+  );
 
   return { meta, result };
 };
 
 
 const getGearMarketplaceById = async (id: string) => {
-  return await GearMarketplace.findOne({ _id: id, isDeleted: false })
+  const item = await GearMarketplace.findOne({ _id: id, isDeleted: false })
     .populate({path: "authorId", select: "name sureName role email" })
-    .populate({path: "categoryId", select: "title" });
+    .populate({path: "categoryId", select: "title" })
+    .lean();
+
+  if (!item) return item;
+  return { ...item, gallery: await resolveFileUrls((item as any).gallery) };
 };
 
 const updateGearMarketplace = async (
@@ -106,16 +118,11 @@ const updateGearMarketplace = async (
       throw new AppError(400, "Gear Marketplace item not found or cannot be updated");
     }
 
-    // Remove physical files if deleteGallery exists
+    // Remove the S3 objects now that the DB update has succeeded
     if (deleteGallery && deleteGallery.length > 0) {
-      for (const filePath of deleteGallery) {
-        try {
-          await deleteFile(filePath);
-        } catch (err) {
-          console.error(`Failed to delete file ${filePath}:`, err);
-          // Skip error, don't crash server
-        }
-      }
+      deleteFilesFromS3(deleteGallery).catch((err) =>
+        console.error('Failed to delete gear gallery images from S3:', err),
+      );
     }
 
     return updatedDoc;
@@ -166,8 +173,12 @@ const getPendingGearMarketplace = async (
     .paginate()
     .fields();
 
-  const result = await userQuery.modelQuery;
+  const items = await userQuery.modelQuery.lean();
   const meta = await userQuery.countTotal();
+
+  const result = await Promise.all(
+    items.map(async (item: any) => ({ ...item, gallery: await resolveFileUrls(item.gallery) })),
+  );
 
   return { meta, result };
 };

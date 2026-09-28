@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { WorkshopService } from "./workshop.service";
-import { storeFile } from "../../utils/fileHelper";
+import { uploadFileToS3 } from "../../helpers/s3FileHelper";
 import { ApprovalStatus } from "../gearMarketplace/gearMarketplace.interface";
 import httpStatus from 'http-status';
 
@@ -11,7 +11,7 @@ const createWorkshop = catchAsync(async (req: Request, res: Response) => {
   req.body.authorId = req.user.userId; // logged-in user
 
     if (req?.file) {
-      req.body.image = storeFile('workshop', req?.file?.filename);
+      req.body.image = await uploadFileToS3(req.file, 'workshop');
     }
   const result = await WorkshopService.createWorkshop(req.body);
 
@@ -109,7 +109,7 @@ const updateWorkshop = catchAsync(async (req: Request, res: Response) => {
 
 
     if (req?.file) {
-      req.body.image = storeFile('workshop', req?.file?.filename);
+      req.body.image = await uploadFileToS3(req.file, 'workshop');
     }
 
   const result = await WorkshopService.updateWorkshop(

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { PackageService } from "./package.service";
-import { storeFile } from "../../utils/fileHelper";
+import { uploadFileToS3 } from "../../helpers/s3FileHelper";
 import { ApprovalStatus } from "./package.interface";
 import httpStatus from "http-status";
 
@@ -10,10 +10,8 @@ const createPackage = catchAsync(async (req: Request, res: Response) => {
   req.body.authorId = req.user.userId;
 
   if (req?.file) {
-    req.body.thumbnailImage = storeFile("package", req?.file?.filename);
+    req.body.thumbnailImage = await uploadFileToS3(req.file, "package");
   }
-
-  console.log("Request Body:", req.body); // Debugging line
 
   const result = await PackageService.createPackage(req.body);
 
@@ -84,7 +82,7 @@ const getUserPackageAndReviewStats = catchAsync(async (req: Request, res: Respon
 
 const updatePackage = catchAsync(async (req: Request, res: Response) => {
   if (req?.file) {
-    req.body.thumbnailImage = storeFile("package", req?.file?.filename);
+    req.body.thumbnailImage = await uploadFileToS3(req.file, "package");
   }
 
   const result = await PackageService.updatePackage(

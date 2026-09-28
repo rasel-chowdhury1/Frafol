@@ -7,7 +7,7 @@ import { verifyOtpValidations } from '../otp/otp.validation';
 import { userController } from './user.controller';
 import { userValidation } from './user.validation';
 import { USER_ROLE } from './user.constants';
-const upload = fileUpload('./public/uploads/profile');
+const upload = fileUpload();
 
 export const userRoutes = Router();
 

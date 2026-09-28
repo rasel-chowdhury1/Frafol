@@ -2,27 +2,17 @@ import { Request, Response } from "express";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { GearMarketplaceService } from "./gearMarketplace.service";
-import { storeFiles } from "../../utils/fileHelper";
+import { uploadFilesToS3 } from "../../helpers/s3FileHelper";
 import { ApprovalStatus } from "./gearMarketplace.interface";
 import httpStatus from 'http-status';
 
 const createGearMarketplace = catchAsync(async (req: Request, res: Response) => {
   req.body.authorId = req.user.userId; // logged in user
 
-
-  if (req.files) {
+  const files = req.files as { [fieldName: string]: Express.Multer.File[] } | undefined;
+  if (files?.gallery?.length) {
     try {
-      // Use storeFiles to process all uploaded files
-      const filePaths = storeFiles(
-        'marketPlace',
-        req.files as { [fieldName: string]: Express.Multer.File[] },
-      );
-
-      // Set photos (multiple files)
-      if (filePaths.gallery && filePaths.gallery.length > 0) {
-        req.body.gallery = filePaths.gallery; // Assign full array of photos
-      }
-
+      req.body.gallery = await uploadFilesToS3(files.gallery, 'marketPlace');
     } catch (error: any) {
       console.error('Error processing files:', error.message);
       return sendResponse(res, {
@@ -114,19 +104,10 @@ const getPendingGearMarketplace = catchAsync(async (req, res) => {
 
 const updateGearMarketplace = catchAsync(async (req: Request, res: Response) => {
 
-    if (req.files) {
+  const files = req.files as { [fieldName: string]: Express.Multer.File[] } | undefined;
+  if (files?.gallery?.length) {
     try {
-      // Use storeFiles to process all uploaded files
-      const filePaths = storeFiles(
-        'marketPlace',
-        req.files as { [fieldName: string]: Express.Multer.File[] },
-      );
-
-      // Set photos (multiple files)
-      if (filePaths.gallery && filePaths.gallery.length > 0) {
-        req.body.gallery = filePaths.gallery; // Assign full array of photos
-      }
-
+      req.body.gallery = await uploadFilesToS3(files.gallery, 'marketPlace');
     } catch (error: any) {
       console.error('Error processing files:', error.message);
       return sendResponse(res, {
