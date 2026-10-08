@@ -84,33 +84,49 @@ const clientUrl = process.env.FRONT_URL || "http://76.13.133.178:3000";
 
 const emailFooter = () => `
   <div style="background-color: #f5f5f5; padding: 16px 24px; border-top: 1px solid #e0e0e0;">
-    <p style="margin: 0 0 8px 0; text-align: center; font-size: 12px; color: #777;">&copy; ${new Date().getFullYear()} Frafol. All rights reserved.</p>
+    <p style="margin: 0 0 8px 0; text-align: center; font-size: 12px; color: #777;">&copy; ${new Date().getFullYear()} Frafol. Všetky práva vyhradené.</p>
     <p style="margin: 0; font-size: 11px; color: #999; line-height: 1.6;">
       Spracúvanie osobných údajov: Radi by sme Vás informovali, že spracúvame Vaše osobné údaje v súlade s Nariadením Európskeho parlamentu a Rady (EÚ) č. 2016/679 a v súlade s príslušnými slovenskými právnymi predpismi, najmä zákonom č. 18/2018 Z. z. Bližšie informácie nájdete na našej webovej stránke: <a href="${clientUrl}/data-protection" style="color: #999; text-decoration: underline;">GDPR</a>. V prípade ak máte akékoľvek otázky, neváhajte nás kontaktovať na adrese: <a href="mailto:gdpr@frafol.sk" style="color: #999; text-decoration: none;">gdpr@frafol.sk</a>.
     </p>
   </div>`;
 
+const supportEmailSection = () => `
+        <p style="margin-top: 24px; font-size: 14px;">
+          Ak ste o tento kód nežiadali alebo potrebujete pomoc, kontaktujte nás na
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
+        </p>
+        `;
+
+const regardsSection = () => `
+        <p style="margin-top: 32px;">
+          S pozdravom,<br />
+          Frafol
+        </p>
+`
+
 const policiesSection = () => `
       <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 32px 0;" />
 
       <p style="font-size: 14px; color: #555;">
-        Please review our policies:
+        Prečítajte si naše dokumenty:
       </p>
 
       <ul style="font-size: 14px; color: #555; padding-left: 20px;">
         <li>
           <a href="${clientUrl}/terms-of-service-marketplace" style="color: ${primaryColor}; text-decoration: none;">
-            Terms &amp; Conditions (Marketplace)
+            Všeobecné obchodné podmienky Online trh
           </a>
         </li>
         <li>
           <a href="${clientUrl}/terms-of-service" style="color: ${primaryColor}; text-decoration: none;">
-            Terms &amp; Conditions (Conceptual)
+            Všeobecné obchodné podmienky Zmluvné vzťahy
           </a>
         </li>
         <li>
           <a href="${clientUrl}/data-protection" style="color: ${primaryColor}; text-decoration: none;">
-            GDPR &amp; Data Protection Policy
+            GDPR
           </a>
         </li>
       </ul>`;
@@ -154,17 +170,16 @@ const otpSendEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          One-Time Password (OTP)
+          Jednorazový overovací kód
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň <strong>${name}</strong>,</p>
 
         <p>
-          Use the following One-Time Password (OTP) to complete your verification.
-          This code is valid for a limited time.
+          na dokončenie overenia použite nasledujúci jednorazový kód. Tento kód je platný len obmedzený čas.
         </p>
 
         <div style="
@@ -175,32 +190,23 @@ const otpSendEmail = async ({
           border-radius: 6px;
           margin: 24px 0;
         ">
-          <p style="margin: 0; font-size: 14px; color: #555;">Your OTP Code</p>
+          <p style="margin: 0; font-size: 14px; color: #555;">Váš overovací kód</p>
           <p style="margin: 8px 0 0; font-size: 28px; font-weight: bold; color: ${primaryColor}; letter-spacing: 4px;">
             ${otp}
           </p>
         </div>
 
         <p style="font-size: 14px; color: #666;">
-          This OTP will expire on:<br />
+          Platnosť kódu vyprší:<br />
           <strong>${expiredAt.toLocaleString()}</strong>
         </p>
 
-        <p style="margin-top: 24px; font-size: 14px;">
-          If you didn't request this code or need assistance, please contact our
-          support team at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong><br />
-          Frafol
-        </p>
+        ${regardsSection()}
+
       </div>
 
       ${emailFooter()}
@@ -225,8 +231,7 @@ export const welcomeEmail = async ({
     userType === "professional"
       ? `
       <p>
-        Your account has been successfully created. Our admin team is currently
-        reviewing your profile.
+        Váš účet bol úspešne vytvorený. Náš tím momentálne kontroluje váš profil.
       </p>
       <div style="
         background-color: #fff8e1;
@@ -237,17 +242,16 @@ export const welcomeEmail = async ({
         font-size: 14px;
         color: #555;
       ">
-        <strong>Profile Verification in Progress</strong><br/>
-        Your profile is being verified by our team. You will receive a confirmation
-        email once the verification is complete.
+        <strong>Prebieha overovanie profilu</strong><br/>
+        Váš profil práve overuje náš tím. Po dokončení overenia vám pošleme potvrdzovací e-mail.
       </div>`
       : `
       <p>
         ${userType === "professional_verified"
-          ? "Your profile has been verified! You can now start receiving booking requests."
-          : "Your account has been successfully created. We're excited to have you on board."}
+          ? "Váš profil bol úspešne overený. Teraz môžete začať prijímať žiadosti o rezerváciu."
+          : "Váš účet bol úspešne vytvorený. Tešíme sa, že ste sa k nám pripojili."}
       </p>
-      <p>To get started, please review how our platform works:</p>
+      <p>Na začiatok si pozrite, ako naša platforma funguje: </p>
       <p style="margin: 20px 0;">
         <a href="${howItWorksLink}" style="
           display: inline-block;
@@ -258,7 +262,7 @@ export const welcomeEmail = async ({
           border-radius: 6px;
           font-size: 14px;
         ">
-          How It Works
+          Ako to funguje
         </a>
       </p>`;
 
@@ -269,29 +273,21 @@ export const welcomeEmail = async ({
     <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
       <img src="${logoUrl}" alt="FRAFOL PROFILE PICTURE" style="max-width: 150px; margin-bottom: 12px;" />
       <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-        Welcome to Frafol 🎉
+        Vitajte vo Frafole 🎉
       </h1>
     </div>
 
     <!-- Body -->
     <div style="padding: 24px; color: #333;">
-      <p>Hello <strong>${name}</strong>,</p>
-      <p>Welcome to <strong>Frafol</strong>!</p>
+      <p>Dobrý deň <strong>${name}</strong>,</p>
+      <p>Vitajte vo <strong>Frafole!</strong>!</p>
       ${dynamicSection}
 
       ${policiesSection()}
 
-      <p style="margin-top: 24px; font-size: 14px;">
-        If you have any questions, feel free to contact us at
-        <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-          ${supportEmail}
-        </a>.
-      </p>
+      ${supportEmailSection()}
 
-      <p style="margin-top: 32px;">
-        Best regards,<br />
-        <strong>Frafol Team</strong>
-      </p>
+      ${regardsSection()}
     </div>
 
     ${emailFooter()}
@@ -330,17 +326,16 @@ const profileVerifiedEmail = async ({
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Profile Verified ✅
+          Profil overený ✅
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň, <strong>${name}</strong>,</p>
 
         <p>
-          Great news! Your <strong>Frafol professional profile has been successfully verified</strong>
-          by our administration team.
+          máme pre vás dobrú správu! Náš tím úspešne overil váš profesionálny profil na Frafole.
         </p>
 
         <div style="
@@ -352,15 +347,15 @@ const profileVerifiedEmail = async ({
           text-align: center;
         ">
           <p style="margin: 0; font-size: 16px; font-weight: bold; color: ${primaryColor};">
-            Your account is now active
+            Váš účet je teraz aktívny
           </p>
           <p style="margin: 8px 0 0; font-size: 14px; color: #555;">
-            You can now complete your profile and start receiving requests.
+            Teraz môžete dokončiť svoj profil a začať prijímať objednávky.
           </p>
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          <strong>Next step:</strong> Upload your portfolio so clients can see your work and contact you.
+          <strong>Ďalší krok:</strong> Nahrajte svoje portfólio, aby si klienti mohli pozrieť vašu prácu a kontaktovať vás.
         </p>
 
         <!-- CTA Button -->
@@ -375,27 +370,17 @@ const profileVerifiedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Upload Your Portfolio
+            Nahrať portfólio
           </a>
         </div>
 
         <p style="font-size: 14px; color: #666;">
-          A complete profile with portfolio images and details helps you get more visibility and bookings.
+          Kompletný profil s ukážkami vašej práce a podrobnými informáciami Vám pomôže získať väčšiu viditeľnosť a viac rezervácií.
         </p>
 
-        <p style="margin-top: 24px; font-size: 14px;">
-          Need help? Contact us anytime at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>The Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -429,7 +414,7 @@ const profileVerifiedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${userName}</strong>,</p>
+        <p>Dobrý deň <strong>${userName}</strong>,</p>
 
         <p>You have received a new booking request on <strong>Frafol</strong>. Please review the details below.</p>
 
@@ -466,20 +451,11 @@ const profileVerifiedEmail = async ({
           </a>
         </div>
 
-        <p style="margin-top: 24px; font-size: 14px;">
-          If you have any questions, please contact our support team at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+      ${supportEmailSection()}
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
-      </div>
+      ${regardsSection()}
 
       ${emailFooter()}
     </div>
@@ -511,7 +487,7 @@ const sendBookingDeclineEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${userName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${userName}</strong>,</p>
 
         <p>We're sorry to inform you that your booking request on <strong>Frafol</strong> has been declined. Please see the details below.</p>
 
@@ -602,7 +578,7 @@ const frafolChoiceEmail = async ({
 
     <!-- Body -->
     <div style="padding:24px;color:#333;">
-      <p>Hello <strong>${name}</strong>,</p>
+      <p>Dobrý deň,  <strong>${name}</strong>,</p>
       <p>Your <strong>Frafol Choice</strong> subscription has been <strong>successfully activated</strong>. Your profile now gets higher visibility and priority placement.</p>
 
       <!-- Benefits -->
@@ -805,17 +781,16 @@ const profileDeclinedEmail = async ({
       <!-- Header -->
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Profile Verification Update</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Aktualizácia overenia profilu</h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň, <strong>${name}</strong>,</p>
 
         <p>
-          Thank you for submitting your professional profile on <strong>Frafol</strong>.
-          After careful review, we regret to inform you that your profile verification
-          has not been approved at this time.
+          ďakujeme, že ste odoslali svoj profil tvorcu na <strong>Frafole</strong>.
+          Po jeho kontrole vás, žiaľ, musíme informovať, že váš profil nebol schválený.
         </p>
 
         <div style="
@@ -827,21 +802,18 @@ const profileDeclinedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason for Decline:</strong><br/>
+          <strong>Dôvod zamietnutia:</strong><br/>
           ${reason}
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you believe this is an error or would like to provide additional information,
-          please contact our support team at
+          Ak si myslíte, že ide o chybu, alebo nám chcete poskytnúť ďalšie informácie, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
 
-        ${policiesSection()}
-
         <p style="margin-top: 32px;">
-          Best regards,<br />
-          <strong>Frafol Team</strong>
+          S pozdravom,<br />
+          <strong>Frafol</strong>
         </p>
       </div>
 
@@ -849,7 +821,7 @@ const profileDeclinedEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, 'Profile Verification Declined', emailBody);
+  await sendEmail(sentTo, 'Overenie profilu bolo zamietnuté', emailBody);
 };
 
 const passwordChangedEmail = async ({
@@ -866,7 +838,7 @@ const passwordChangedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Password Changed</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň,  <strong>${name}</strong>,</p>
         <p>Your account password has been successfully changed.</p>
         <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           If you did not make this change, please contact us immediately at
@@ -895,7 +867,7 @@ const forgotPasswordEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Password Reset Successful</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň,  <strong>${name}</strong>,</p>
         <p>Your password has been reset successfully. You can now log in with your new password.</p>
         <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           If you did not request this reset, please contact us immediately at
@@ -921,22 +893,22 @@ const bankDetailsChangedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bank Account Updated</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bankové údaje boli aktualizované</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
-        <p>Your bank account details on <strong>Frafol</strong> have been successfully updated.</p>
+        <p>Dobrý deň, <strong>${name}</strong>,</p>
+        <p>vaše bankové údaje na <strong>Frafole</strong> boli úspešne aktualizované.</p>
         <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          If you did not make this change, please contact us immediately at
+          Ak ste túto zmenu nevykonali vy, okamžite nás kontaktujte na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
-        ${policiesSection()}
-        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+
+        <p style="margin-top: 32px;">S pozdravom,<br /><strong>Frafol</strong></p>
       </div>
       ${emailFooter()}
     </div>
   `;
-  await sendEmail(sentTo, 'Bank Account Details Changed', emailBody);
+  await sendEmail(sentTo, 'Bankové údaje boli zmenené', emailBody);
 };
 
 const accountBlockedEmail = async ({
@@ -959,7 +931,7 @@ const accountBlockedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">${title}</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň,  <strong>${name}</strong>,</p>
         <p>Your Frafol account has been <strong>${action}</strong> by our admin team.</p>
         ${reason ? `
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
@@ -1002,7 +974,7 @@ const accountDeleteRequestAdminEmail = async ({
       </div>
 
       <div style="padding: 24px; color: #333333;">
-        <p>Hello Admin,</p>
+        <p>Dobrý deň,  Admin,</p>
 
         <p>
           <strong>${name}</strong> has requested to delete their Frafol account.
@@ -1058,7 +1030,7 @@ const accountDeleteRejectedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Account Deletion Request Declined</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${name}</strong>,</p>
+        <p>Dobrý deň,  <strong>${name}</strong>,</p>
         <p>
           Your request to delete your Frafol account has been reviewed by our admin team and
           has been <strong>declined</strong>. Your account remains active.
@@ -1108,7 +1080,7 @@ const frafolChoiceRenewalSuccessEmail = async ({
       <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Renewed ✅</h1>
     </div>
     <div style="padding:24px;color:#333;">
-      <p>Hello <strong>${name}</strong>,</p>
+      <p>Dobrý deň,  <strong>${name}</strong>,</p>
       <p>Your <strong>Frafol Choice</strong> subscription has been <strong>successfully renewed</strong>. Your benefits continue without interruption.</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;margin:16px 0;">
         ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Order ID</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
@@ -1178,7 +1150,7 @@ const frafolChoiceRenewalFailedEmail = async ({
       <h1 style="color:#fff;margin:0;font-size:22px;">Payment Failed</h1>
     </div>
     <div style="padding:24px;color:#333;">
-      <p>Hello <strong>${name}</strong>,</p>
+      <p>Dobrý deň,  <strong>${name}</strong>,</p>
       <p>We were unable to process the renewal payment for your <strong>Frafol Choice</strong> subscription.</p>
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
         <strong>Action Required:</strong> Please try a different payment method to avoid losing your Frafol Choice benefits.
@@ -1214,7 +1186,7 @@ const frafolChoiceExpiringSoonEmail = async ({
       <h1 style="color:#fff;margin:0;font-size:22px;">Your Frafol Choice Expires Soon</h1>
     </div>
     <div style="padding:24px;color:#333;">
-      <p>Hello <strong>${name}</strong>,</p>
+      <p>Dobrý deň,  <strong>${name}</strong>,</p>
       <p>Your <strong>Frafol Choice</strong> subscription is expiring in <strong>${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong> on <strong>${expiryDate}</strong>.</p>
       <div style="background-color:#fff8e1;border-left:4px solid #f5a623;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
         <strong>Don't lose your perks!</strong> Renew now to keep your highlighted profile, priority ranking, and Frafol Choice badge.
@@ -1245,7 +1217,7 @@ const frafolChoiceExpiredEmail = async ({
       <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Has Expired</h1>
     </div>
     <div style="padding:24px;color:#333;">
-      <p>Hello <strong>${name}</strong>,</p>
+      <p>Dobrý deň,  <strong>${name}</strong>,</p>
       <p>Your <strong>Frafol Choice</strong> subscription has expired. Your profile has returned to standard visibility.</p>
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
         <strong>You have lost access to:</strong>
@@ -1284,7 +1256,7 @@ const frafolChoiceCancelledByAdminEmail = async ({
       <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Cancelled</h1>
     </div>
     <div style="padding:24px;color:#333;">
-      <p>Hello <strong>${name}</strong>,</p>
+      <p>Dobrý deň,  <strong>${name}</strong>,</p>
       <p>Your <strong>Frafol Choice</strong> subscription has been <strong>cancelled by our admin team</strong>. Your profile has returned to standard visibility.</p>
       ${reason ? `
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
@@ -1327,8 +1299,8 @@ const sendCommentOrReplyEmail = async ({
   commentText: string;
   isReply: boolean;
 }): Promise<void> => {
-  const action = isReply ? 'replied to a comment on' : 'commented on';
-  const subject = isReply ? 'New Reply on Your Post' : 'New Comment on Your Post';
+  const action = isReply ? 'replied to a comment on' : 'komentoval';
+  const subject = isReply ? 'New Reply on Your Post' : 'Nový komentár k vášmu príspevku';
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1347,10 +1319,10 @@ const sendCommentOrReplyEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${actorName}</strong> ${action} your post
+          <strong>${actorName}</strong> ${action} váš príspevok
           <strong>"${communityTitle}"</strong>.
         </p>
 
@@ -1378,22 +1350,21 @@ const sendCommentOrReplyEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Post
+            Zobraziť príspevok
           </a>
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
+          Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
         </p>
 
-        ${policiesSection()}
 
         <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
+          S pozdravom,<br />
+          <strong>Frafol</strong>
         </p>
 
         ${notificationUnsubscribeFooter(receiverId)}
@@ -1424,8 +1395,16 @@ const sendBookingRequestEmail = async ({
   const isDirectBooking = orderType === 'direct';
   const orderLabel = isDirectBooking
     ? packageName ? `"${packageName}"` : 'a package'
-    : `custom ${serviceType?.trim() || 'service'}`;
-  const bookingType = isDirectBooking ? 'Direct Booking' : `Custom ${serviceType?.trim() || 'Service'} Booking`;
+    : `Custom ${serviceType?.trim() || 'service'}`;
+
+  const headerLevel = isDirectBooking ? "Nová objednávka balíka" : "Nový dopyt na fotenie alebo natáčanie"
+
+  const message = isDirectBooking ? `používateľ <strong>${senderName}</strong> si objednal váš balík ${orderLabel}` : `používateľ <strong>${senderName}</strong> vám poslal nový dopyt s podrobnosťami o ${orderLabel}.`
+
+  const actionRequired = isDirectBooking? 'Skontrolujte podrobnosti objednávky a prijmite alebo zamietnite ju vo svojom účte.' : 'Pozrite si jeho požiadavky a pripravte mu ponuku na mieru.'
+
+  const btnName = isDirectBooking?'Zobraziť objednávku': 'Zobraziť dopyt';
+
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1438,17 +1417,16 @@ const sendBookingRequestEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          New ${bookingType} Request
+          ${headerLevel}
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
-          You have received a new <strong>${bookingType.toLowerCase()} request</strong>
-          from <strong>${senderName}</strong> for ${orderLabel}.
+          ${message}
         </p>
 
         <div style="
@@ -1460,7 +1438,7 @@ const sendBookingRequestEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Action required:</strong> Please review this request and accept or decline it from your dashboard.
+          <strong>${actionRequired}</strong>
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -1474,30 +1452,19 @@ const sendBookingRequestEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Review Request
+            ${btnName}
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
-
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${supportEmailSection()}
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `New ${bookingType} Request from ${senderName}`, emailBody);
+  await sendEmail(sentTo, `Nový dopyt od používateľa ${senderName}`, emailBody);
 };
 
 const sendOrderAcceptedEmail = async ({
@@ -1531,17 +1498,16 @@ const sendOrderAcceptedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Booking Accepted
+          Objednávka bola prijatá
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${clientName}</strong>,</p>
+        <p>Dobrý deň, <strong>${clientName}</strong>,</p>
 
         <p>
-          Great news! <strong>${serviceProviderName}</strong> has <strong>accepted</strong>
-          your booking request for <strong>${orderLabel}</strong>.
+          tvorca <strong>${serviceProviderName}</strong> prijal vašu objednávku služby <strong>${orderLabel}</strong>.
         </p>
 
         <div style="
@@ -1553,7 +1519,7 @@ const sendOrderAcceptedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Next step:</strong> Please complete your payment to confirm the booking.
+          <strong>Ďalší krok: </strong> Dokončite platbu a potvrďte tak objednávku.
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -1567,30 +1533,20 @@ const sendOrderAcceptedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Complete Payment
+            Dokončiť platbu
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Your Booking Has Been Accepted – Complete Payment`, emailBody);
+  await sendEmail(sentTo, `Vaša objednávka bola prijatá – dokončite platbu`, emailBody);
 };
 
 const sendPaymentSuccessEmail = async ({
@@ -1624,17 +1580,16 @@ const sendPaymentSuccessEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Payment Received – Order In Progress
+          Objednávka bola zaplatená
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${clientName}</strong> has successfully completed payment for
-          <strong>${orderLabel}</strong>. The order is now in progress.
+          používateľ <strong>${clientName}</strong> úspešne zaplatil za objednávku služby <strong>${orderLabel}</strong>.
         </p>
 
         <div style="
@@ -1646,7 +1601,7 @@ const sendPaymentSuccessEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Payment confirmed.</strong> You can now start working on the order.
+          <strong>Objednávka je potvrdená.</strong> Môžete sa začať pripravovať na jej realizáciu.
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -1660,30 +1615,20 @@ const sendPaymentSuccessEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Order
+            Zobraziť objednávku
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Payment Received – Your Order Is Now In Progress', emailBody);
+  await sendEmail(sentTo, 'Objednávka bola zaplatená', emailBody);
 };
 
 const sendNewMessageEmail = async ({
@@ -1710,15 +1655,15 @@ const sendNewMessageEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          New Message
+          Nová správa
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
-        <p>You have received a new message from <strong>${senderName}</strong>.</p>
+        <p>dostali ste novú správu od používateľa <strong>${senderName}</strong>.</p>
 
         <div style="
           background-color: #f4f6fb;
@@ -1743,22 +1688,20 @@ const sendNewMessageEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Reply to Message
+            Odpovedať na správu
           </a>
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
+          Ak máte akékoľvek otázky, kontaktujte nás na 
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
         </p>
 
-        ${policiesSection()}
-
         <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
+          S pozdravom,<br />
+          <strong>Frafol</strong>
         </p>
 
         ${notificationUnsubscribeFooter(receiverId)}
@@ -1770,7 +1713,7 @@ const sendNewMessageEmail = async ({
 
   await sendEmail(
     sentTo,
-    `New Message from ${senderName}`,
+    `Nová správa od ${senderName}`,
     emailBody,
     buildNotificationUnsubscribeHeaders(receiverId),
   );
@@ -1800,17 +1743,16 @@ const sendDeliveryAcceptedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Delivery Accepted ✅
+          Objednávka bola úspešne dokončená ✅
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          Great news! <strong>${clientName}</strong> has <strong>accepted your delivery</strong>
-          for the <strong>${serviceType || 'order'}${packageName ? ` – ${packageName}` : ''}</strong>.
+          máme dobrú správu! Klient <strong>${clientName}</strong> potvrdil prevzatie objednávky <strong>${serviceType || 'order'}${packageName ? ` – ${packageName}` : ''}</strong>. Peniaze vám budú odoslané na bankový účet uvedený vo vašom profile do 15 kalendárnych dní.
         </p>
 
         <div style="
@@ -1822,7 +1764,7 @@ const sendDeliveryAcceptedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          The order has been successfully completed. Well done!
+          Objednávka bola úspešne dokončená. Skvelá práca!
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -1836,30 +1778,20 @@ const sendDeliveryAcceptedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Order
+            Zobraziť objednávku
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Your Delivery Has Been Accepted', emailBody);
+  await sendEmail(sentTo, 'Klient potvrdil prevzatie objednávky', emailBody);
 };
 
 const sendReviewRequestEmail = async ({
@@ -1892,7 +1824,7 @@ const sendReviewRequestEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           Your order with <strong>${serviceProviderName}</strong>
@@ -1973,18 +1905,16 @@ const sendCancelRequestDeclinedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Cancellation Request Declined
+          Žiadosť o zrušenie bola zamietnutá
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${declinedByName}</strong> has <strong>declined</strong> your cancellation request
-          for the <strong>${serviceType || 'order'}</strong>.
-          The order will continue as previously agreed.
+          tvorca <strong>${declinedByName}</strong> zamietol vašu žiadosť o zrušenie objednávky <strong>${serviceType || 'order'}</strong>. Objednávka bude pokračovať podľa pôvodnej dohody.
         </p>
 
         ${reason ? `
@@ -2012,30 +1942,20 @@ const sendCancelRequestDeclinedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Order
+            Zobraziť objednávku
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Your Cancellation Request Has Been Declined', emailBody);
+  await sendEmail(sentTo, 'Vaša žiadosť o zrušenie bola zamietnutá', emailBody);
 };
 
 const sendCancelRequestEmail = async ({
@@ -2070,18 +1990,16 @@ const sendCancelRequestEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Cancellation Request Received
+          Klient požiadal o zrušenie objednávky
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${requesterName}</strong> has requested to cancel the
-          <strong>${serviceType || 'order'}</strong>.
-          Please review this request and take action.
+          klient <strong>${requesterName}</strong> požiadal o zrušenie objednávky <strong>${serviceType || 'order'}</strong>. Pozrite si jeho žiadosť a rozhodnite, či ju schválite alebo zamietnete.
         </p>
 
         ${reason ? `
@@ -2094,7 +2012,7 @@ const sendCancelRequestEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason provided:</strong><br/>
+          <strong>Dôvod zrušenia:</strong><br/>
           ${reason}
         </div>` : ''}
 
@@ -2109,30 +2027,20 @@ const sendCancelRequestEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Review Request
+            Odpovedať na žiadosť
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Cancellation Request – Action Required', emailBody);
+  await sendEmail(sentTo, 'Žiadosť o zrušenie objednávky – vyžaduje sa odpoveď', emailBody);
 };
 
 const sendRefundRequiredEmail = async ({
@@ -2169,7 +2077,7 @@ const sendRefundRequiredEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${adminName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${adminName}</strong>,</p>
 
         <p>
           An order has been cancelled and may require a <strong>refund</strong>.
@@ -2306,7 +2214,7 @@ const sendDeliveryRequestEmail = async ({
           margin: 0;
           font-size: 22px;
         ">
-          Delivery Request Received
+          Objednávka je pripravená
         </h1>
       </div>
 
@@ -2316,12 +2224,10 @@ const sendDeliveryRequestEmail = async ({
         color: #333333;
       ">
 
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${senderName}</strong> has submitted a delivery for
-          <strong>${orderLabel}</strong>.
-          Please review the delivery and confirm it.
+          Vaše fotografie alebo video od tvorcu <strong>${senderName}</strong> sú pripravené! Pozrite si objednávku <strong>${orderLabel}</strong> a potvrďte jej prevzatie.
         </p>
 
         ${
@@ -2388,8 +2294,7 @@ const sendDeliveryRequestEmail = async ({
           font-size: 14px;
           color: #555555;
         ">
-          <strong>Action required:</strong>
-          Please review the delivery and confirm or decline it from your dashboard.
+          Po prezretí objednávky potvrďte jej prevzatie alebo ju zamietnite vo svojom profile.
         </div>
 
         <!-- Open Delivery Link -->
@@ -2435,32 +2340,13 @@ const sendDeliveryRequestEmail = async ({
               font-weight: bold;
             "
           >
-            Review Delivery
+            Pozrieť objednávku
           </a>
         </div>
 
-        <p style="
-          font-size: 14px;
-          color: #555555;
-        ">
-          If you have any questions, contact us at
-          <a
-            href="mailto:${supportEmail}"
-            style="
-              color: ${primaryColor};
-              text-decoration: none;
-            "
-          >
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
 
       </div>
 
@@ -2471,7 +2357,7 @@ const sendDeliveryRequestEmail = async ({
 
   await sendEmail(
     sentTo,
-    'Delivery Request Received – Action Required',
+    'Vaše fotografie alebo video sú pripravené!',
     emailBody,
   );
 };
@@ -2500,17 +2386,16 @@ const sendExtensionRequestEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Delivery Date Extension Requested
+          Žiadosť o predĺženie termínu
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${senderName}</strong> has requested a delivery date extension
-          for the <strong>${serviceType || 'order'}</strong>.
+          <strong>${senderName}</strong> požiadal o predĺženie termínu odovzdania <strong>${serviceType || 'order'}</strong>.
         </p>
 
         ${reason ? `
@@ -2523,7 +2408,7 @@ const sendExtensionRequestEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason:</strong> ${reason}
+          <strong>Dôvod: </strong> ${reason}
         </div>` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
@@ -2537,30 +2422,19 @@ const sendExtensionRequestEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Review Request
+            Odpovedať na žiadosť
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
-
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${supportEmailSection()}
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Delivery Date Extension Requested', emailBody);
+  await sendEmail(sentTo, 'Žiadosť o predĺženie termínu', emailBody);
 };
 
 const sendExtensionAcceptedEmail = async ({
@@ -2591,17 +2465,16 @@ const sendExtensionAcceptedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Extension Request Accepted
+          Predĺženie termínu schválené
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${senderName}</strong> has accepted your delivery date extension request
-          for the <strong>${serviceType || 'order'}</strong>.
+          klient <strong>${senderName}</strong> schválil vašu žiadosť o predĺženie termínu objednávky <strong>${serviceType || 'order'}</strong>.
         </p>
 
         <div style="
@@ -2613,7 +2486,7 @@ const sendExtensionAcceptedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>New delivery date:</strong> ${dateStr}
+          <strong>Nový termín odovzdania: </strong> ${dateStr}
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -2627,30 +2500,20 @@ const sendExtensionAcceptedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Order
+            Zobraziť objednávku
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Delivery Date Extension Accepted', emailBody);
+  await sendEmail(sentTo, 'Predĺženie termínu schválené', emailBody);
 };
 
 const sendExtensionRejectedEmail = async ({
@@ -2677,17 +2540,16 @@ const sendExtensionRejectedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Extension Request Rejected
+          Žiadosť o predĺženie termínu zamietnutá
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${senderName}</strong> has rejected your delivery date extension request
-          for the <strong>${serviceType || 'order'}</strong>.
+          klient <strong>${senderName}</strong> zamietol vašu žiadosť o predĺženie termínu objednávky pre <strong>${serviceType || 'order'}</strong>.
         </p>
 
         ${reason ? `
@@ -2700,29 +2562,20 @@ const sendExtensionRejectedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason:</strong> ${reason}
+          <strong>Dôvod: </strong> ${reason}
         </div>` : ''}
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
+        ${regardsSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, 'Delivery Date Extension Rejected', emailBody);
+  await sendEmail(sentTo, 'Žiadosť o predĺženie termínu zamietnutá', emailBody);
 };
 
 const sendOrderDeclinedEmail = async ({
@@ -2747,8 +2600,8 @@ const sendOrderDeclinedEmail = async ({
   const isDeliveryDeclined = status === 'deliveryRequestDeclined';
 
   const subject = isDeliveryDeclined
-    ? 'Delivery Request Declined'
-    : 'Order Request Declined';
+    ? 'Klient požiadal o úpravu objednávky'
+    : 'Vaša žiadosť o ponuku na mieru bola zamietnutá';
 
   const orderLabel =
     orderType === 'direct'
@@ -2756,8 +2609,8 @@ const sendOrderDeclinedEmail = async ({
       : `custom ${serviceType || 'booking'}`;
 
   const bodyText = isDeliveryDeclined
-    ? `<strong>${senderName}</strong> has declined the delivery request for your <strong>${orderLabel}</strong>. You can revise and resubmit the delivery from your dashboard.`
-    : `<strong>${senderName}</strong> has declined your <strong>${orderLabel}</strong> request.`;
+    ? `klient <strong>${senderName}</strong> požiadal o úpravu objednávky <strong>${orderLabel}</strong>. Po vykonaní úprav ju môžete vo svojom profile znova odovzdať.`
+    : `tvorca <strong>${senderName}</strong> zamietol vašu žiadosť o <strong>${orderLabel}</strong>.`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -2770,13 +2623,13 @@ const sendOrderDeclinedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          ${isDeliveryDeclined ? 'Delivery Request Declined' : 'Order Request Declined'}
+          ${isDeliveryDeclined ? 'Klient požiadal o úpravu objednávky' : 'Žiadosť bola zamietnutá'}
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>${bodyText}</p>
 
@@ -2790,14 +2643,17 @@ const sendOrderDeclinedEmail = async ({
           color: #555;
         ">
           ${reason
-            ? `<strong>Reason:</strong> ${reason}`
+            ? `<strong>Dôvod zamietnutia: </strong> ${reason}`
             : isDeliveryDeclined
-              ? 'Please review the feedback and update your delivery before resubmitting.'
-              : 'If you have questions or believe this was a mistake, please contact us.'}
+              ? 'Prečítajte si spätnú väzbu a pred opätovným odoslaním dodanie upravte.'
+              : 'Ak máte otázky alebo si myslíte, že ide o omyl, kontaktujte nás.'}
         </div>
 
+        
+
+        ${isDeliveryDeclined ? `
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}${isDeliveryDeclined ? '/dashboard/professional/event-orders?tab=inProgress' : ''}" style="
+          <a href="${clientUrl}/dashboard/professional/event-orders?tab=inProgress" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -2807,23 +2663,13 @@ const sendOrderDeclinedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Go to Dashboard
+            Upraviť objednávku
           </a>
-        </div>
+        </div>` : ''}
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -2864,16 +2710,16 @@ const sendOrderCancelledEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Order Cancelled
+          Objednávka zrušená
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${senderName}</strong> has cancelled the
+          tvorca <strong>${senderName}</strong> schválil vašu žiadosť o zrušenie objednávky 
           <strong>${orderLabel}</strong>.
         </p>
 
@@ -2886,44 +2732,19 @@ const sendOrderCancelledEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          If you have any questions about this cancellation, please contact us.
+          Ak máte otázky týkajúce sa zrušenia objednávky, kontaktujte nás.
         </div>
 
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/event-orders?tab=cancelled" style="
-            display: inline-block;
-            padding: 12px 22px;
-            background-color: ${primaryColor};
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-          ">
-            Go to Dashboard
-          </a>
-        </div>
+        ${supportEmailSection()}
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
-
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Order Cancelled: ${orderLabel}`, emailBody);
+  await sendEmail(sentTo, `Objednávka bola zrušená`, emailBody);
 };
 
 const sendGearMarketplaceApprovedEmail = async ({
@@ -2946,7 +2767,7 @@ const sendGearMarketplaceApprovedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           Congratulations! Your gear item <strong>"${itemName}"</strong> has been
@@ -3022,7 +2843,7 @@ const sendGearMarketplaceDeclinedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           We're sorry to inform you that your gear item
@@ -3083,7 +2904,7 @@ const sendGearOrderPayoutCompletedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Payment Processed ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           Your payment for the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''} (Order ID: <strong>${orderId}</strong>)
           has been processed and marked as completed by our team.
@@ -3140,7 +2961,7 @@ const sendEventOrderPayoutCompletedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Payment Processed ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           Your payment for the <strong>${orderLabel}</strong> (Order ID: <strong>${orderId}</strong>) has been
           processed and marked as completed by our team.
@@ -3189,7 +3010,7 @@ const sendWorkshopPayoutCompletedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Payment Processed ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           Your payment for the workshop${workshopTitle ? ` <strong>"${workshopTitle}"</strong>` : ''} (Order ID: <strong>${orderId}</strong>)
           has been processed and marked as completed by our team.
@@ -3234,7 +3055,7 @@ const sendGearDeliveryRequestEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Delivery Request</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           <strong>${senderName}</strong> has marked your gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''} as shipped/delivered.
           Please confirm once you've received it.
@@ -3277,7 +3098,7 @@ const sendGearDeliveryAcceptedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Delivery Accepted ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           Great news! <strong>${clientName}</strong> has confirmed receipt of the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''}.
         </p>
@@ -3321,7 +3142,7 @@ const sendGearDeliveryDeclinedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Delivery Declined</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           <strong>${clientName}</strong> has declined the delivery for the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''}.
         </p>
@@ -3368,7 +3189,7 @@ const sendGearOrderCancelledEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Gear Order Cancelled</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           We're sorry to inform you that your gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''} has been cancelled by <strong>${cancelledByName}</strong>.
         </p>
@@ -3420,7 +3241,7 @@ const sendGearOrderSoldEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">New Order – Product Sold! 🎉</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
           Great news! <strong>${clientName}</strong> just purchased ${items.length > 1 ? 'the following gear items' : 'your gear item'} from your marketplace listing.
         </p>
@@ -3488,7 +3309,7 @@ const sendWorkshopDeclinedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           We're sorry to inform you that your workshop
@@ -3556,7 +3377,7 @@ const sendWorkshopApprovedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           Congratulations! Your workshop <strong>"${workshopTitle}"</strong> has been
@@ -3644,7 +3465,7 @@ const sendWorkshopNewParticipantEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           Great news! <strong>${participantName}</strong> has joined your workshop
@@ -3720,17 +3541,16 @@ const sendPackageApprovedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Package Approved!
+          Balík bol schválený
         </h1>
       </div>
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          Congratulations! Your package <strong>"${packageTitle}"</strong> has been
-          approved by our admin team and is now live on Frafol.
+          váš balík <strong>"${packageTitle}"</strong> bol schválený naším tímom a je teraz zverejnený na Frafole.
         </p>
 
         <div style="
@@ -3742,7 +3562,7 @@ const sendPackageApprovedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          Your package is now visible to clients and ready to accept bookings.
+          Balík je viditeľný pre zákazníkov a pripravený na prijímanie rezervácií.
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -3756,30 +3576,20 @@ const sendPackageApprovedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Your Package
+            Zobraziť balík
           </a>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
-          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
-            ${supportEmail}
-          </a>.
-        </p>
+        ${supportEmailSection()}
 
-        ${policiesSection()}
-
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Package Approved: "${packageTitle}"`, emailBody);
+  await sendEmail(sentTo, `Váš balík "${packageTitle}" bol schválený`, emailBody);
 };
 
 const sendPackageDeclinedEmail = async ({
@@ -3810,7 +3620,7 @@ const sendPackageDeclinedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Hello <strong>${receiverName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
           We're sorry to inform you that your package
@@ -3887,6 +3697,7 @@ interface EventOrderInvoiceParams {
   IC_DPH?: string;
   serviceProviderName?: string;
   invoiceType?: 'payment' | 'completed';
+  invoiceUrl: string;
 }
 
 const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Promise<void> => {
@@ -3895,7 +3706,7 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
     eventDate, eventTime, location, price, serviceFee, vatAmount = 0,
     couponCode, couponDiscount = 0, totalPrice, transactionId, paymentMethod,
     paymentDate, streetAddress, town, country, isRegisterAsCompany,
-    companyName, ICO, DIC, IC_DPH, serviceProviderName, invoiceType = 'payment',
+    companyName, ICO, DIC, IC_DPH, serviceProviderName, invoiceType = 'payment',invoiceUrl
   } = params;
 
   const isCompleted = invoiceType === 'completed';
@@ -3927,7 +3738,7 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
       </div>
 
       <div style="padding:28px;color:#333;">
-        <p>Hello <strong>${recipientName || customerName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${recipientName || customerName}</strong>,</p>
         <p>${introText}</p>
 
         <!-- Invoice Header -->
@@ -4003,14 +3814,32 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
           </tr>
         </table>
 
+
+        <div style="text-align:center;margin:28px 0;">
+          <a
+            href="${invoiceUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              display:inline-block;
+              background-color:${primaryColor};
+              color:#ffffff;
+              text-decoration:none;
+              padding:12px 24px;
+              border-radius:6px;
+              font-size:14px;
+              font-weight:bold;
+            "
+          >
+            View Invoice
+          </a>
+        </div>
+
         <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
 
         ${policiesSection()}
 
-        <p style="margin-top:24px;font-size:14px;">
-          Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
-        </p>
-        <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -4044,6 +3873,7 @@ interface WorkshopInvoiceParams {
   DIC?: string;
   IC_DPH?: string;
   instructorName?: string;
+  invoiceUrl: string;
 }
 
 const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<void> => {
@@ -4051,7 +3881,7 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
     sentTo, customerName, workshopTitle, workshopDate, workshopTime,
     location, locationType, basePrice, vatPercent = 0, vatAmount, totalPrice,
     orderId, transactionId, paymentDate, streetAddress, town, country,
-    isRegisterAsCompany, companyName, ICO, DIC, IC_DPH, instructorName,
+    isRegisterAsCompany, companyName, ICO, DIC, IC_DPH, instructorName,invoiceUrl
   } = params;
 
   const billingRows = isRegisterAsCompany ? `
@@ -4070,7 +3900,7 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
       </div>
 
       <div style="padding:28px;color:#333;">
-        <p>Hello <strong>${customerName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${customerName}</strong>,</p>
         <p>Your workshop registration is confirmed. Here is your invoice.</p>
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
@@ -4132,6 +3962,26 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
           </tr>
         </table>
 
+                <div style="text-align:center;margin:28px 0;">
+          <a
+            href="${invoiceUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              display:inline-block;
+              background-color:${primaryColor};
+              color:#ffffff;
+              text-decoration:none;
+              padding:12px 24px;
+              border-radius:6px;
+              font-size:14px;
+              font-weight:bold;
+            "
+          >
+            View Invoice
+          </a>
+        </div>
+
         <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
 
         ${policiesSection()}
@@ -4176,13 +4026,14 @@ interface GearOrderInvoiceParams {
   ico?: string;
   dic?: string;
   ic_dph?: string;
+  invoiceUrl: string;
 }
 
 const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promise<void> => {
   const {
     sentTo, customerName, items, subtotal, totalShipping, totalAmount,
     transactionId, paymentDate, shippingAddress, postCode, town,
-    loginAsCompany, companyName, ico, dic, ic_dph,
+    loginAsCompany, companyName, ico, dic, ic_dph,invoiceUrl
   } = params;
 
   const itemRows = items.map((item, i) => `
@@ -4214,7 +4065,7 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
       </div>
 
       <div style="padding:28px;color:#333;">
-        <p>Hello <strong>${customerName}</strong>,</p>
+        <p>Dobrý deň,  <strong>${customerName}</strong>,</p>
         <p>Your marketplace purchase is confirmed. Here is your invoice.</p>
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
@@ -4271,14 +4122,32 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
           </tr>
         </table>
 
+
+        <div style="text-align:center;margin:28px 0;">
+          <a
+            href="${invoiceUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              display:inline-block;
+              background-color:${primaryColor};
+              color:#ffffff;
+              text-decoration:none;
+              padding:12px 24px;
+              border-radius:6px;
+              font-size:14px;
+              font-weight:bold;
+            "
+          >
+            View Invoice
+          </a>
+        </div>
+
         <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
 
         ${policiesSection()}
 
-        <p style="margin-top:24px;font-size:14px;">
-          Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
-        </p>
-        <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}

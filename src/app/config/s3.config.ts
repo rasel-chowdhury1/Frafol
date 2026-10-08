@@ -20,3 +20,11 @@ export const s3Client = new S3Client({
 });
 
 export const S3_BUCKET = process.env.AWS_S3_BUCKET!;
+export const S3_REGION = process.env.AWS_REGION!;
+
+// Public base URL objects are served from (no trailing slash). Overridable
+// via env for other environments; defaults to the production bucket's URL.
+export const S3_PUBLIC_BASE_URL = (
+  process.env.AWS_S3_PUBLIC_BASE_URL ||
+  'https://frafol-media-prod-498618930282-us-east-1-an.s3.us-east-1.amazonaws.com'
+).replace(/\/+$/, '');

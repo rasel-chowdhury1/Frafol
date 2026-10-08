@@ -28,11 +28,14 @@ const smtp = {
   fromEmail: process.env.MAIL_FROM_EMAIL as string,
 }
 
+
+
 export default {
   NODE_ENV: process.env.NODE_ENV,
   port: process.env.PORT,
   ip: process.env.IP,
   database_url: process.env.DATABASE_URL,
+  FRONTEND_URL: process.env.FRONT_URL,
   BACKEND_URL: process.env.BACKEND_URL,
   client_Url: process.env.CLIENT_URL,
   bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,
@@ -40,6 +43,9 @@ export default {
   jwt_refresh_secret: process.env.JWT_REFRESH_SECRET,
   jwt_access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN,
   jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
+  admin_email: process.env.ADMIN_EMAIL,
+  admin_password: process.env.ADMIN_PASSWORD,
+  admin_phone: process.env.ADMIN_PHONE,
   contact_email: process.env.CONTACT_EMAIL,
   nodemailer_host_email: process.env.NODEMAILER_HOST_EMAIL,
   nodemailer_host_pass: process.env.NODEMAILER_HOST_PASS,

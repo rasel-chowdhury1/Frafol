@@ -297,11 +297,23 @@ console.log("file =>>> ", req.file)
 });
 
 const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
+
+  console.log("req file ===>>> ", req.file)
   if (req?.file) {
-    req.body.introVideo = await uploadFileToS3(req.file, 'video');
+    let result;
+
+    try {
+      result = await uploadFileToS3(req.file,'video')
+      console.log("result=>> ", result);
+    } catch (error) {
+      console.log({error})
+    }
+    req.body.introVideo = result;
   }
 
   const result = await userService.updateIntroVideo(req?.user?.userId, req.body.introVideo);
+
+  console.log("result =>>>> ", result)
   
   sendResponse(res, {
     statusCode: httpStatus.OK,

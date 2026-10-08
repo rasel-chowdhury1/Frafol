@@ -414,7 +414,7 @@ const getAllGearOrders = async (query: Record<string, unknown>) => {
   console.log({query})
 
     // 🎯 Base query (non-deleted only)
-  const baseQuery: any = { isDeleted: false, orderStatus: { $ne: "delivered" } };
+  const baseQuery: any = { isDeleted: false };
 
   // 🔎 Search across GearOrder's own fields, the linked gear item's name,
   // and the client/seller User accounts' name, email, and phone

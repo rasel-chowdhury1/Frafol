@@ -1,15 +1,13 @@
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
-  GetObjectCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import path from 'path';
 import crypto from 'crypto';
 
-import { s3Client, S3_BUCKET } from '../config/s3.config';
+import { s3Client, S3_BUCKET, S3_PUBLIC_BASE_URL } from '../config/s3.config';
 
 const generateFileName = (originalName: string) => {
   const extension = path.extname(originalName);
@@ -32,6 +30,9 @@ export const generateS3Key = (folderName: string, originalName: string): string 
   return `${sanitizedFolder}/${generateFileName(originalName)}`;
 };
 
+// Returns the full public URL (base + path) — this is what gets stored
+// directly in the database, e.g.
+// "https://frafol-media-....s3.us-east-1.amazonaws.com/profile/x.jpg".
 export const uploadFileToS3 = async (
   file: Express.Multer.File,
   folderName: string,
@@ -52,7 +53,7 @@ export const uploadFileToS3 = async (
 
   await s3Client.send(command);
 
-  return key;
+  return `${S3_PUBLIC_BASE_URL}/${key}`;
 };
 
 // Uploads multiple files (either a flat array, or a Multer `.fields()` map
@@ -65,13 +66,23 @@ export const uploadFilesToS3 = async (
   return Promise.all(files.map((file) => uploadFileToS3(file, folderName)));
 };
 
+// Stored values are now full public URLs, but S3 commands need the bare
+// object key. Strips the known public base URL if present; otherwise
+// assumes the value is already a bare key (older/transitional records).
+export const extractS3Key = (value: string): string => {
+  if (value.startsWith(`${S3_PUBLIC_BASE_URL}/`)) {
+    return value.slice(S3_PUBLIC_BASE_URL.length + 1);
+  }
+  return value.replace(/^\/+/, '');
+};
+
 export const deleteFileFromS3 = async (
   key: string,
 ): Promise<void> => {
   try {
     if (!key) return;
 
-    const normalizedKey = key.replace(/^\/+/, '');
+    const normalizedKey = extractS3Key(key);
 
     const command = new DeleteObjectCommand({
       Bucket: S3_BUCKET,
@@ -89,7 +100,7 @@ export const deleteFileFromS3 = async (
 
 // Batch delete (S3 supports up to 1000 keys per DeleteObjects call).
 export const deleteFilesFromS3 = async (keys: string[]): Promise<void> => {
-  const validKeys = (keys || []).filter(Boolean).map((k) => k.replace(/^\/+/, ''));
+  const validKeys = (keys || []).filter(Boolean).map((k) => extractS3Key(k));
   if (!validKeys.length) return;
 
   try {
@@ -115,25 +126,19 @@ export const deleteFilesFromS3 = async (keys: string[]): Promise<void> => {
 export const isLegacyLocalPath = (value: string): boolean =>
   value.startsWith('/uploads/') || value.startsWith('http://') || value.startsWith('https://');
 
-// Turns a stored S3 object key into a temporary signed GET URL. Legacy local
-// paths and already-absolute URLs are returned unchanged. Never persist the
-// result — only generate it when serving a response to the frontend.
+// Turns a stored S3 object key into a plain, permanent public URL. Objects
+// are public (no restriction) — this bucket serves images/video to anyone,
+// so no signing is needed. Legacy local paths and already-absolute URLs are
+// returned unchanged. Kept async so existing `await resolveFileUrl(...)`
+// call sites across the codebase don't need to change.
 export const resolveFileUrl = async (
   value?: string | null,
 ): Promise<string | null> => {
   if (!value) return value ?? null;
   if (isLegacyLocalPath(value)) return value;
 
-  try {
-    const command = new GetObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: value.replace(/^\/+/, ''),
-    });
-    return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-  } catch (error) {
-    console.error(`Failed to generate presigned URL for key: ${value}`, error);
-    return null;
-  }
+  const key = value.replace(/^\/+/, '');
+  return `${S3_PUBLIC_BASE_URL}/${key}`;
 };
 
 export const resolveFileUrls = async (

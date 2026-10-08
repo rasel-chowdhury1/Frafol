@@ -9,10 +9,10 @@ import { Payment } from "../payment/payment.model";
 import { User } from "../user/user.model";
 import { sendEventOrderInvoiceEmail } from "../../utils/eamilNotifiacation";
 import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForEventOrderPayoutCompleted, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired, sentNotificationForReviewRequest } from "../../../socketIo";
+import config from "../../config";
 
 const createEventOrder = async (payload: IEventOrder) => {
     
-  console.log("Creating EventOrder with payload:", payload);
   const result = await EventOrder.create(payload);
 
   // 🚀 Send notification asynchronously (non-blocking)
@@ -885,22 +885,28 @@ try {
         IC_DPH: order.IC_DPH,
       };
 
+
+
       if (client?.email) {
+        const invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/orders?tab=delivered`
         await sendEventOrderInvoiceEmail({
           ...invoiceBase,
           sentTo: client.email,
           customerName: client.name || "Customer",
           serviceProviderName: provider?.name || undefined,
+          invoiceUrl
         });
       }
 
       if (provider?.email) {
+        const invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/event-orders?tab=delivered`
         await sendEventOrderInvoiceEmail({
           ...invoiceBase,
           sentTo: provider.email,
           customerName: client?.name || "Customer",
           recipientName: provider.name || undefined,
           serviceProviderName: provider.name || undefined,
+          invoiceUrl
         });
       }
     } catch (err) {

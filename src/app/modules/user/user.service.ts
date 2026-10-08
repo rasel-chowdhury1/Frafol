@@ -162,8 +162,8 @@ const createUserToken = async (payload: TUserCreate) => {
   process.nextTick(async () => {
     await otpSendEmail({
       sentTo: email,
-      subject: 'Frafol Verification Code',
-      name: 'Customer',
+      subject: 'Overovací kód Frafol',
+      name: name  || companyName || 'Customer',
       otp,
       expiredAt: expiredAt,
     });
@@ -309,8 +309,8 @@ const otpVerifyAndCreateUser = async ({
       try {
         await welcomeEmail({
           sentTo: user[0].email,
-          subject: "Welcome to Frafol 🎉",
-          name: user[0].name || "Customer",
+          subject: "Vitajte vo Frafole 🎉",
+          name: user[0].name || user[0].companyName || "Customer",
           userType: getUserType(user[0].role),
         });
       } catch (err) {
@@ -789,16 +789,16 @@ const verifyProfessionalUserById = async (userId: string, status?: string) => {
   if (updatedStatus === 'verified') {
     profileVerifiedEmail({
       sentTo: user.email,
-      subject: 'Good News! Your Frafol Account Is Now Verified',
-      name: user.name || 'User',
+      subject: 'Dobrá správa! Váš účet na Frafole je overený',
+      name: user.name || user.companyName || 'User',
     }).catch((error) => {
       console.error('Profile verified email failed:', error);
     });
 
     welcomeEmail({
       sentTo: user.email,
-      subject: 'Welcome to Frafol – Here\'s How It Works',
-      name: user.name || 'User',
+      subject: 'Vitajte vo Frafole: Takto to funguje',
+      name: user.name  || user.companyName || 'User',
       userType: 'professional_verified',
     }).catch((error) => {
       console.error('Welcome email failed:', error);
@@ -1114,7 +1114,17 @@ if (minPrice || maxPrice) {
   ];
 
   // 🔥 Execute query
-  const result = await User.aggregate(pipeline);
+  const rawResult = await User.aggregate(pipeline);
+
+  const result = await Promise.all(
+    rawResult.map(async (u: any) => ({
+      ...u,
+      profileImage: await resolveFileUrl(u.profileImage),
+      introVideo: await resolveFileUrl(u.introVideo),
+      gallery: await resolveFileUrls(u.gallery),
+      bannerImages: await resolveFileUrls(u.bannerImages),
+    })),
+  );
 
   // 📊 Meta data
   const total = await User.countDocuments({
@@ -1989,7 +1999,22 @@ const getOverviewOfSpecificUser = async (userId: string) => {
               $sum: { $cond: [{ $eq: ['$status', 'delivered'] }, 1, 0] },
             },
             totalPaymentPending: {
-              $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] },
+              $sum: {
+                $cond: [
+                  { $and: [{ $eq: ['$status', 'accepted'] }, { $eq: ['$orderType', 'direct'] }] },
+                  1,
+                  0,
+                ],
+              },
+            },
+            totalPaymentPendingCustom: {
+              $sum: {
+                $cond: [
+                  { $and: [{ $eq: ['$status', 'accepted'] }, { $eq: ['$orderType', 'custom'] }] },
+                  1,
+                  0,
+                ],
+              },
             },
             totalDeliveryConfirmation: {
               $sum: { $cond: [{ $eq: ['$status', 'deliveryRequest'] }, 1, 0] },
@@ -2063,6 +2088,7 @@ const getOverviewOfSpecificUser = async (userId: string) => {
     totalPendingConfirmation: 0,
     totalCompleted: 0,
     totalPaymentPending: 0,
+    totalPaymentPendingCustom: 0,
     totalDeliveryConfirmation: 0,
     totalCancelRequestConfirmation: 0,
   };
@@ -2081,17 +2107,16 @@ const getOverviewOfSpecificUser = async (userId: string) => {
   return {
     user: userInfo?.name || '',
     totalActiveOrders: event.totalActive + gear.totalActive,
-    totalPendingConfirmation:
-      event.totalPendingConfirmation + gear.totalPendingConfirmation,
+    totalPendingConfirmation: event.totalPendingConfirmation + gear.totalPendingConfirmation,
     totalCompletedOrders: event.totalCompleted + gear.totalCompleted,
     totalSpent,
     actionRequired: {
-      totalPaymentPending: event.totalPaymentPending + gear.totalPaymentPending,
+      totalPaymentPending: event.totalPaymentPending,
+      totalPaymentPendingCustom: event.totalPaymentPendingCustom,
       totalDeliveryConfirmation:
         event.totalDeliveryConfirmation,
       totalCancelRequestConfirmation:
-        event.totalCancelRequestConfirmation +
-        gear.totalCancelRequestConfirmation,
+        event.totalCancelRequestConfirmation
     },
     latestNotifications,
   };
@@ -2207,10 +2232,18 @@ const getMyEarnings = async (
   const providerObjId = new Types.ObjectId(serviceProviderId);
 
   if (type === 'event') {
+    // 💰 Only payouts for event orders that have been delivered
+    const deliveredEventOrders = await EventOrder.find({
+      serviceProviderId: providerObjId,
+      status: 'delivered',
+      isDeleted: false,
+    }).select('_id');
+
     const eventPaymentQuery: any = {
       serviceProviderId: providerObjId,
       paymentType: 'event',
       paymentStatus: 'completed',
+      eventOrderId: { $in: deliveredEventOrders.map((o) => o._id) },
     };
 
     // 🔎 Search by client name, event name, and order type
@@ -2243,7 +2276,7 @@ const getMyEarnings = async (
 
     const earningsQuery = new QueryBuilder(
       Payment.find(eventPaymentQuery)
-        .populate('userId', 'name companyName profileImage email  address town zipCode')
+        .populate('userId', 'name companyName profileImage email  address town zipCode ico dic ic_dph')
         .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
         .populate('eventOrderId', 'orderId title serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
       restQuery,

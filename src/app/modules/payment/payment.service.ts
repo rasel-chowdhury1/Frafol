@@ -15,6 +15,7 @@ import { MySubscription } from '../mySubscription/mySubscription.model';
 import { User } from '../user/user.model';
 import { sendFrafolEmail, sendEmailAndNotification, sendEventOrderInvoiceEmail, sendWorkshopInvoiceEmail, sendGearOrderInvoiceEmail } from '../../utils/eamilNotifiacation';
 import httpStatus from 'http-status';
+import config from '../../config';
 
 /**
  * 🔹 Create Payment Session (Stripe Checkout)
@@ -147,6 +148,7 @@ const confirmPayment = async (sessionId: string) => {
                 const price = updatedOrder.price || 0;
                 const totalPrice = updatedOrder.totalPrice || payment.amount;
                 const serviceFee = (updatedOrder.priceWithServiceFee || 0) - price;
+                const invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/orders?tab=currentOrder`
                 await sendEventOrderInvoiceEmail({
                   sentTo: client.email,
                   customerName: (client as any).name || payment.name || 'Customer',
@@ -176,6 +178,7 @@ const confirmPayment = async (sessionId: string) => {
                   DIC: payment.DIC,
                   IC_DPH: payment.IC_DPH,
                   serviceProviderName: (provider as any)?.name || undefined,
+                  invoiceUrl
                 });
               }
             } catch (err) {
@@ -254,6 +257,16 @@ const confirmPayment = async (sessionId: string) => {
             const subtotal = items.reduce((s: number, i: any) => s + i.totalPrice, 0);
             const totalShipping = items.reduce((s: number, i: any) => s + i.shippingCost, 0);
 
+            let invoiceUrl = '';
+
+            if (client.role === 'user' || client.role === 'company') {
+              invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/gear-order?tab=currentOrder`;
+            } else if (
+              ['photographer', 'videographer', 'both'].includes(client.role)
+            ) {
+              invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/gear-purchases`;
+            }
+
             await sendGearOrderInvoiceEmail({
               sentTo: client.email,
               customerName: (client as any).name || firstOrder?.name || 'Customer',
@@ -271,6 +284,7 @@ const confirmPayment = async (sessionId: string) => {
               ico: firstOrder?.ico,
               dic: firstOrder?.dic,
               ic_dph: firstOrder?.ic_dph,
+              invoiceUrl
             });
           } catch (err) {
             console.error('❌ Gear invoice email failed:', err);
@@ -363,7 +377,7 @@ const confirmPayment = async (sessionId: string) => {
         process.nextTick(async () => {
           try {
             const [client, workshop, instructor] = await Promise.all([
-              User.findById(payment.userId).select('name email').lean(),
+              User.findById(payment.userId).select('name email role').lean(),
               Workshop.findById(payment.workshopId).select('title date time locationType location workshopLink price mainPrice vatAmount vatPercent').lean(),
               User.findById(payment.serviceProviderId).select('name').lean(),
             ]);
@@ -372,6 +386,18 @@ const confirmPayment = async (sessionId: string) => {
               const basePrice = ws.price || 0;
               const vatAmount = ws.vatAmount || 0;
               const totalPrice = ws.mainPrice || payment.amount;
+
+
+                let invoiceUrl = '';
+
+                if (client.role === 'user' || client.role === 'company') {
+                  invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/my-workshop`;
+                } else if (
+                  ['photographer', 'videographer', 'both'].includes(client.role)
+                ) {
+                  invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/my-workshop`;
+                }
+
               await sendWorkshopInvoiceEmail({
                 sentTo: (client as any).email,
                 customerName: (client as any).name || payment.name || 'Customer',
@@ -396,6 +422,7 @@ const confirmPayment = async (sessionId: string) => {
                 DIC: payment.DIC,
                 IC_DPH: payment.IC_DPH,
                 instructorName: (instructor as any)?.name || undefined,
+                invoiceUrl
               });
             }
 
