@@ -7,7 +7,6 @@ import {
   IOrderStats,
   OrderStats,
   PaginateQuery,
-  TownCategoryResponse,
   TUser,
   TUserCreate,
   VerifiedProfessionalPayload,
