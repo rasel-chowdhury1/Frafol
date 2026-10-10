@@ -92,7 +92,7 @@ const emailFooter = () => `
 
 const supportEmailSection = () => `
         <p style="margin-top: 24px; font-size: 14px;">
-          Ak ste o tento kód nežiadali alebo potrebujete pomoc, kontaktujte nás na
+          Ak potrebujete pomoc, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
@@ -101,7 +101,7 @@ const supportEmailSection = () => `
 
 const regardsSection = () => `
         <p style="margin-top: 32px;">
-          S pozdravom,<br />
+          S pozdravom<br />
           Frafol
         </p>
 `
@@ -134,6 +134,19 @@ const policiesSection = () => `
 // Notification-style emails (new message / comment / reply) are the only
 // ones that should carry an unsubscribe option — transactional emails
 // (OTP, password reset, payment confirmations, etc.) never get one.
+//
+// NOTE: we intentionally do NOT send our own List-Unsubscribe /
+// List-Unsubscribe-Post headers here. Brevo's SMTP relay injects its own
+// List-Unsubscribe header on every email it sends (transactional and
+// notification alike) regardless of what headers the app provides, and a
+// click on Gmail's one-click button is handled entirely on Brevo's side —
+// it blocklists the contact for ALL transactional sends on this account,
+// not just this one. Our own header therefore had no effect on Gmail's
+// button and only risked producing a duplicate/conflicting header, so it
+// was removed. The in-app opt-out below (link -> our own
+// /api/v1/email/unsubscribe endpoint -> User.emailNotificationsEnabled)
+// is the real, working per-user control for these two notification emails
+// and is unaffected by Brevo's own unsubscribe/blocklist behavior.
 const notificationUnsubscribeFooter = (receiverId: string) => {
   const unsubscribeUrl = EmailUnsubscribeService.getUnsubscribeUrl(receiverId);
   return `
@@ -141,14 +154,6 @@ const notificationUnsubscribeFooter = (receiverId: string) => {
       You're receiving this because someone interacted with your content on Frafol.
       <a href="${unsubscribeUrl}" style="color: #999; text-decoration: underline;">Unsubscribe</a> from these notification emails.
     </p>`;
-};
-
-const buildNotificationUnsubscribeHeaders = (receiverId: string) => {
-  const unsubscribeUrl = EmailUnsubscribeService.getUnsubscribeUrl(receiverId);
-  return {
-    'List-Unsubscribe': `<${unsubscribeUrl}>`,
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  };
 };
 
 const otpSendEmail = async ({
@@ -230,7 +235,7 @@ export const welcomeEmail = async ({
   const dynamicSection =
     userType === "professional"
       ? `
-      <p>
+      <p style="margin: 0 0 12px 0; line-height: 1.5;">
         Váš účet bol úspešne vytvorený. Náš tím momentálne kontroluje váš profil.
       </p>
       <div style="
@@ -246,13 +251,15 @@ export const welcomeEmail = async ({
         Váš profil práve overuje náš tím. Po dokončení overenia vám pošleme potvrdzovací e-mail.
       </div>`
       : `
-      <p>
+      <p style="margin: 0 0 12px 0; line-height: 1.5;">
         ${userType === "professional_verified"
-          ? "Váš profil bol úspešne overený. Teraz môžete začať prijímať žiadosti o rezerváciu."
+          ? "Váš profil bol úspešne overený. Klienti Vás teraz môžu nájsť a objednať si Vaše služby."
           : "Váš účet bol úspešne vytvorený. Tešíme sa, že ste sa k nám pripojili."}
       </p>
-      <p>Na začiatok si pozrite, ako naša platforma funguje: </p>
-      <p style="margin: 20px 0;">
+      <p style="margin: 0 0 12px 0; line-height: 1.5;">
+        Na začiatok si pozrite, ako naša platforma funguje: 
+      </p>
+      <p style="margin: 12px 0; line-height: 1.5;">
         <a href="${howItWorksLink}" style="
           display: inline-block;
           padding: 12px 20px;
@@ -277,10 +284,15 @@ export const welcomeEmail = async ({
       </h1>
     </div>
 
-    <!-- Body -->
-    <div style="padding: 24px; color: #333;">
-      <p>Dobrý deň <strong>${name}</strong>,</p>
-      <p>Vitajte vo <strong>Frafole!</strong>!</p>
+    <div style="padding: 24px; color: #333; line-height: 1.5;">
+      <p style="margin: 0 0 12px 0; line-height: 1.5;">
+        Dobrý deň <strong>${name}</strong>,
+      </p>
+
+      <p style="margin: 0 0 12px 0; line-height: 1.5;">
+        Vitajte vo <strong>Frafole!</strong>
+      </p>
+
       ${dynamicSection}
 
       ${policiesSection()}
@@ -332,7 +344,7 @@ const profileVerifiedEmail = async ({
 
       <!-- Body -->
       <div style="padding: 24px; color: #333333;">
-        <p>Dobrý deň, <strong>${name}</strong>,</p>
+        <p>Dobrý deň, <strong>${name}</strong>,</p><br/>
 
         <p>
           máme pre vás dobrú správu! Náš tím úspešne overil váš profesionálny profil na Frafole.
@@ -375,7 +387,7 @@ const profileVerifiedEmail = async ({
         </div>
 
         <p style="font-size: 14px; color: #666;">
-          Kompletný profil s ukážkami vašej práce a podrobnými informáciami Vám pomôže získať väčšiu viditeľnosť a viac rezervácií.
+          Kompletný profil s ukážkami Vašej práce a podrobnými informáciami Vám pomôže získať viac rezervácií.
         </p>
 
         ${supportEmailSection()}
@@ -1374,7 +1386,7 @@ const sendCommentOrReplyEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, subject, emailBody, buildNotificationUnsubscribeHeaders(receiverId));
+  await sendEmail(sentTo, subject, emailBody);
 };
 
 const sendBookingRequestEmail = async ({
@@ -1715,7 +1727,6 @@ const sendNewMessageEmail = async ({
     sentTo,
     `Nová správa od ${senderName}`,
     emailBody,
-    buildNotificationUnsubscribeHeaders(receiverId),
   );
 };
 
