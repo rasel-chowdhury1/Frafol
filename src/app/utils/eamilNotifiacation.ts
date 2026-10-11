@@ -1888,6 +1888,90 @@ const sendReviewRequestEmail = async ({
   await sendEmail(sentTo, `How Was Your Experience with ${serviceProviderName}?`, emailBody);
 };
 
+const sendReviewSubmittedEmail = async ({
+  sentTo,
+  receiverName,
+  reviewerName,
+  rating,
+  message,
+  serviceType,
+  isAnonymous,
+}: {
+  sentTo: string;
+  receiverName: string;
+  reviewerName: string;
+  rating: number;
+  message?: string;
+  serviceType?: string;
+  isAnonymous?: boolean;
+}): Promise<void> => {
+  const serviceTypeLabel = getServiceTypeLabel(serviceType) || 'order';
+  const displayName = isAnonymous ? 'Anonymný klient' : reviewerName;
+  const starsDisplay = '⭐'.repeat(Math.max(0, Math.min(5, Math.round(rating))));
+
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+      <!-- Header -->
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img
+          src="${logoUrl}"
+          alt="Frafol Logo"
+          style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
+        />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
+          Dostali ste nové hodnotenie ⭐
+        </h1>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px; color: #333333;">
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
+
+        <p>
+          <strong>${displayName}</strong> zanechal/a hodnotenie k vašej objednávke <strong>${serviceTypeLabel}</strong>.
+        </p>
+
+        <div style="
+          background-color: #fdf0ec;
+          border-left: 4px solid ${primaryColor};
+          padding: 14px 18px;
+          border-radius: 4px;
+          margin: 20px 0;
+          font-size: 14px;
+          color: #555;
+        ">
+          <p style="margin: 0 0 8px; font-size: 18px;">${starsDisplay} (${rating}/5)</p>
+          ${message ? `<p style="margin: 0;">"${message}"</p>` : ''}
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${clientUrl}/dashboard/professional/reviews" style="
+            display: inline-block;
+            padding: 12px 22px;
+            background-color: ${primaryColor};
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            Zobraziť hodnotenie
+          </a>
+        </div>
+
+        ${supportEmailSection()}
+
+        ${regardsSection()}
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Nové hodnotenie od klienta | Frafol`, emailBody);
+};
+
 const sendCancelRequestDeclinedEmail = async ({
   sentTo,
   receiverName,
@@ -4149,6 +4233,7 @@ export {
   sendCancelRequestDeclinedEmail, 
   sendDeliveryAcceptedEmail,
   sendReviewRequestEmail,
+  sendReviewSubmittedEmail,
   sendNewMessageEmail,
   sendPaymentSuccessEmail, 
   sendOrderAcceptedEmail, 

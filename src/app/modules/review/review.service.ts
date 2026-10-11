@@ -6,6 +6,7 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import { EventOrder } from '../eventOrder/eventOrder.model';
 import AppError from '../../error/AppError';
 import status from 'http-status';
+import { sendReviewSubmittedEmail } from '../../utils/eamilNotifiacation';
 
 const createReview = async (payload: IReview) => {
   console.log('review payload===>> ', payload);
@@ -91,6 +92,24 @@ const completePendingReview = async (
     serviceProvider.averageRating = avgRating;
 
     await serviceProvider.save();
+
+    // 7️⃣ Notify the service provider by email that they received a review
+    if (serviceProvider.email) {
+      const reviewer = await User.findById(review.userId).select('name companyName sureName');
+      const reviewerName = reviewer
+        ? `${reviewer.name || ''} ${reviewer.companyName || ''} ${reviewer.sureName || ''}`.trim() || 'A client'
+        : 'A client';
+
+      sendReviewSubmittedEmail({
+        sentTo: serviceProvider.email,
+        receiverName: serviceProvider.name || '',
+        reviewerName,
+        rating: review.rating,
+        message: review.message,
+        serviceType: eventOrder.serviceType,
+        isAnonymous: review.isAnonymous,
+      }).catch((err) => console.error('Review email failed:', err));
+    }
   }
 
   return review;
