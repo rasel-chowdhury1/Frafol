@@ -894,7 +894,8 @@ try {
           sentTo: client.email,
           customerName: client.name || "Customer",
           serviceProviderName: provider?.name || undefined,
-          invoiceUrl
+          invoiceUrl,
+          billInfoShow: true
         });
       }
 
@@ -906,7 +907,8 @@ try {
           customerName: client?.name || "Customer",
           recipientName: provider.name || undefined,
           serviceProviderName: provider.name || undefined,
-          invoiceUrl
+          invoiceUrl,
+          billInfoShow: false,
         });
       }
     } catch (err) {

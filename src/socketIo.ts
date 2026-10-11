@@ -586,7 +586,7 @@ export const sentNotificationForOrderAccepted = async ({
 
   // Build notification text
   if (orderType === 'direct') {
-    const pkgText = packageName ? `"${packageName}"` : 'your package';
+    const pkgText = packageName ? `"${packageName}"` : 'Váš balík';
     text = `${serviceProvider.name} has accepted your direct booking request for ${pkgText}. Please proceed to payment to confirm the booking.`;
     type = 'DirectBookingAccepted';
   } else {
@@ -652,7 +652,7 @@ export const sentNotificationForPaymentSuccess = async ({
 
   // Build notification text
   if (orderType === 'direct') {
-    const pkgText = packageName ? `"${packageName}"` : 'your package';
+    const pkgText = packageName ? `"${packageName}"` : 'Váš balík';
     text = `${client.name} has successfully completed payment for ${pkgText}. The order is now in progress.`;
     type = 'DirectBookingInProgress';
   } else {
@@ -717,7 +717,7 @@ export const sentNotificationForDeliveryRequest = async ({
 
   const text =
     orderType === 'direct'
-      ? `${sender.name} has submitted the delivery for your ${serviceType || 'order'}. Please review and confirm.`
+      ? `${sender.name} has submitted the delivery for your ${serviceType || 'Objednávka'}. Please review and confirm.`
       : `${sender.name} has sent a delivery request for your custom ${serviceType || 'booking'}. Please review.`;
 
   const notificationPayload = {
@@ -771,7 +771,7 @@ export const sentNotificationForDeliveryAccepted = async ({
   // ðŸ”¹ Build notification message
   const text =
     orderType === 'direct'
-      ? `${sender.name} has accepted your delivery request for ${serviceType || 'order'}${packageName ? ` (${packageName})` : ''}. Great job!`
+      ? `${sender.name} has accepted your delivery request for ${serviceType || 'Objednávka'}${packageName ? ` (${packageName})` : ''}. Great job!`
       : `${sender.name} has accepted your delivery request for the custom ${serviceType || 'booking'}. Congratulations!`;
 
   const notificationPayload = {
@@ -865,7 +865,7 @@ export const sentNotificationForOrderDeclined = async ({
 
   const text =
     status === 'deliveryRequestDeclined'
-      ? `${sender.name} has declined the delivery request for your ${orderType === 'direct' ? packageName || serviceType || 'order' : `custom ${serviceType || 'booking'}`}.`
+      ? `${sender.name} has declined the delivery request for your ${orderType === 'direct' ? packageName || serviceType || 'Objednávka' : `custom ${serviceType || 'booking'}`}.`
       : orderType === 'direct'
         ? `${sender.name} has declined your direct order request${serviceType ? ` for ${serviceType}` : ''}.`
         : `${sender.name} has declined your custom ${serviceType || 'booking'} request.`;
@@ -918,7 +918,7 @@ export const sentNotificationForOrderCancelled = async ({
 
   const text =
     orderType === 'direct'
-      ? `${sender.name} has cancelled the ${packageName || serviceType || 'order'}.`
+      ? `${sender.name} has cancelled the ${packageName || serviceType || 'Objednávka'}.`
       : `${sender.name} has cancelled your custom ${serviceType || 'booking'}.`;
 
   const payload = {
@@ -970,7 +970,7 @@ export const sentNotificationForCancelRequest = async ({
 
   const text =
     orderType === 'direct'
-      ? `${sender.name} has requested to cancel the ${serviceType || 'order'}${reason ? `: "${reason}"` : '.'}`
+      ? `${sender.name} has requested to cancel the ${serviceType || 'Objednávka'}${reason ? `: "${reason}"` : '.'}`
       : `${sender.name} has requested to cancel your custom ${serviceType || 'booking'}${reason ? `: "${reason}"` : '.'}`;
 
   const payload = {
@@ -1290,7 +1290,7 @@ export const sentNotificationForCancelRequestDeclined = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} has declined your cancellation request for the ${serviceType || 'order'}${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `${sender.name} has declined your cancellation request for the ${serviceType || 'Objednávka'}${reason ? `. Reason: "${reason}"` : '.'}`;
 
   const payload = {
     userId: declinedBy,
@@ -1331,7 +1331,7 @@ export const sentNotificationForExtensionRequest = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} has requested a delivery date extension for the ${serviceType || 'order'}${reason ? `: "${reason}"` : '.'}`;
+  const text = `${sender.name} has requested a delivery date extension for the ${serviceType || 'Objednávka'}${reason ? `: "${reason}"` : '.'}`;
 
   const payload = {
     userId: requestedBy,
@@ -1376,7 +1376,7 @@ export const sentNotificationForExtensionAccepted = async ({
     ? new Date(newDeliveryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : 'the new date';
 
-  const text = `${sender.name} has accepted your delivery date extension request for the ${serviceType || 'order'}. New delivery date: ${dateStr}.`;
+  const text = `${sender.name} has accepted your delivery date extension request for the ${serviceType || 'Objednávka'}. New delivery date: ${dateStr}.`;
 
   const payload = {
     userId: acceptedBy,
@@ -1417,7 +1417,7 @@ export const sentNotificationForExtensionRejected = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} has rejected your delivery date extension request for the ${serviceType || 'order'}${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `${sender.name} has rejected your delivery date extension request for the ${serviceType || 'Objednávka'}${reason ? `. Reason: "${reason}"` : '.'}`;
 
   const payload = {
     userId: rejectedBy,
@@ -1452,7 +1452,7 @@ export const sentNotificationForGearMarketplaceApproved = async ({
   const receiver = await User.findById(receiverId).select('name email');
   if (!receiver) return;
 
-  const text = `Congratulations! Your gear item "${itemName}" has been approved by the admin and is now live on the marketplace.`;
+  const text = `Gratulujeme! Vaše príslušenstvo "${itemName}"  bolo schválené naším administratívnym tímom a je teraz dostupné na Frafol bazáre.`;
 
   const payload = {
     userId: receiverId,
@@ -1599,7 +1599,7 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
   if (!serviceProvider) return;
 
   const orderLabel = orderType === 'direct'
-    ? packageName || serviceType || 'order'
+    ? packageName || serviceType || 'Objednávka'
     : `custom ${serviceType || 'booking'}`;
 
   const text = `Your payment for the ${orderLabel} (Order ID: ${orderId}) has been processed and marked as completed.`;
@@ -1933,7 +1933,7 @@ export const sentNotificationForPackageApproved = async ({
 
   if (!receiver) return;
 
-  const text = `Congratulations! Your package "${packageTitle}" has been approved by the admin and is now live.`;
+  const text = `Congratulations! Váš balík. "${packageTitle}" has been approved by the admin and is now live.`;
 
   const payload = {
     userId: receiverId,
@@ -1973,7 +1973,7 @@ export const sentNotificationForPackageDeclined = async ({
 
   if (!receiver) return;
 
-  const text = `Your package "${packageTitle}" has been declined by the admin. Reason: "${reason}"`;
+  const text = `Váš balík "${packageTitle}" has been declined by the admin. Reason: "${reason}"`;
 
   const payload = {
     userId: receiverId,

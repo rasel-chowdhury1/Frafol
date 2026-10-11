@@ -178,7 +178,8 @@ const confirmPayment = async (sessionId: string) => {
                   DIC: payment.DIC,
                   IC_DPH: payment.IC_DPH,
                   serviceProviderName: (provider as any)?.name || undefined,
-                  invoiceUrl
+                  invoiceUrl,
+                  billInfoShow: true
                 });
               }
             } catch (err) {

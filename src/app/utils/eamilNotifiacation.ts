@@ -80,6 +80,15 @@ const supportEmail = 'cvak@frafol.sk';
 
 const clientUrl = process.env.FRONT_URL || "http://76.13.133.178:3000";
 
+// Slovak display labels for the serviceType enum ("photography" | "videography" | "both")
+const serviceTypeLabels: Record<string, string> = {
+  photography: 'Fotenie',
+  videography: 'Natáčanie',
+  both: 'Fotenie a Natáčanie',
+};
+const getServiceTypeLabel = (serviceType?: string) =>
+  (serviceType && serviceTypeLabels[serviceType]) || serviceType || '';
+
 
 
 const emailFooter = () => `
@@ -545,10 +554,7 @@ const sendBookingDeclineEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -606,7 +612,7 @@ const frafolChoiceEmail = async ({
       </div>
 
       <!-- Order Details -->
-      <p style="font-weight:bold;margin-bottom:8px;">Order Details</p>
+      <p style="font-weight:bold;margin-bottom:8px;">Detaily objednávky</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
         ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Order ID</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
         ${planName ? `<tr><td style="padding:6px 0;color:#777;">Plan</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
@@ -624,14 +630,15 @@ const frafolChoiceEmail = async ({
       ${policiesSection()}
 
       <p style="margin-top:24px;font-size:14px;">
-        Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
+        Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
       </p>
-      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      
+      ${regardsSection()}
     </div>
 
     <!-- Footer -->
     <div style="background-color:#f5f5f5;text-align:center;padding:14px;font-size:12px;color:#777;">
-      © ${new Date().getFullYear()} Frafol. All rights reserved.
+      © ${new Date().getFullYear()} Frafol. Všetky práva vyhradené.
     </div>
   </div>
   `;
@@ -757,10 +764,7 @@ const sendFrafolEmail = ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -857,7 +861,7 @@ const passwordChangedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol</strong></p>
       </div>
       ${emailFooter()}
     </div>
@@ -886,7 +890,7 @@ const forgotPasswordEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol</strong></p>
       </div>
       ${emailFooter()}
     </div>
@@ -947,14 +951,14 @@ const accountBlockedEmail = async ({
         <p>Your Frafol account has been <strong>${action}</strong> by our admin team.</p>
         ${reason ? `
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          <strong>Reason:</strong><br/>${reason}
+          <strong>Dôvod:</strong><br/>${reason}
         </div>` : ''}
         <p style="font-size: 14px; color: #555;">
           If you believe this is a mistake, please reach out to us at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol</strong></p>
       </div>
       ${emailFooter()}
     </div>
@@ -996,7 +1000,7 @@ const accountDeleteRequestAdminEmail = async ({
           reason
             ? `
           <div style="background-color: #fff8e1; border-left: 4px solid #f9a825; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-            <strong>Reason:</strong><br/>
+            <strong>Dôvod:</strong><br/>
             ${reason}
           </div>
         `
@@ -1009,10 +1013,7 @@ const accountDeleteRequestAdminEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Best regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -1049,14 +1050,14 @@ const accountDeleteRejectedEmail = async ({
         </p>
         ${reason ? `
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          <strong>Reason:</strong><br/>${reason}
+          <strong>Dôvod:</strong><br/>${reason}
         </div>` : ''}
         <p style="font-size: 14px; color: #555;">
           If you have any questions or would like to submit a new request, please contact us at
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Best regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection}
       </div>
       ${emailFooter()}
     </div>
@@ -1107,8 +1108,9 @@ const frafolChoiceRenewalSuccessEmail = async ({
 
       ${policiesSection()}
 
-      <p style="margin-top:24px;font-size:14px;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
-      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      <p style="margin-top:24px;font-size:14px;">Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      
+      ${regardsSection()}
     </div>
     ${emailFooter()}
   </div>`;
@@ -1173,7 +1175,7 @@ const frafolChoiceRenewalFailedEmail = async ({
       </div>
       <p style="font-size:14px;color:#555;">If you need help, contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.</p>
       ${policiesSection()}
-      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      ${regardsSection()}
     </div>
     ${emailFooter()}
   </div>`;
@@ -1206,9 +1208,9 @@ const frafolChoiceExpiringSoonEmail = async ({
       <div style="text-align:center;margin:24px 0;">
         <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
       </div>
-      <p style="font-size:14px;color:#555;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      <p style="font-size:14px;color:#555;">Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
       ${policiesSection()}
-      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      ${regardsSection()}
     </div>
     ${emailFooter()}
   </div>`;
@@ -1243,9 +1245,9 @@ const frafolChoiceExpiredEmail = async ({
       <div style="text-align:center;margin:24px 0;">
         <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
       </div>
-      <p style="font-size:14px;color:#555;">Questions? <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
+      <p style="font-size:14px;color:#555;">Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
       ${policiesSection()}
-      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      ${regardsSection()}
     </div>
     ${emailFooter()}
   </div>`;
@@ -1272,7 +1274,7 @@ const frafolChoiceCancelledByAdminEmail = async ({
       <p>Your <strong>Frafol Choice</strong> subscription has been <strong>cancelled by our admin team</strong>. Your profile has returned to standard visibility.</p>
       ${reason ? `
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
-        <strong>Reason:</strong><br/>${reason}
+        <strong>Dôvod:</strong><br/>${reason}
       </div>` : ''}
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
         <strong>You have lost access to:</strong>
@@ -1287,7 +1289,7 @@ const frafolChoiceCancelledByAdminEmail = async ({
         <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
       </p>
       ${policiesSection()}
-      <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+      ${regardsSection()}
     </div>
     ${emailFooter()}
   </div>`;
@@ -1311,8 +1313,8 @@ const sendCommentOrReplyEmail = async ({
   commentText: string;
   isReply: boolean;
 }): Promise<void> => {
-  const action = isReply ? 'replied to a comment on' : 'komentoval';
-  const subject = isReply ? 'New Reply on Your Post' : 'Nový komentár k vášmu príspevku';
+  const action = isReply ? 'odpovedal(a) na komentár k' : 'komentoval';
+  const subject = isReply ? 'Nová odpoveď na váš príspevok' : 'Nový komentár k vášmu príspevku';
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1374,12 +1376,8 @@ const sendCommentOrReplyEmail = async ({
         </p>
 
 
-        <p style="margin-top: 32px;">
-          S pozdravom,<br />
-          <strong>Frafol</strong>
-        </p>
+        ${regardsSection()}
 
-        ${notificationUnsubscribeFooter(receiverId)}
       </div>
 
       ${emailFooter()}
@@ -1406,8 +1404,8 @@ const sendBookingRequestEmail = async ({
 }): Promise<void> => {
   const isDirectBooking = orderType === 'direct';
   const orderLabel = isDirectBooking
-    ? packageName ? `"${packageName}"` : 'a package'
-    : `Custom ${serviceType?.trim() || 'service'}`;
+    ? packageName ? `"${packageName}"` : 'Balík'
+    : getServiceTypeLabel(serviceType?.trim()) || 'service';
 
   const headerLevel = isDirectBooking ? "Nová objednávka balíka" : "Nový dopyt na fotenie alebo natáčanie"
 
@@ -1496,7 +1494,7 @@ const sendOrderAcceptedEmail = async ({
 }): Promise<void> => {
   const orderLabel =
     orderType === 'direct'
-      ? packageName ? `"${packageName}"` : 'your package'
+      ? packageName ? `"${packageName}"` : 'Váš balík.'
       : `custom ${serviceType || 'booking'}`;
 
   const emailBody = `
@@ -1578,7 +1576,7 @@ const sendPaymentSuccessEmail = async ({
 }): Promise<void> => {
   const orderLabel =
     orderType === 'direct'
-      ? packageName ? `"${packageName}"` : 'your package'
+      ? packageName ? `"${packageName}"` : 'Váš balík'
       : `custom ${serviceType || 'booking'}`;
 
   const emailBody = `
@@ -1743,6 +1741,7 @@ const sendDeliveryAcceptedEmail = async ({
   serviceType?: string;
   packageName?: string;
 }): Promise<void> => {
+  const serviceTypeLabel = getServiceTypeLabel(serviceType);
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
 
@@ -1763,7 +1762,7 @@ const sendDeliveryAcceptedEmail = async ({
         <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          máme dobrú správu! Klient <strong>${clientName}</strong> potvrdil prevzatie objednávky <strong>${serviceType || 'order'}${packageName ? ` – ${packageName}` : ''}</strong>. Peniaze vám budú odoslané na bankový účet uvedený vo vašom profile do 15 kalendárnych dní.
+          máme dobrú správu! Klient <strong>${clientName}</strong> potvrdil prevzatie objednávky <strong>${serviceTypeLabel}${packageName ? ` – ${packageName}` : ''}</strong>. Peniaze vám budú odoslané na bankový účet uvedený vo vašom profile do 15 kalendárnych dní.
         </p>
 
         <div style="
@@ -1879,10 +1878,7 @@ const sendReviewRequestEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -1985,10 +1981,12 @@ const sendCancelRequestEmail = async ({
   receiverRole: string;
 }): Promise<void> => {
 
-  const reviewRequestUrl =
-    receiverRole === 'serviceProvider'
-      ? `${clientUrl}/dashboard/professional/event-orders?tab=cancelRequest`
-      : `${clientUrl}/dashboard/my-account/orders?tab=cancelRequest`;
+  const isServiceProvider = ['photographer', 'videographer', 'both'].includes(receiverRole);
+  const reviewRequestUrl = isServiceProvider
+    ? `${clientUrl}/dashboard/professional/event-orders?tab=cancelRequest`
+    : `${clientUrl}/dashboard/my-account/orders?tab=cancelRequest`;
+
+  const serviceTypeLabel = getServiceTypeLabel(serviceType) || 'order';
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -2010,7 +2008,7 @@ const sendCancelRequestEmail = async ({
         <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          klient <strong>${requesterName}</strong> požiadal o zrušenie objednávky <strong>${serviceType || 'order'}</strong>. Pozrite si jeho žiadosť a rozhodnite, či ju schválite alebo zamietnete.
+          klient <strong>${requesterName}</strong> požiadal o zrušenie objednávky <strong>${serviceTypeLabel}</strong>. Pozrite si jeho žiadosť a rozhodnite, či ju schválite alebo zamietnete.
         </p>
 
         ${reason ? `
@@ -2113,7 +2111,7 @@ const sendRefundRequiredEmail = async ({
             </tr>
             ${serviceType ? `
             <tr>
-              <td style="padding: 6px 0; color: #777;">Service Type</td>
+              <td style="padding: 6px 0; color: #777;">Typ služby</td>
               <td style="padding: 6px 0; text-align: right;">${serviceType}</td>
             </tr>` : ''}
             ${customerEmail ? `
@@ -2153,10 +2151,7 @@ const sendRefundRequiredEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol System</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -2253,7 +2248,7 @@ const sendDeliveryRequestEmail = async ({
                 font-size: 14px;
                 color: #555555;
               ">
-                <strong>Message from ${senderName}:</strong>
+                <strong>Správa od ${senderName}:</strong>
                 <p style="
                   margin: 8px 0 0;
                   line-height: 1.6;
@@ -2308,29 +2303,6 @@ const sendDeliveryRequestEmail = async ({
           Po prezretí objednávky potvrďte jej prevzatie alebo ju zamietnite vo svojom profile.
         </div>
 
-        <!-- Open Delivery Link -->
-        <div style="
-          text-align: center;
-          margin: 28px 0 16px;
-        ">
-          <a
-            href="${deliveryLink}"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="
-              display: inline-block;
-              padding: 12px 22px;
-              background-color: ${primaryColor};
-              color: #ffffff;
-              text-decoration: none;
-              border-radius: 6px;
-              font-size: 14px;
-              font-weight: bold;
-            "
-          >
-            View Delivered Files
-          </a>
-        </div>
 
         <!-- Review Delivery -->
         <div style="
@@ -2386,6 +2358,7 @@ const sendExtensionRequestEmail = async ({
   serviceType?: string;
   reason?: string;
 }): Promise<void> => {
+  const serviceTypeLabel = getServiceTypeLabel(serviceType) || 'order';
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
 
@@ -2406,7 +2379,7 @@ const sendExtensionRequestEmail = async ({
         <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          <strong>${senderName}</strong> požiadal o predĺženie termínu odovzdania <strong>${serviceType || 'order'}</strong>.
+          <strong>${senderName}</strong> požiadal o predĺženie termínu odovzdania <strong>${serviceTypeLabel}</strong>.
         </p>
 
         ${reason ? `
@@ -2773,7 +2746,7 @@ const sendGearMarketplaceApprovedEmail = async ({
       <!-- Header -->
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Gear Item Approved!</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Príslušenstvo schválené</h1>
       </div>
 
       <!-- Body -->
@@ -2781,8 +2754,7 @@ const sendGearMarketplaceApprovedEmail = async ({
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
-          Congratulations! Your gear item <strong>"${itemName}"</strong> has been
-          approved by our admin team and is now live on the Frafol marketplace.
+          Vaše príslušenstvo <strong>"${itemName}"</strong> bolo schválené a je teraz dostupné v bazári FRAFOL.
         </p>
 
         <div style="
@@ -2794,7 +2766,7 @@ const sendGearMarketplaceApprovedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          Your item is now visible to buyers and ready to receive orders.
+          Vaše príslušenstvo je teraz viditeľné pre kupujúcich, ktorí si ho môžu objednať.
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -2808,28 +2780,25 @@ const sendGearMarketplaceApprovedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Your Listing
+            Zobraziť inzerát
           </a>
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
+          Ak máte akékoľvek otázky, kontaktujte nás na 
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Gear Item Approved: "${itemName}"`, emailBody);
+  await sendEmail(sentTo, `Príslušenstvo schválené: "${itemName}"`, emailBody);
 };
 
 const sendGearMarketplaceDeclinedEmail = async ({
@@ -2849,7 +2818,7 @@ const sendGearMarketplaceDeclinedEmail = async ({
       <!-- Header -->
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Gear Item Declined</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Príslušenstvo zamietnuté</h1>
       </div>
 
       <!-- Body -->
@@ -2857,8 +2826,8 @@ const sendGearMarketplaceDeclinedEmail = async ({
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
-          We're sorry to inform you that your gear item
-          <strong>"${itemName}"</strong> has been declined by our admin team.
+          Vaše príslušenstvo
+          <strong>"${itemName}"</strong> ebolo schválené na zverejnenie v bazári FRAFOL.
         </p>
 
         <div style="
@@ -2870,27 +2839,25 @@ const sendGearMarketplaceDeclinedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          ${reason ? `<strong>Reason:</strong> ${reason}` : 'Please review our listing guidelines and resubmit if appropriate.'}
+          ${reason ? `<strong>Dôvod:</strong> ${reason}` : 'Prečítajte si prosím pravidlá pre inzeráty a v prípade potreby znova odošlite žiadosť.'}
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you have any questions, contact us at
+          Ak máte akékoľvek otázky, kontaktujte nás na 
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
 
+        
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Gear Item Declined: "${itemName}"`, emailBody);
+  await sendEmail(sentTo, `Príslušenstvo zamietnuté: "${itemName}"`, emailBody);
 };
 
 const sendGearOrderPayoutCompletedEmail = async ({
@@ -2933,7 +2900,7 @@ const sendGearOrderPayoutCompletedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -2990,7 +2957,7 @@ const sendEventOrderPayoutCompletedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3039,7 +3006,7 @@ const sendWorkshopPayoutCompletedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3082,7 +3049,7 @@ const sendGearDeliveryRequestEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3124,7 +3091,7 @@ const sendGearDeliveryAcceptedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3158,7 +3125,7 @@ const sendGearDeliveryDeclinedEmail = async ({
           <strong>${clientName}</strong> has declined the delivery for the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''}.
         </p>
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          <strong>Reason:</strong> ${reason || 'No reason provided.'}
+          <strong>Dôvod:</strong> ${reason || 'No reason provided.'}
         </div>
         <p style="font-size: 14px; color: #555;">
           Please review the details and resend the delivery once resolved.
@@ -3171,7 +3138,7 @@ const sendGearDeliveryDeclinedEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3205,7 +3172,7 @@ const sendGearOrderCancelledEmail = async ({
           We're sorry to inform you that your gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''} has been cancelled by <strong>${cancelledByName}</strong>.
         </p>
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          <strong>Reason:</strong> ${reason || 'No reason provided.'}
+          <strong>Dôvod:</strong> ${reason || 'No reason provided.'}
         </div>
         <p style="font-size: 14px; color: #555;">
           If a payment was already made, our team will review and process a refund where applicable.
@@ -3218,7 +3185,7 @@ const sendGearOrderCancelledEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3279,7 +3246,7 @@ const sendGearOrderSoldEmail = async ({
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
-        <p style="margin-top: 32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -3314,7 +3281,7 @@ const sendWorkshopDeclinedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Workshop Declined
+          Kurz nebol schválený
         </h1>
       </div>
 
@@ -3336,7 +3303,7 @@ const sendWorkshopDeclinedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason:</strong> ${reason}
+          <strong>Dôvod:</strong> ${reason}
         </div>
 
         <p style="font-size: 14px; color: #555;">
@@ -3349,17 +3316,14 @@ const sendWorkshopDeclinedEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Workshop Declined: "${workshopTitle}"`, emailBody);
+  await sendEmail(sentTo, `Kurz nebol schválený: "${workshopTitle}"`, emailBody);
 };
 
 const sendWorkshopApprovedEmail = async ({
@@ -3382,7 +3346,7 @@ const sendWorkshopApprovedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Workshop Approved!
+          Kurz bol schválený!
         </h1>
       </div>
 
@@ -3391,8 +3355,7 @@ const sendWorkshopApprovedEmail = async ({
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
-          Congratulations! Your workshop <strong>"${workshopTitle}"</strong> has been
-          approved by our admin team and is now live on Frafol.
+          Váš kurz <strong>"${workshopTitle}"</strong> bol schválený a zverejnený na Frafol.
         </p>
 
         <div style="
@@ -3404,7 +3367,7 @@ const sendWorkshopApprovedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          Your workshop is now visible to participants and ready to accept bookings.
+          Kurz je teraz viditeľný pre účastníkov a môžu sa naň prihlasovať.
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -3418,7 +3381,7 @@ const sendWorkshopApprovedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Your Workshop
+            Zobraziť kurz
           </a>
         </div>
 
@@ -3431,10 +3394,7 @@ const sendWorkshopApprovedEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -3519,10 +3479,7 @@ const sendWorkshopNewParticipantEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -3625,7 +3582,7 @@ const sendPackageDeclinedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Package Declined
+          Balík zamietnutý
         </h1>
       </div>
 
@@ -3634,8 +3591,8 @@ const sendPackageDeclinedEmail = async ({
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
-          We're sorry to inform you that your package
-          <strong>"${packageTitle}"</strong> has been declined by our admin team.
+          Váš kurz 
+          <strong>"${packageTitle}"</strong> nebol schválený.
         </p>
 
         <div style="
@@ -3647,7 +3604,7 @@ const sendPackageDeclinedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason:</strong> ${reason}
+          <strong></strong> ${reason}
         </div>
 
         <p style="font-size: 14px; color: #555;">
@@ -3660,17 +3617,14 @@ const sendPackageDeclinedEmail = async ({
 
         ${policiesSection()}
 
-        <p style="margin-top: 32px;">
-          Kind regards,<br />
-          <strong>Frafol Team</strong>
-        </p>
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
     </div>
   `;
 
-  await sendEmail(sentTo, `Package Declined: "${packageTitle}"`, emailBody);
+  await sendEmail(sentTo, `Balík zamietnutý: "${packageTitle}"`, emailBody);
 };
 
 // ─────────────────────────────────────────────
@@ -3709,6 +3663,7 @@ interface EventOrderInvoiceParams {
   serviceProviderName?: string;
   invoiceType?: 'payment' | 'completed';
   invoiceUrl: string;
+  billInfoShow: boolean;
 }
 
 const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Promise<void> => {
@@ -3717,27 +3672,29 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
     eventDate, eventTime, location, price, serviceFee, vatAmount = 0,
     couponCode, couponDiscount = 0, totalPrice, transactionId, paymentMethod,
     paymentDate, streetAddress, town, country, isRegisterAsCompany,
-    companyName, ICO, DIC, IC_DPH, serviceProviderName, invoiceType = 'payment',invoiceUrl
+    companyName, ICO, DIC, IC_DPH, serviceProviderName, invoiceType = 'payment',invoiceUrl, billInfoShow
   } = params;
 
   const isCompleted = invoiceType === 'completed';
-  const headerTitle = isCompleted ? 'Order Completed Successfully ✅' : 'Payment Confirmation &amp; Invoice';
+  const headerTitle = isCompleted ? 'Objednávka bola úspešne dokončená ✅' : 'Potvrdenie platby a faktúra';
   const introText = isCompleted
-    ? 'Your order has been completed successfully. Please find the invoice for your records below.'
-    : 'Your payment has been successfully processed. Please find your invoice below.';
+    ? 'Vaša objednávka bola úspešne dokončená. Nižšie nájdete faktúru k objednávke.'
+    : 'Vaša platba bola úspešne spracovaná. Faktúru nájdete nižšie.';
   const emailSubject = isCompleted
-    ? `Order Completed – Invoice ${orderId} | Frafol`
-    : `Invoice – Order ${orderId} | Frafol`;
+    ? `Objednávka dokončená – faktúra ${orderId} | Frafol`
+    : `Faktúra – Objednávka ${orderId} | Frafol`;
+
+  const serviceTypeLabel = getServiceTypeLabel(serviceType);
 
   const orderLabel = orderType === 'direct'
-    ? `Direct Booking${packageName ? ` – ${packageName}` : ''}`
-    : `Custom ${serviceType.charAt(0).toUpperCase() + serviceType.slice(1)} Booking`;
+    ? `Balík ${packageName ? ` – ${packageName}` : ''}`
+    : `Formulár ${serviceTypeLabel}`;
 
   const billingRows = isRegisterAsCompany ? `
-    <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Company</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
-    ${ICO ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">ICO</td><td style="padding:4px 8px;font-size:13px;">${ICO}</td></tr>` : ''}
-    ${DIC ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">DIC</td><td style="padding:4px 8px;font-size:13px;">${DIC}</td></tr>` : ''}
-    ${IC_DPH ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IC DPH</td><td style="padding:4px 8px;font-size:13px;">${IC_DPH}</td></tr>` : ''}
+    <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Spoločnosť</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
+    ${ICO ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IČO </td><td style="padding:4px 8px;font-size:13px;">${ICO}</td></tr>` : ''}
+    ${DIC ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">DIČ </td><td style="padding:4px 8px;font-size:13px;">${DIC}</td></tr>` : ''}
+    ${IC_DPH ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IČ DPH</td><td style="padding:4px 8px;font-size:13px;">${IC_DPH}</td></tr>` : ''}
   ` : '';
 
   const emailBody = `
@@ -3749,78 +3706,81 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
       </div>
 
       <div style="padding:28px;color:#333;">
-        <p>Dobrý deň,  <strong>${recipientName || customerName}</strong>,</p>
+        <p style="margin-bottom: 20px;">Dobrý deň,  <strong>${recipientName || customerName}</strong>,</p>
+
         <p>${introText}</p>
 
         <!-- Invoice Header -->
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
           <tr>
-            <td style="padding:4px 0;color:#777;">Invoice / Order ID</td>
+            <td style="padding:4px 0;color:#777;">Číslo objednávky</td>
             <td style="padding:4px 0;text-align:right;font-weight:bold;">${orderId}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;color:#777;">Transaction ID</td>
+            <td style="padding:4px 0;color:#777;">ID transakcie</td>
             <td style="padding:4px 0;text-align:right;">${transactionId}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;color:#777;">Payment Date</td>
+            <td style="padding:4px 0;color:#777;">Dátum platby</td>
             <td style="padding:4px 0;text-align:right;">${paymentDate}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;color:#777;">Payment Method</td>
+            <td style="padding:4px 0;color:#777;">Spôsob platby</td>
             <td style="padding:4px 0;text-align:right;text-transform:capitalize;">${paymentMethod}</td>
           </tr>
         </table>
 
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
 
+        ${billInfoShow ? `
         <!-- Billing Info -->
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Bill To</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Fakturačné údaje</p>
         <table style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Name</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
-          ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Address</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
+          <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Meno</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
+          ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Adresa</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
           ${billingRows}
         </table>
 
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+        ` : ''}
 
         <!-- Order Details -->
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Order Details</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Detaily objednávky</p>
         <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin-bottom:20px;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <tr>
-              <td style="padding:5px 0;color:#777;">Order Type</td>
+              <td style="padding:5px 0;color:#777;">Typ objednávky</td>
               <td style="padding:5px 0;text-align:right;font-weight:bold;">${orderLabel}</td>
             </tr>
             <tr>
-              <td style="padding:5px 0;color:#777;">Service Title</td>
+              <td style="padding:5px 0;color:#777;">Názov</td>
               <td style="padding:5px 0;text-align:right;font-weight:bold;">${title}</td>
             </tr>
             <tr>
-              <td style="padding:5px 0;color:#777;">Service Type</td>
-              <td style="padding:5px 0;text-align:right;text-transform:capitalize;">${serviceType}</td>
+              <td style="padding:5px 0;color:#777;">Typ služby</td>
+              <td style="padding:5px 0;text-align:right;">${serviceTypeLabel}</td>
             </tr>
-            ${serviceProviderName ? `<tr><td style="padding:5px 0;color:#777;">Service Provider</td><td style="padding:5px 0;text-align:right;">${serviceProviderName}</td></tr>` : ''}
+            ${serviceProviderName ? `<tr><td style="padding:5px 0;color:#777;">Poskytovateľ služby</td><td style="padding:5px 0;text-align:right;">${serviceProviderName}</td></tr>` : ''}
             <tr>
-              <td style="padding:5px 0;color:#777;">Event Date</td>
+              <td style="padding:5px 0;color:#777;">Dátum fotenia/natáčania</td>
               <td style="padding:5px 0;text-align:right;">${eventDate}${eventTime ? ' at ' + eventTime : ''}</td>
             </tr>
-            ${location ? `<tr><td style="padding:5px 0;color:#777;">Location</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
+            ${location ? `<tr><td style="padding:5px 0;color:#777;">Miesto</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
           </table>
         </div>
 
         <!-- Price Breakdown -->
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Price Breakdown</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Rozpis ceny</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr>
-            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Base Price</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Základná cena</td>
             <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${price.toFixed(2)} EUR</td>
           </tr>
-          ${serviceFee > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Service Fee</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${serviceFee.toFixed(2)} EUR</td></tr>` : ''}
-          ${vatAmount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">VAT</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${vatAmount.toFixed(2)} EUR</td></tr>` : ''}
-          ${couponDiscount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;">Coupon Discount${couponCode ? ' (' + couponCode + ')' : ''}</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;color:#2e7d32;">-${couponDiscount.toFixed(2)} EUR</td></tr>` : ''}
+          ${serviceFee > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Servisný poplatok</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${serviceFee.toFixed(2)} EUR</td></tr>` : ''}
+          ${vatAmount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">DPH</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${vatAmount.toFixed(2)} EUR</td></tr>` : ''}
+          ${couponDiscount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;">Zľava z kupónu${couponCode ? ' (' + couponCode + ')' : ''}</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;color:#2e7d32;">-${couponDiscount.toFixed(2)} EUR</td></tr>` : ''}
           <tr>
-            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Total Paid</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Celková zaplatená suma</td>
             <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalPrice.toFixed(2)} EUR</td>
           </tr>
         </table>
@@ -3842,11 +3802,10 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
               font-weight:bold;
             "
           >
-            View Invoice
+            Zobraziť faktúru
           </a>
         </div>
 
-        <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
 
         ${policiesSection()}
 
@@ -3907,31 +3866,31 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
 
       <div style="background-color:${primaryColor};text-align:center;padding:24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-        <h1 style="color:#ffffff;margin:0;font-size:22px;">Workshop Registration Invoice</h1>
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">Faktúra za prihlásenie na kurz</h1>
       </div>
 
       <div style="padding:28px;color:#333;">
         <p>Dobrý deň,  <strong>${customerName}</strong>,</p>
-        <p>Your workshop registration is confirmed. Here is your invoice.</p>
+        <p>Vaše prihlásenie na kurz bolo potvrdené. Faktúru nájdete v prílohe tohto e-mailu.</p>
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
           <tr>
-            <td style="padding:4px 0;color:#777;">Order ID</td>
+            <td style="padding:4px 0;color:#777;">objednávky</td>
             <td style="padding:4px 0;text-align:right;font-weight:bold;">${orderId}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;color:#777;">Transaction ID</td>
+            <td style="padding:4px 0;color:#777;">ID transakcie</td>
             <td style="padding:4px 0;text-align:right;">${transactionId}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;color:#777;">Payment Date</td>
+            <td style="padding:4px 0;color:#777;">Dátum platby</td>
             <td style="padding:4px 0;text-align:right;">${paymentDate}</td>
           </tr>
         </table>
 
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
 
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Bill To</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Fakturačné údaje</p>
         <table style="width:100%;border-collapse:collapse;">
           <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Name</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
           ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Address</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
@@ -3940,35 +3899,35 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
 
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
 
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Workshop Details</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Podrobnosti o workshope</p>
         <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin-bottom:20px;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <tr>
-              <td style="padding:5px 0;color:#777;">Workshop</td>
+              <td style="padding:5px 0;color:#777;">Kurz</td>
               <td style="padding:5px 0;text-align:right;font-weight:bold;">${workshopTitle}</td>
             </tr>
-            ${instructorName ? `<tr><td style="padding:5px 0;color:#777;">Instructor</td><td style="padding:5px 0;text-align:right;">${instructorName}</td></tr>` : ''}
+            ${instructorName ? `<tr><td style="padding:5px 0;color:#777;">Lektor</td><td style="padding:5px 0;text-align:right;">${instructorName}</td></tr>` : ''}
             <tr>
-              <td style="padding:5px 0;color:#777;">Date &amp; Time</td>
+              <td style="padding:5px 0;color:#777;">Dátum a čas</td>
               <td style="padding:5px 0;text-align:right;">${workshopDate} at ${workshopTime}</td>
             </tr>
             <tr>
-              <td style="padding:5px 0;color:#777;">Format</td>
-              <td style="padding:5px 0;text-align:right;text-transform:capitalize;">${locationType || 'In-person'}</td>
+              <td style="padding:5px 0;color:#777;">Formát</td>
+              <td style="padding:5px 0;text-align:right;text-transform:capitalize;">${locationType || 'Osobne'}</td>
             </tr>
-            ${location ? `<tr><td style="padding:5px 0;color:#777;">Location / Link</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
+            ${location ? `<tr><td style="padding:5px 0;color:#777;">Miesto / odkaz</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
           </table>
         </div>
 
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Price Breakdown</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Rozpis ceny</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr>
-            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Base Price</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Základná cena</td>
             <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${basePrice.toFixed(2)} EUR</td>
           </tr>
           ${vatAmount > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">VAT${vatPercent > 0 ? ' (' + vatPercent + '%)' : ''}</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${vatAmount.toFixed(2)} EUR</td></tr>` : ''}
           <tr>
-            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Total Paid</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Celková zaplatená suma</td>
             <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalPrice.toFixed(2)} EUR</td>
           </tr>
         </table>
@@ -3989,18 +3948,17 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
               font-weight:bold;
             "
           >
-            View Invoice
+            Zobraziť faktúru
           </a>
         </div>
-
-        <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
 
         ${policiesSection()}
 
         <p style="margin-top:24px;font-size:14px;">
-          Questions? Contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
+          Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
         </p>
-        <p style="margin-top:32px;">Kind regards,<br /><strong>Frafol Team</strong></p>
+
+        ${regardsSection()}
       </div>
 
       ${emailFooter()}
@@ -4051,7 +4009,7 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
     <tr style="background-color:${i % 2 === 0 ? '#fafafa' : '#ffffff'};">
       <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;">
         <strong>${item.name}</strong><br/>
-        <span style="color:#777;font-size:12px;">Order: ${item.orderId} &bull; Condition: ${item.condition}</span>
+        <span style="color:#777;font-size:12px;">Order: ${item.orderId} &bull; Stav: ${item.condition}</span>
       </td>
       <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:right;">${item.basePrice.toFixed(2)} EUR</td>
       <td style="padding:10px 8px;font-size:13px;border-bottom:1px solid #f0f0f0;text-align:right;">${item.vatAmount.toFixed(2)} EUR</td>
@@ -4072,12 +4030,12 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
 
       <div style="background-color:${primaryColor};text-align:center;padding:24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-        <h1 style="color:#ffffff;margin:0;font-size:22px;">Marketplace Order Invoice</h1>
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">Faktúra za objednávku z bazáru</h1>
       </div>
 
       <div style="padding:28px;color:#333;">
         <p>Dobrý deň,  <strong>${customerName}</strong>,</p>
-        <p>Your marketplace purchase is confirmed. Here is your invoice.</p>
+        <p>Vaša objednávka z bazáru bola potvrdená. Faktúru nájdete v prílohe tohto e-mailu.</p>
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
           <tr>
@@ -4089,14 +4047,14 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
             <td style="padding:4px 0;text-align:right;">${paymentDate}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;color:#777;">Items Purchased</td>
+            <td style="padding:4px 0;color:#777;">Zakúpené položky</td>
             <td style="padding:4px 0;text-align:right;">${items.length}</td>
           </tr>
         </table>
 
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
 
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Ship To</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Doručovacia adresa</p>
         <table style="width:100%;border-collapse:collapse;">
           <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Name</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
           ${shippingAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Address</td><td style="padding:4px 8px;font-size:13px;">${shippingAddress}${postCode ? ', ' + postCode : ''}${town ? ', ' + town : ''}</td></tr>` : ''}
@@ -4105,15 +4063,15 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
 
         <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
 
-        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Items Ordered</p>
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Objednané položky</p>
         <table style="width:100%;border-collapse:collapse;">
           <thead>
             <tr style="background-color:#f5f5f5;">
-              <th style="padding:8px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Item</th>
-              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Base</th>
-              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">VAT</th>
-              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Shipping</th>
-              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Total</th>
+              <th style="padding:8px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Položka</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Základ</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">DPH</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Doprava</th>
+              <th style="padding:8px;text-align:right;font-size:12px;color:#555;border-bottom:2px solid #e0e0e0;">Spolu</th>
             </tr>
           </thead>
           <tbody>
@@ -4123,12 +4081,12 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
 
         <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:16px;">
           <tr>
-            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Items Subtotal</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Medzisúčet položiek</td>
             <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${subtotal.toFixed(2)} EUR</td>
           </tr>
-          ${totalShipping > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Total Shipping</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${totalShipping.toFixed(2)} EUR</td></tr>` : ''}
+          ${totalShipping > 0 ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Doprava spolu</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${totalShipping.toFixed(2)} EUR</td></tr>` : ''}
           <tr>
-            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Total Paid</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Celková zaplatená suma</td>
             <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalAmount.toFixed(2)} EUR</td>
           </tr>
         </table>
@@ -4150,11 +4108,11 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
               font-weight:bold;
             "
           >
-            View Invoice
+            Zobraziť faktúru
           </a>
         </div>
 
-        <p style="font-size:12px;color:#999;margin-top:8px;">This email serves as your official invoice. Please keep it for your records.</p>
+        <p style="font-size:12px;color:#999;margin-top:8px;">Tento e-mail slúži ako vaša oficiálna faktúra. Uschovajte si ho pre svoje záznamy.</p>
 
         ${policiesSection()}
 
