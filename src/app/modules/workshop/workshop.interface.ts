@@ -10,6 +10,8 @@ export interface IWorkshop {
   workshopLink?: string; // required if online
   vatPercent?: number;
   vatAmount?: number;
+  serviceFeePercent?: number;
+  serviceFeeAmount?: number;
   price: number;
   mainPrice: number;
   description: string;

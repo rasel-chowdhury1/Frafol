@@ -190,6 +190,12 @@ userRoutes
     userController.uploadIntroVideo,
   )
 
+  .delete(
+    '/delete-intro-video',
+    auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),
+    userController.deleteIntroVideo,
+  )
+
   .patch(
     '/upload-new-photo',
     auth(USER_ROLE.USER,USER_ROLE.PHOTOGRAPHER,USER_ROLE.VIDEOGRAPHER,USER_ROLE.BOTH,USER_ROLE.ADMIN, USER_ROLE.COMPANY),

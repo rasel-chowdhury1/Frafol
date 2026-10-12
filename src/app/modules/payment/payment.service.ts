@@ -13,7 +13,7 @@ import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.
 import QueryBuilder from '../../builder/QueryBuilder';
 import { MySubscription } from '../mySubscription/mySubscription.model';
 import { User } from '../user/user.model';
-import { sendFrafolEmail, sendEmailAndNotification, sendEventOrderInvoiceEmail, sendWorkshopInvoiceEmail, sendGearOrderInvoiceEmail } from '../../utils/eamilNotifiacation';
+import {sendEmailAndNotification, sendEventOrderInvoiceEmail, sendWorkshopInvoiceEmail, sendGearOrderInvoiceEmail } from '../../utils/eamilNotifiacation';
 import httpStatus from 'http-status';
 import config from '../../config';
 

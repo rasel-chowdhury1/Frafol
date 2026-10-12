@@ -12,6 +12,8 @@ const workshopSchema = new Schema<IWorkshop>(
     workshopLink: { type: String },
     vatPercent: { type: Number, default: 0 },
     vatAmount: { type: Number, default: 0 },
+    serviceFeePercent: { type: Number, default: 0 },
+    serviceFeeAmount: { type: Number, default: 0 },
     price: { type: Number, required: true },
     mainPrice: {type: Number, required: true},
     description: { type: String, required: true },

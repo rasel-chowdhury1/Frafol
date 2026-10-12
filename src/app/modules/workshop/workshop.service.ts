@@ -7,6 +7,7 @@ import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.
 import httpStatus from 'http-status';
 import mongoose from "mongoose";
 import { sentNotificationForWorkshopApproved, sentNotificationForWorkshopDeclined } from "../../../socketIo";
+import { CommissionSetupService } from "../../commissionSetup/commissionSetup.service";
 
 
 const createWorkshop = async (payload: IWorkshop) => {
@@ -18,7 +19,11 @@ const createWorkshop = async (payload: IWorkshop) => {
   // ✅ Calculate actual VAT amount based on main price
   payload.vatAmount = (payload.price * payload.vatPercent) / 100;
 
-
+  // ✅ Pull the current workshop service-fee (commission) percent from the
+  // admin-managed commission setup and calculate the amount based on price.
+  const commissionSetup = await CommissionSetupService.getCommissionSetup();
+  payload.serviceFeePercent = commissionSetup.workShop;
+  payload.serviceFeeAmount = (payload.price * commissionSetup.workShop) / 100;
 
   const result = await Workshop.create(payload);
 

@@ -324,6 +324,17 @@ const uploadIntroVideo = catchAsync(async (req: Request, res: Response) => {
 
 })
 
+const deleteIntroVideo = catchAsync(async (req: Request, res: Response) => {
+  const result = await userService.deleteIntroVideo(req?.user?.userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Intro video deleted successfully',
+    data: result,
+  });
+})
+
 const updateUserGallery = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user.userId; // Logged-in user
   
@@ -745,6 +756,7 @@ export const userController = {
   getAdminProfile,
   updateMyProfile,
   uploadIntroVideo,
+  deleteIntroVideo,
   updateUserGallery,
   updateBannerImages,
   setUnAvailability,

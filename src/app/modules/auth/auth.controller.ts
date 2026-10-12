@@ -25,8 +25,7 @@ const login = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
     statusCode: httpStatus.UNAUTHORIZED,
     success: false,
-    message: `Your registration was successful.
-Your profile is currently under review. You will be notified by email once it has been approved.`,
+    message: `Vaša registrácia prebehla úspešne! Váš profil momentálne čaká na schválenie. O jeho schválení vás budeme informovať e-mailom.`,
     data: null,
   });
   }

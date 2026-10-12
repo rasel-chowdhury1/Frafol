@@ -97,7 +97,7 @@ const createUserToken = async (payload: TUserCreate) => {
   const userExist = await userService.getUserByEmail(email);
 
   if (userExist) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User already exist!!');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Používateľ už existuje!');
   }
 
   const { isExist, isExpireOtp } = await otpServices.checkOtpByEmail(
@@ -765,6 +765,34 @@ const updateIntroVideo = async (
 
   if (!updatedBusiness) return updatedBusiness;
   const obj = updatedBusiness.toObject();
+  return { ...obj, introVideo: await resolveFileUrl(obj.introVideo) };
+};
+
+const deleteIntroVideo = async (userId: string) => {
+  const existingUser = await User.findById(userId);
+  if (!existingUser) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const oldIntroVideo = existingUser.introVideo;
+  if (!oldIntroVideo) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'No intro video to delete');
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { introVideo: '' },
+    { new: true },
+  );
+
+  // Only remove the S3 object once the DB field is cleared
+  deleteFileFromS3(oldIntroVideo).catch((err) =>
+    console.error('Failed to delete intro video from S3:', err),
+  );
+
+  if (!updatedUser) return updatedUser;
+  const obj = updatedUser.toObject();
+  
   return { ...obj, introVideo: await resolveFileUrl(obj.introVideo) };
 };
 
@@ -3160,6 +3188,7 @@ export const userService = {
   updateGallery,
   updateBannerImages,
   updateIntroVideo,
+  deleteIntroVideo,
   updateUnAvailability,
   verifyProfessionalUserById,
   declineProfessionalUserById,
