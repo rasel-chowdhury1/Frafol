@@ -16,7 +16,7 @@ const login = async (payload: TLogin) => {
   const user = await User.isUserActive(payload?.email);
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User not found');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Používateľ sa nenašiel');
   }
 
   if (!(await User.isPasswordMatched(payload.password, user.password))) {
@@ -73,7 +73,7 @@ const forgotPasswordByEmail = async (email: string) => {
   const user: TUser | null = await User.isUserActive(email);
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User not found');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Používateľ sa nenašiel');
   }
 
   const { isExist, isExpireOtp } = await otpServices.checkOtpByEmail(
@@ -163,7 +163,7 @@ const forgotPasswordOtpMatch = async ({
   const user: TUser | null = await User.isUserActive(email);
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User not found');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Používateľ sa nenašiel');
   }
 
   const jwtPayload = {
@@ -212,7 +212,7 @@ const resetPassword = async ({
   const user: TUser | null = await User.isUserActive(email);
 
   if (!user) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User not found');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Používateľ sa nenašiel');
   }
 
   const hashedPassword = await bcrypt.hash(
@@ -247,7 +247,7 @@ const changePassword = async ({
   const user = await User.IsUserExistById(userId);
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   if (!(await User.isPasswordMatched(oldPassword, user.password))) {
@@ -297,7 +297,7 @@ const refreshToken = async (token: string) => {
   const activeUser = await User.isUserActive(email);
 
   if (!activeUser) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   const jwtPayload: {

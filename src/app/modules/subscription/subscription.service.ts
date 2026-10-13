@@ -15,13 +15,17 @@ const getAllSubscriptions = async () => {
 };
 
 const updateSubscriptionPrice = async (id: string, price: number) => {
+
   const subscription = await Subscription.findById(id);
+
   if (!subscription) throw new Error("Subscription not found");
 
   subscription.price = price;
+  
   await subscription.save();
 
   return subscription;
+
 };
 
 export const SubscriptionService = {

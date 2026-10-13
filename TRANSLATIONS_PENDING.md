@@ -567,13 +567,13 @@ Legend: file paths are relative to the repo root.
 | 96 | Unable to create pending review. Please try again later. | | eventOrder/eventOrder.service.ts:810 |
 | 97 | Unauthorized to delete this community post | | community/community.service.ts:444 |
 | 98 | Unauthorized: User ID is missing | | eventOrder/eventOrder.controller.ts:348 |
-| 99 | Unauthorized: User not found | | payment/payment.controller.ts:309 |
+| 99 | Unauthorized: Používateľ sa nenašiel | | payment/payment.controller.ts:309 |
 | 100 | Unsubscribe token is required | | emailUnsubscribe/emailUnsubscribe.service.ts:24 |
 | 101 | User ID is required | | review/review.service.ts:178 |
 | 102 | User ID not found | | payment/payment.controller.ts:327 |
 | 103 | User already has this role | | user/user.service.ts:381 |
 | 104 | User creation failed | | user/user.service.ts:355 |
-| 105 | User not found | | auth/auth.service.ts:19 |
+| 105 | Používateľ sa nenašiel | | auth/auth.service.ts:19 |
 | 106 | User updating failed | | auth/auth.service.ts:269 |
 | 107 | User verification update failed | | feedback/feedback.service.ts:69 |
 | 108 | Workshop is already expired | | payment/payment.utils.ts:122 |

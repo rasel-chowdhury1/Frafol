@@ -360,7 +360,7 @@ const switchUserRole = async (userId: string, newRole: string) => {
   // 1️⃣ Validate user existence
   const user = await User.findById(userId);
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   // 2️⃣ Check if newRole is valid
@@ -429,7 +429,7 @@ const updateUserRole = async( userId: string, newRole: string) => {
   // 1️⃣ Validate user existence
   const user = await User.findById(userId);
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   // 2️⃣ Check if newRole is valid
@@ -514,7 +514,7 @@ const updateUser = async (userId: string, payload: Partial<TUser>) => {
 
   // 1️⃣ Find existing user
   const user = await User.findById(userId);
-  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
 
   if(role){
       // 2️⃣ Check if newRole is valid
@@ -645,7 +645,7 @@ const updateGallery = async (
   // Fetch the current business first
   const existingUser = await User.findById(userId);
   if (!existingUser) {
-    throw new Error('User not found');
+    throw new Error('Používateľ sa nenašiel');
   }
 
   let newGallery = (existingUser as any).gallery || [];
@@ -696,7 +696,7 @@ const updateBannerImages = async (
   // Fetch existing user
   const existingUser = await User.findById(userId);
   if (!existingUser) {
-    throw new Error('User not found');
+    throw new Error('Používateľ sa nenašiel');
   }
 
 
@@ -745,7 +745,7 @@ const updateIntroVideo = async (
   // Fetch the current business first
   const existingUser = await User.findById(userId);
   if (!existingUser) {
-    throw new Error('User not found');
+    throw new Error('Používateľ sa nenašiel');
   }
 
   const oldIntroVideo = existingUser.introVideo;
@@ -771,7 +771,7 @@ const updateIntroVideo = async (
 const deleteIntroVideo = async (userId: string) => {
   const existingUser = await User.findById(userId);
   if (!existingUser) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   const oldIntroVideo = existingUser.introVideo;
@@ -868,7 +868,7 @@ const declineProfessionalUserById = async (userId: string, reason?: string) => {
 const updateUnAvailability = async (userId: string, dates: string[]) => {
   // Find the user
   const user = (await User.findById(userId)) as any;
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error('Používateľ sa nenašiel');
 
   // Convert existing dates (if any) to plain strings
   // const existingDates = (user.unAvailability || []).map(String);
@@ -1707,7 +1707,7 @@ const getUserRoleStats = async () => {
 const getUserById = async (id: string) => {
   const result = await User.findById(id);
   if (!result) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
   return result;
 };
@@ -1715,7 +1715,7 @@ const getUserById = async (id: string) => {
 const getUserGalleryById = async (id: string) => {
   const result = await User.findById(id).select('gallery').lean();
   if (!result) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
   return { ...result, gallery: await resolveFileUrls(result.gallery) };
 };
@@ -1734,7 +1734,7 @@ const getUserDetailsById = async (userId: string) => {
 
   // ✅ Handle user not found
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   // 3️⃣ Fetch user's package and review stats
@@ -1766,7 +1766,7 @@ const getAdminProfile = async (id: string) => {
   const result = await User.findById(id).lean();
 
   if (!result) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   return result;
@@ -1788,7 +1788,7 @@ const getMySubscriptionStatus = async (userId: string) => {
   );
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   return {
@@ -1802,7 +1802,7 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
   const user: TUser | null = await User.IsUserExistById(id);
 
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
 
@@ -1876,9 +1876,9 @@ const getDeleteAccountRequests = async (query: Record<string, unknown> = {}) => 
 const approveDeleteAccount = async (userId: string, adminId: string) => {
   const user = await User.IsUserExistById(userId);
 
-  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   if ((user as any).deleteRequestStatus !== 'pending') {
-    throw new AppError(httpStatus.BAD_REQUEST, 'No pending delete request for this user');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Pre tohto používateľa neexistuje žiadosť o odstránenie účtu čakajúca na schválenie');
   }
 
   const deleted = await User.findByIdAndUpdate(
@@ -1893,7 +1893,7 @@ const approveDeleteAccount = async (userId: string, adminId: string) => {
 
   accountBlockedEmail({
     sentTo: (user as any).email,
-    name: (user as any).name || 'User',
+    name: (user as any).name || 'Používateľ',
     isDeleted: true,
   }).catch((err) => console.error('Account deleted email failed:', err));
 
@@ -1902,7 +1902,7 @@ const approveDeleteAccount = async (userId: string, adminId: string) => {
     receiverId: new Types.ObjectId(userId),
     userMsg: {
       image: '',
-      text: 'Your account deletion request has been approved. Your account has been deleted.',
+      text: 'Vaša žiadosť o odstránenie účtu bola schválená. Váš účet bol odstránený.',
     },
     type: 'AccountDeleteApproved',
   } as any).catch((err) => console.error('Account delete approved notification failed:', err));
@@ -1913,9 +1913,9 @@ const approveDeleteAccount = async (userId: string, adminId: string) => {
 const rejectDeleteAccount = async (userId: string, adminId: string, reason: string) => {
   const user = await User.IsUserExistById(userId);
 
-  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   if ((user as any).deleteRequestStatus !== 'pending') {
-    throw new AppError(httpStatus.BAD_REQUEST, 'No pending delete request for this user');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Pre tohto používateľa neexistuje žiadosť o odstránenie účtu čakajúca na schválenie');
   }
 
   const updated = await User.findByIdAndUpdate(
@@ -1933,7 +1933,7 @@ const rejectDeleteAccount = async (userId: string, adminId: string, reason: stri
     receiverId: new Types.ObjectId(userId),
     userMsg: {
       image: '',
-      text: `Your account deletion request has been declined.${reason ? ` Reason: "${reason}"` : ''}`,
+      text: `Vaša žiadosť o odstránenie účtu bola zamietnutá.${reason ? ` Dôvod: "${reason}"` : ''}`,
     },
     type: 'AccountDeleteRejected',
   } as any).catch((err) => console.error('Account delete rejected notification failed:', err));
@@ -1953,7 +1953,7 @@ const blockedUser = async (id: string) => {
   const singleUser = await User.IsUserExistById(id);
 
   if (!singleUser) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    throw new AppError(httpStatus.NOT_FOUND, 'Používateľ sa nenašiel');
   }
 
   // let status;

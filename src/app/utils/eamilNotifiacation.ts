@@ -434,7 +434,7 @@ const profileVerifiedEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          New Booking Request
+          Nová žiadosť o foto/video objednávku
         </h1>
       </div>
 
@@ -442,7 +442,7 @@ const profileVerifiedEmail = async ({
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň <strong>${userName}</strong>,</p>
 
-        <p>You have received a new booking request on <strong>Frafol</strong>. Please review the details below.</p>
+        <p>Na platforme  <strong>FRAFOL</strong> ste dostali novú žiadosť o fotenie alebo natáčanie. Podrobnosti nájdete nižšie.</p>
 
         <div style="
           background-color: #fdf0ec;
@@ -459,7 +459,7 @@ const profileVerifiedEmail = async ({
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          Log in to your Frafol account to review and respond to this request.
+          Prihláste sa do svojho účtu FRAFOL, skontrolujte podrobnosti a rozhodnite sa, či žiadosť prijmete.
         </p>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -473,7 +473,7 @@ const profileVerifiedEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Booking Request
+            Zobraziť žiadosť o objednávku
           </a>
         </div>
 
@@ -508,7 +508,7 @@ const sendBookingDeclineEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Booking Request Declined
+          Žiadosť o foto/video objednávku bola odmietnutá
         </h1>
       </div>
 
@@ -516,7 +516,7 @@ const sendBookingDeclineEmail = async ({
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${userName}</strong>,</p>
 
-        <p>We're sorry to inform you that your booking request on <strong>Frafol</strong> has been declined. Please see the details below.</p>
+        <p>Je nám ľúto, ale Vaša žiadosť o fotenie alebo natáčanie na platforme <strong>FRAFOL</strong> bola odmietnutá. Podrobnosti nájdete nižšie.</p>
 
         <div style="
           background-color: #fdf0ec;
@@ -533,7 +533,7 @@ const sendBookingDeclineEmail = async ({
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          Log in to your Frafol account to view more details or explore other options.
+          Prihláste sa do svojho účtu FRAFOL, kde nájdete podrobnosti a môžete si vybrať iného fotografa alebo kameramana.
         </p>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -547,12 +547,12 @@ const sendBookingDeclineEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            View Dashboard
+            Prejsť do môjho účtu
           </a>
         </div>
 
         <p style="margin-top: 24px; font-size: 14px;">
-          If you have any questions, please contact our support team at
+          Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
@@ -599,41 +599,38 @@ const frafolChoiceEmail = async ({
     <!-- Header -->
     <div style="background-color:${primaryColor};text-align:center;padding:24px;">
       <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Activated 🎉</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;">Služba Odporúča Frafol je aktívna! 🎉</h1>
     </div>
 
     <!-- Body -->
     <div style="padding:24px;color:#333;">
       <p>Dobrý deň,  <strong>${name}</strong>,</p>
-      <p>Your <strong>Frafol Choice</strong> subscription has been <strong>successfully activated</strong>. Your profile now gets higher visibility and priority placement.</p>
+
+      <p>Služba Odporúča <strong>Frafol </strong> bola úspešne aktivovaná. Váš profil bude viditeľnejší a zobrazí sa na prednostných pozíciách.</p>
 
       <!-- Benefits -->
       <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin:20px 0;">
-        <p style="margin:0 0 8px;font-weight:bold;color:${primaryColor};">Your Frafol Choice Benefits:</p>
+        <p style="margin:0 0 8px;font-weight:bold;color:${primaryColor};">Výhody Odporúča Frafol:</p>
         <ul style="margin:0;padding-left:18px;color:#333;font-size:14px;">
-          <li>Highlighted profile for higher visibility</li>
-          <li>Higher ranking in client search results</li>
-          <li>Featured visibility on the Frafol homepage</li>
-          <li>Frafol Choice badge displayed on your profile</li>
-          <li>Priority placement over standard profiles</li>
+          <li>Zvýraznený profil pre lepšiu viditeľnosť</li>
+          <li>Vyššia pozícia vo výsledkoch vyhľadávania</li>
+          <li>Zvýraznenie na úvodnej stránke FRAFOL</li>
+          <li>Označenie „Odporúča Frafol“ na Vašom profile</li>
+          <li>Prednostné umiestnenie pred štandardnými profilmi</li>
         </ul>
       </div>
 
       <!-- Order Details -->
       <p style="font-weight:bold;margin-bottom:8px;">Detaily objednávky</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
-        ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Order ID</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
-        ${planName ? `<tr><td style="padding:6px 0;color:#777;">Plan</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
-        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Duration</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
-        ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Amount Paid</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
-        ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Purchase Date</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
-        ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Valid Until</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
+        ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Číslo objednávky</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
+        ${planName ? `<tr><td style="padding:6px 0;color:#777;">Program</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
+        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Trvanie</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
+        ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Zaplatená suma</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
+        ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Dátum zakúpenia</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
+        ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Platné do</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
       </table>
       <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
-
-      <p style="font-size:13px;color:#777;margin-top:16px;">
-        Your official invoice is attached to this email as a PDF. Please keep it for your records.
-      </p>
 
       ${policiesSection()}
 
@@ -681,7 +678,7 @@ const frafolChoiceEmail = async ({
     console.error('❌ Failed to generate Frafol Choice invoice PDF:', err);
   }
 
-  await sendEmail(sentTo, 'Frafol Choice Activated – Order Confirmation', emailBody, undefined, attachments);
+  await sendEmail(sentTo, 'Odporúča Frafol – aktivácia a potvrdenie objednávky', emailBody, undefined, attachments);
 };
 
 
@@ -698,7 +695,7 @@ const sendEmailAndNotification = (params: SendEmailNotificationParams) => {
     // 🔹 Send Email
     frafolChoiceEmail({
       sentTo: email,
-      name: name || 'User',
+      name: name || 'Používateľ',
       orderId,
       planName,
       planDays,
@@ -725,7 +722,7 @@ const sendEmailAndNotification = (params: SendEmailNotificationParams) => {
       receiverId: userId as any, // send to same user
       userMsg: {
         image: '', // optional profile image
-        text: notificationText || 'Your Frafol Choice has been successfully activated! 🚀',
+        text: notificationText || 'Služba Odporúča Frafol bola úspešne aktivovaná! 🚀',
       },
       type: "AdminNotice",
     }).catch((err) => console.error('❌ Notification failed:', err));
@@ -859,13 +856,13 @@ const passwordChangedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Password Changed</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Heslo bolo zmenené</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${name}</strong>,</p>
-        <p>Your account password has been successfully changed.</p>
+        <p>Heslo k Vášmu účtu bolo úspešne zmenené.</p>
         <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          If you did not make this change, please contact us immediately at
+          Ak ste túto zmenu nevykonali Vy, okamžite nás kontaktujte na adrese
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
         ${policiesSection()}
@@ -874,7 +871,7 @@ const passwordChangedEmail = async ({
       ${emailFooter()}
     </div>
   `;
-  await sendEmail(sentTo, 'Your Password Has Been Changed', emailBody);
+  await sendEmail(sentTo, 'Vaše heslo bolo zmenené', emailBody);
 };
 
 const forgotPasswordEmail = async ({
@@ -888,13 +885,13 @@ const forgotPasswordEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Password Reset Successful</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Obnovenie hesla bolo úspešné</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${name}</strong>,</p>
-        <p>Your password has been reset successfully. You can now log in with your new password.</p>
+        <p>Vaše heslo bolo úspešne obnovené. Teraz sa môžete prihlásiť pomocou nového hesla.</p>
         <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          If you did not request this reset, please contact us immediately at
+          Ak ste o obnovenie hesla nepožiadali, okamžite nás kontaktujte na adrese
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
         ${policiesSection()}
@@ -903,7 +900,7 @@ const forgotPasswordEmail = async ({
       ${emailFooter()}
     </div>
   `;
-  await sendEmail(sentTo, 'Your Password Has Been Reset', emailBody);
+  await sendEmail(sentTo, 'Vaše heslo bolo obnovené', emailBody);
 };
 
 const bankDetailsChangedEmail = async ({
@@ -946,8 +943,8 @@ const accountBlockedEmail = async ({
   reason?: string;
   isDeleted?: boolean;
 }): Promise<void> => {
-  const action = isDeleted ? 'deleted' : 'blocked';
-  const title = isDeleted ? 'Account Deleted' : 'Account Blocked';
+  const action = isDeleted ? 'odstránený' : 'zablokovaný';
+  const title = isDeleted ? 'Účet bol odstránený' : 'Účet bol zablokovaný';
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
@@ -955,14 +952,18 @@ const accountBlockedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">${title}</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
+
         <p>Dobrý deň,  <strong>${name}</strong>,</p>
-        <p>Your Frafol account has been <strong>${action}</strong> by our admin team.</p>
+
+        <p>Váš účet na platforme FRAFOL bol naším administrátorským tímom <strong>${action}</strong>.
+        </p>
+
         ${reason ? `
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           <strong>Dôvod:</strong><br/>${reason}
         </div>` : ''}
         <p style="font-size: 14px; color: #555;">
-          If you believe this is a mistake, please reach out to us at
+          Ak si myslíte, že došlo k omylu, kontaktujte nás na adrese
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
@@ -971,7 +972,7 @@ const accountBlockedEmail = async ({
       ${emailFooter()}
     </div>
   `;
-  await sendEmail(sentTo, `Your Frafol Account Has Been ${isDeleted ? 'Deleted' : 'Blocked'}`, emailBody);
+  await sendEmail(sentTo, `Váš účet na platforme FRAFOL bol ${isDeleted ? 'odstránený' : 'zablokovaný'}`, emailBody);
 };
 
 const accountDeleteRequestAdminEmail = async ({
@@ -1048,20 +1049,19 @@ const accountDeleteRejectedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; margin-bottom: 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Account Deletion Request Declined</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Vaša žiadosť o odstránenie účtu bola zamietnutá</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${name}</strong>,</p>
         <p>
-          Your request to delete your Frafol account has been reviewed by our admin team and
-          has been <strong>declined</strong>. Your account remains active.
+          Vašu žiadosť o odstránenie účtu FRAFOL posúdil náš administrátorský tím a bola <strong>zamietnutá</strong>. Váš účet zostáva aktívny.
         </p>
         ${reason ? `
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           <strong>Dôvod:</strong><br/>${reason}
         </div>` : ''}
         <p style="font-size: 14px; color: #555;">
-          If you have any questions or would like to submit a new request, please contact us at
+          Ak máte otázky alebo chcete podať novú žiadosť, kontaktujte nás na adrese
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
         ${policiesSection()}
@@ -1070,7 +1070,7 @@ const accountDeleteRejectedEmail = async ({
       ${emailFooter()}
     </div>
   `;
-  await sendEmail(sentTo, 'Your Account Deletion Request Was Declined', emailBody);
+  await sendEmail(sentTo, 'Žiadosť o odstránenie účtu bola zamietnutá', emailBody);
 };
 
 const frafolChoiceRenewalSuccessEmail = async ({
@@ -1098,21 +1098,21 @@ const frafolChoiceRenewalSuccessEmail = async ({
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
     <div style="background-color:${primaryColor};text-align:center;padding:24px;">
       <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Renewed ✅</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;">Služba Odporúča Frafol bola obnovená ✅</h1>
     </div>
     <div style="padding:24px;color:#333;">
       <p>Dobrý deň,  <strong>${name}</strong>,</p>
-      <p>Your <strong>Frafol Choice</strong> subscription has been <strong>successfully renewed</strong>. Your benefits continue without interruption.</p>
+      <p>Služba <strong>Odporúča Frafol</strong> bola <strong>úspešne obnovená</strong>. Všetky výhody môžete naďalej využívať bez prerušenia.</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;margin:16px 0;">
-        ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Order ID</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
-        ${planName ? `<tr><td style="padding:6px 0;color:#777;">Plan</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
-        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Duration</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
-        ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Amount Paid</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
-        ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Renewal Date</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
-        ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Valid Until</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
+        ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Číslo objednávky</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
+        ${planName ? `<tr><td style="padding:6px 0;color:#777;">Program</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
+        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Trvanie</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
+        ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Zaplatená suma</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
+        ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Dátum obnovenia</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
+        ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Platné do</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
       </table>
       <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
-      <p style="font-size:13px;color:#777;">Your official invoice for this renewal is attached to this email as a PDF. Please keep it for your records.</p>
+      <p style="font-size:13px;color:#777;">Faktúru za obnovenie služby nájdete v prílohe e-mailu vo formáte PDF. Uschovajte si ju.</p>
 
       ${policiesSection()}
 
@@ -1153,7 +1153,7 @@ const frafolChoiceRenewalSuccessEmail = async ({
     console.error('❌ Failed to generate Frafol Choice renewal invoice PDF:', err);
   }
 
-  await sendEmail(sentTo, 'Frafol Choice Renewed – Payment Confirmation', emailBody, undefined, attachments);
+  await sendEmail(sentTo, 'Odporúča Frafol – potvrdenie obnovenia platby', emailBody, undefined, attachments);
 };
 
 const frafolChoiceRenewalFailedEmail = async ({
@@ -1169,25 +1169,27 @@ const frafolChoiceRenewalFailedEmail = async ({
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
     <div style="background-color:${primaryColor};text-align:center;padding:24px;">
       <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-      <h1 style="color:#fff;margin:0;font-size:22px;">Payment Failed</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;">Platba sa nepodarila</h1>
     </div>
     <div style="padding:24px;color:#333;">
       <p>Dobrý deň,  <strong>${name}</strong>,</p>
-      <p>We were unable to process the renewal payment for your <strong>Frafol Choice</strong> subscription.</p>
+
+      <p>Nepodarilo sa nám spracovať platbu za obnovenie služby <strong>Odporúča Frafol</strong>.</p>
+
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
-        <strong>Action Required:</strong> Please try a different payment method to avoid losing your Frafol Choice benefits.
-        ${expiryDate ? `<br/>Your current subscription remains active until <strong>${expiryDate}</strong>.` : ''}
+        <strong>Vyžaduje sa Vaša pozornosť:</strong> Skúste iný spôsob platby, aby ste neprišli o výhody Odporúča Frafol.
+        ${expiryDate ? `<br/>Vaša aktuálna služba zostáva aktívna do <strong>${expiryDate}</strong>.` : ''}
       </div>
       <div style="text-align:center;margin:24px 0;">
-        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Update Payment Method</a>
+        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Zmeniť spôsob platby</a>
       </div>
-      <p style="font-size:14px;color:#555;">If you need help, contact us at <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.</p>
+      <p style="font-size:14px;color:#555;">Ak potrebujete pomoc, kontaktujte nás na adrese <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.</p>
       ${policiesSection()}
       ${regardsSection()}
     </div>
     ${emailFooter()}
   </div>`;
-  await sendEmail(sentTo, 'Frafol Choice – Payment Failed, Please Update Your Payment Method', emailBody);
+  await sendEmail(sentTo, 'Odporúča Frafol – platba sa nepodarila, aktualizujte spôsob platby', emailBody);
 };
 
 const frafolChoiceExpiringSoonEmail = async ({
@@ -1205,16 +1207,19 @@ const frafolChoiceExpiringSoonEmail = async ({
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
     <div style="background-color:${primaryColor};text-align:center;padding:24px;">
       <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-      <h1 style="color:#fff;margin:0;font-size:22px;">Your Frafol Choice Expires Soon</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;">Platnosť Odporúča Frafol sa čoskoro skončí</h1>
     </div>
     <div style="padding:24px;color:#333;">
       <p>Dobrý deň,  <strong>${name}</strong>,</p>
-      <p>Your <strong>Frafol Choice</strong> subscription is expiring in <strong>${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong> on <strong>${expiryDate}</strong>.</p>
+
+      <p>Platnosť služby <strong>Odporúča Frafol</strong> vyprší o <strong>${daysLeft} ${daysLeft === 1 ? 'deň' : 'dní'}</strong>, dňa</p>
+
       <div style="background-color:#fff8e1;border-left:4px solid #f5a623;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
-        <strong>Don't lose your perks!</strong> Renew now to keep your highlighted profile, priority ranking, and Frafol Choice badge.
+
+        <strong>Nestrácajte svoje výhody!</strong> Obnovte službu, aby ste si zachovali zvýraznený profil, prednostné umiestnenie a označenie „Odporúča Frafol“.
       </div>
       <div style="text-align:center;margin:24px 0;">
-        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
+        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Obnoviť Odporúča Frafol</a>
       </div>
       <p style="font-size:14px;color:#555;">Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
       ${policiesSection()}
@@ -1222,7 +1227,7 @@ const frafolChoiceExpiringSoonEmail = async ({
     </div>
     ${emailFooter()}
   </div>`;
-  await sendEmail(sentTo, `Your Frafol Choice Expires in ${daysLeft} Day${daysLeft !== 1 ? 's' : ''} – Renew Now`, emailBody);
+  await sendEmail(sentTo, `Platnosť Odporúča Frafol vyprší o ${daysLeft} ${daysLeft === 1 ? 'deň' : 'dní'} – obnovte ho`, emailBody);
 };
 
 const frafolChoiceExpiredEmail = async ({
@@ -1236,22 +1241,24 @@ const frafolChoiceExpiredEmail = async ({
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
     <div style="background-color:${primaryColor};text-align:center;padding:24px;">
       <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Has Expired</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;">Platnosť Odporúča Frafol vypršala</h1>
     </div>
     <div style="padding:24px;color:#333;">
       <p>Dobrý deň,  <strong>${name}</strong>,</p>
-      <p>Your <strong>Frafol Choice</strong> subscription has expired. Your profile has returned to standard visibility.</p>
+
+      <p>Platnosť služby <strong>Odporúča Frafol</strong> vypršala. Váš profil sa opäť zobrazuje štandardným spôsobom.</p>
+
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
-        <strong>You have lost access to:</strong>
+        <strong>Už nemáte prístup k týmto výhodám:</strong>
         <ul style="margin:8px 0 0;padding-left:16px;">
-          <li>Highlighted profile &amp; priority ranking</li>
-          <li>Featured visibility on the Frafol homepage</li>
-          <li>Frafol Choice badge on your profile</li>
+          <li>Zvýraznený profil a prednostné umiestnenie</li>
+          <li>Zvýraznenie na úvodnej stránke FRAFOL</li>
+          <li>Označenie Odporúča Frafol na Vašom profile</li>
         </ul>
       </div>
-      <p style="font-size:14px;color:#555;">Renew your Frafol Choice to regain these benefits and stay ahead of the competition.</p>
+      <p style="font-size:14px;color:#555;">Obnovte si Odporúča Frafol a získajte tieto výhody späť.</p>
       <div style="text-align:center;margin:24px 0;">
-        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Renew Frafol Choice</a>
+        <a href="${clientUrl}/dashboard/professional/subscription" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Obnoviť Odporúča Frafol</a>
       </div>
       <p style="font-size:14px;color:#555;">Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
       ${policiesSection()}
@@ -1259,7 +1266,7 @@ const frafolChoiceExpiredEmail = async ({
     </div>
     ${emailFooter()}
   </div>`;
-  await sendEmail(sentTo, 'Your Frafol Choice Has Expired – Renew to Restore Your Benefits', emailBody);
+  await sendEmail(sentTo, 'Platnosť Odporúča Frafol vypršala – obnovte ho a získajte výhody späť', emailBody);
 };
 
 const frafolChoiceCancelledByAdminEmail = async ({
@@ -1275,25 +1282,28 @@ const frafolChoiceCancelledByAdminEmail = async ({
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#fff;">
     <div style="background-color:${primaryColor};text-align:center;padding:24px;">
       <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-      <h1 style="color:#fff;margin:0;font-size:22px;">Frafol Choice Cancelled</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;">Služba Odporúča Frafol bola zrušená</h1>
     </div>
     <div style="padding:24px;color:#333;">
+
       <p>Dobrý deň,  <strong>${name}</strong>,</p>
-      <p>Your <strong>Frafol Choice</strong> subscription has been <strong>cancelled by our admin team</strong>. Your profile has returned to standard visibility.</p>
+
+      <p>Služba <strong>Odporúča Frafol</strong> bola <strong>zrušená administrátorom</strong>. Váš profil sa opäť zobrazuje štandardným spôsobom.</p>
+
       ${reason ? `
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
         <strong>Dôvod:</strong><br/>${reason}
       </div>` : ''}
       <div style="background-color:#fff3f3;border-left:4px solid #e53935;padding:14px 18px;border-radius:4px;margin:20px 0;font-size:14px;color:#555;">
-        <strong>You have lost access to:</strong>
+        <strong>Už nemáte prístup k týmto výhodám:</strong>
         <ul style="margin:8px 0 0;padding-left:16px;">
-          <li>Highlighted profile &amp; priority ranking</li>
-          <li>Featured visibility on the Frafol homepage</li>
-          <li>Frafol Choice badge on your profile</li>
+          <li>Zvýraznený profil a prednostné umiestnenie</li>
+          <li>Zvýraznenie na úvodnej stránke FRAFO</li>
+          <li>Označenie Odporúča Frafol na Vašom profile</li>
         </ul>
       </div>
       <p style="font-size:14px;color:#555;">
-        If you believe this is a mistake, please contact us at
+        Ak si myslíte, že došlo k omylu, kontaktujte nás na adrese 
         <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
       </p>
       ${policiesSection()}
@@ -1301,7 +1311,7 @@ const frafolChoiceCancelledByAdminEmail = async ({
     </div>
     ${emailFooter()}
   </div>`;
-  await sendEmail(sentTo, 'Your Frafol Choice Subscription Has Been Cancelled', emailBody);
+  await sendEmail(sentTo, 'Služba Odporúča Frafol bola zrušená', emailBody);
 };
 
 const sendCommentOrReplyEmail = async ({
@@ -1503,7 +1513,7 @@ const sendOrderAcceptedEmail = async ({
   const orderLabel =
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík.'
-      : `custom ${serviceType || 'booking'}`;
+      : `formulár – ${serviceType || 'booking'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1585,7 +1595,7 @@ const sendPaymentSuccessEmail = async ({
   const orderLabel =
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík'
-      : `custom ${serviceType || 'booking'}`;
+      : `formulár – ${serviceType || 'booking'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1837,7 +1847,7 @@ const sendReviewRequestEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          How Was Your Experience? ⭐
+          Ako hodnotíte svoju skúsenosť? ⭐
         </h1>
       </div>
 
@@ -1846,9 +1856,7 @@ const sendReviewRequestEmail = async ({
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
 
         <p>
-          Your order with <strong>${serviceProviderName}</strong>
-          for the <strong>${serviceTypeLabel}${packageName ? ` – ${packageName}` : ''}</strong>
-          has been marked as delivered.
+          Vaša objednávka u <strong>${serviceProviderName}</strong> za službu <strong>${serviceTypeLabel}${packageName ? ` – ${packageName}` : ''}</strong> bola označená ako odovzdaná.
         </p>
 
         <div style="
@@ -1860,7 +1868,7 @@ const sendReviewRequestEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          We'd love to hear about your experience. Please take a moment to leave a review for <strong>${serviceProviderName}</strong> — it helps other clients and supports our community of professionals.
+          Budeme radi, ak sa podelíte o svoju skúsenosť. Napíšte recenziu na <strong>${serviceProviderName}</strong> – pomôžete tak ďalším klientom aj našej komunite profesionálov.
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -1874,7 +1882,7 @@ const sendReviewRequestEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Leave a Review
+            Napísať recenziu
           </a>
         </div>
 
@@ -1894,7 +1902,7 @@ const sendReviewRequestEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, `How Was Your Experience with ${serviceProviderName}?`, emailBody);
+  await sendEmail(sentTo, `Ako hodnotíte svoju skúsenosť so službou ${serviceProviderName}?`, emailBody);
 };
 
 const sendReviewSubmittedEmail = async ({
@@ -2027,7 +2035,7 @@ const sendCancelRequestDeclinedEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          <strong>Reason for decline:</strong><br/>
+          <strong>Dôvod odmietnutia:</strong><br/>
           ${reason}
         </div>` : ''}
 
@@ -2173,7 +2181,7 @@ const sendRefundRequiredEmail = async ({
           style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;"
         />
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">
-          Refund Required – Order Cancelled
+          Možné vrátenie platby – zrušená objednávka
         </h1>
       </div>
 
@@ -2182,8 +2190,7 @@ const sendRefundRequiredEmail = async ({
         <p>Dobrý deň,  <strong>${adminName}</strong>,</p>
 
         <p>
-          An order has been cancelled and may require a <strong>refund</strong>.
-          Please review the details below and take the necessary action.
+          Objednávka bola zrušená a môže byť potrebné <strong>vrátenie platby</strong>. Skontrolujte podrobnosti nižšie a vykonajte potrebné kroky.
         </p>
 
         <div style="
@@ -2199,7 +2206,7 @@ const sendRefundRequiredEmail = async ({
               <td style="padding: 6px 0; text-align: right; font-weight: bold;">${orderId}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #777;">Cancelled By</td>
+              <td style="padding: 6px 0; color: #777;">Zrušil(a)</td>
               <td style="padding: 6px 0; text-align: right;">${cancellerName}</td>
             </tr>
             ${serviceType ? `
@@ -2209,12 +2216,12 @@ const sendRefundRequiredEmail = async ({
             </tr>` : ''}
             ${customerEmail ? `
             <tr>
-              <td style="padding: 6px 0; color: #777;">Customer Email</td>
+              <td style="padding: 6px 0; color: #777;">E-mail zákazníka</td>
               <td style="padding: 6px 0; text-align: right;">${customerEmail}</td>
             </tr>` : ''}
             ${paidAmount !== undefined ? `
             <tr>
-              <td style="padding: 6px 0; color: #777;">Paid Amount</td>
+              <td style="padding: 6px 0; color: #777;">Zaplatená suma</td>
               <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #e53935;">${paidAmount.toFixed(2)} EUR</td>
             </tr>` : ''}
           </table>
@@ -2231,12 +2238,12 @@ const sendRefundRequiredEmail = async ({
             font-size: 14px;
             font-weight: bold;
           ">
-            Review Order
+            Skontrolovať objednávku
           </a>
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you have any questions, please contact our support team at
+          Ak máte akékoľvek otázky, kontaktujte náš tím podpory na adrese
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
@@ -2251,7 +2258,7 @@ const sendRefundRequiredEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, 'Refund Required – Order Cancelled', emailBody);
+  await sendEmail(sentTo, 'Možné vrátenie platby – zrušená objednávka', emailBody);
 };
 
 const sendDeliveryRequestEmail = async ({
@@ -2277,8 +2284,8 @@ const sendDeliveryRequestEmail = async ({
     orderType === 'direct'
       ? packageName
         ? `"${packageName}"`
-        : 'your order'
-      : `custom ${serviceType || 'booking'}`;
+        : 'Vaša objednávka'
+      : `formulár – ${serviceType || 'booking'}`;
 
   const emailBody = `
     <div style="
@@ -2363,7 +2370,7 @@ const sendDeliveryRequestEmail = async ({
           font-size: 14px;
           color: #555555;
         ">
-          <strong>Delivery link:</strong>
+          <strong>Odkaz na hotovú prácu:</strong>
 
           <p style="
             margin: 8px 0 0;
@@ -2683,7 +2690,7 @@ const sendOrderDeclinedEmail = async ({
   const orderLabel =
     orderType === 'direct'
       ? packageName || serviceType || 'order'
-      : `custom ${serviceType || 'booking'}`;
+      : `formulár – ${serviceType || 'booking'}`;
 
   const bodyText = isDeliveryDeclined
     ? `klient <strong>${senderName}</strong> požiadal o úpravu objednávky <strong>${orderLabel}</strong>. Po vykonaní úprav ju môžete vo svojom profile znova odovzdať.`
@@ -2774,7 +2781,7 @@ const sendOrderCancelledEmail = async ({
   const orderLabel =
     orderType === 'direct'
       ? packageName || serviceType || 'order'
-      : `custom ${serviceType || 'booking'}`;
+      : `formulár – ${serviceType || 'booking'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -2972,21 +2979,21 @@ const sendGearOrderPayoutCompletedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Payment Processed ✅</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Platba bola spracovaná ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
-          Your payment for the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''} (Order ID: <strong>${orderId}</strong>)
-          has been processed and marked as completed by our team.
+          Vaša platba za objednávku z bazára${itemName ? ` <strong>„${itemName}“</strong>` : ''} (číslo objednávky: <strong>${orderId}</strong>) bola spracovaná a označená ako dokončená.
         </p>
+
         <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           ${netAmount !== undefined
-            ? `<strong>Payout Amount:</strong> ${netAmount.toFixed(2)} ${currency}`
-            : 'Your payout for this order has been confirmed.'}
+            ? `<strong>Suma na vyplatenie:</strong> ${netAmount.toFixed(2)} ${currency}`
+            : 'Vyplatenie peňazí za túto objednávku bolo potvrdené.'}
         </div>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">View Order</a>
+          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
         </div>
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
@@ -2999,7 +3006,7 @@ const sendGearOrderPayoutCompletedEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, `Payment Processed – Order ${orderId}`, emailBody);
+  await sendEmail(sentTo, `Platba spracovaná – objednávka ${orderId}`, emailBody);
 };
 
 const sendEventOrderPayoutCompletedEmail = async ({
@@ -3023,27 +3030,28 @@ const sendEventOrderPayoutCompletedEmail = async ({
 }): Promise<void> => {
   const orderLabel = orderType === 'direct'
     ? packageName || serviceType || 'order'
-    : `custom ${serviceType || 'booking'}`;
+    : `formulár – ${serviceType || 'booking'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Payment Processed ✅</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Platba bola spracovaná ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
+
         <p>
-          Your payment for the <strong>${orderLabel}</strong> (Order ID: <strong>${orderId}</strong>) has been
-          processed and marked as completed by our team.
+          Vaša platba za <strong>${orderLabel}</strong> (číslo objednávky: <strong>${orderId}</strong>) bola spracovaná a označená ako odoslaná.
         </p>
+
         <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           ${netAmount !== undefined
-            ? `<strong>Payout Amount:</strong> ${netAmount.toFixed(2)} ${currency}`
-            : 'Your payout for this order has been confirmed.'}
+            ? `<strong>Suma na vyplatenie:</strong> ${netAmount.toFixed(2)} ${currency}`
+            : 'Vyplatenie peňazí za túto objednávku bolo potvrdené.'}
         </div>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/event-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">View Order</a>
+          <a href="${clientUrl}/dashboard/professional/event-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
         </div>
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
@@ -3056,7 +3064,7 @@ const sendEventOrderPayoutCompletedEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, `Payment Processed – Order ${orderId}`, emailBody);
+  await sendEmail(sentTo, `Platba spracovaná – objednávka ${orderId}`, emailBody);
 };
 
 const sendWorkshopPayoutCompletedEmail = async ({
@@ -3078,21 +3086,21 @@ const sendWorkshopPayoutCompletedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Payment Processed ✅</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Platba bola spracovaná ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
-          Your payment for the workshop${workshopTitle ? ` <strong>"${workshopTitle}"</strong>` : ''} (Order ID: <strong>${orderId}</strong>)
-          has been processed and marked as completed by our team.
+          Platba za kurz${workshopTitle ? ` <strong>„${workshopTitle}“</strong>` : ''} (číslo objednávky: <strong>${orderId}</strong>)
+          bola spracovaná a naším tímom označená ako dokončená.
         </p>
         <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           ${amount !== undefined
-            ? `<strong>Payout Amount:</strong> ${amount.toFixed(2)} ${currency}`
-            : 'Your payout for this workshop has been confirmed.'}
+            ? `<strong>Suma na vyplatenie:</strong> ${amount.toFixed(2)} ${currency}`
+            : 'Vyplatenie peňazí za tento kurz bolo potvrdené.'}
         </div>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/workshop" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">View Workshop</a>
+          <a href="${clientUrl}/dashboard/professional/workshop" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť kurz</a>
         </div>
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
@@ -3105,7 +3113,7 @@ const sendWorkshopPayoutCompletedEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, `Payment Processed – Order ${orderId}`, emailBody);
+  await sendEmail(sentTo, `Platba spracovaná – objednávka ${orderId}`, emailBody);
 };
 
 const sendGearDeliveryRequestEmail = async ({
@@ -3165,18 +3173,18 @@ const sendGearDeliveryAcceptedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Delivery Accepted ✅</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Prevzatie potvrdené ✅</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
-          Great news! <strong>${clientName}</strong> has confirmed receipt of the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''}.
+          Dobrá správa! <strong>${clientName}</strong> potvrdil(a) prevzatie príslušenstva z objednávky${itemName ? ` „${itemName}“` : ''}.
         </p>
         <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          The order has been successfully completed. Well done!
+          Objednávka bola úspešne dokončená!
         </div>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">View Order</a>
+          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
         </div>
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
@@ -3189,7 +3197,7 @@ const sendGearDeliveryAcceptedEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, 'Your Gear Delivery Has Been Accepted', emailBody);
+  await sendEmail(sentTo, 'Prevzatie príslušenstva bolo potvrdené', emailBody);
 };
 
 const sendGearDeliveryDeclinedEmail = async ({
@@ -3209,21 +3217,21 @@ const sendGearDeliveryDeclinedEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Delivery Declined</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Prevzatie odmietnuté</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
-          <strong>${clientName}</strong> has declined the delivery for the gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''}.
+          <strong>${clientName}</strong> odmietol/odmietla potvrdiť prevzatie príslušenstva z objednávky${itemName ? ` „${itemName}“` : ''}.
         </p>
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          <strong>Dôvod:</strong> ${reason || 'No reason provided.'}
+          <strong>Dôvod:</strong> ${reason || 'Dôvod nebol uvedený.'}
         </div>
         <p style="font-size: 14px; color: #555;">
-          Please review the details and resend the delivery once resolved.
+          Skontrolujte podrobnosti a po vyriešení problému znova odošlite žiadosť o potvrdenie prevzatia.
         </p>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">View Order</a>
+          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
         </div>
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
@@ -3236,7 +3244,7 @@ const sendGearDeliveryDeclinedEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, 'Gear Order Delivery Declined', emailBody);
+  await sendEmail(sentTo, 'Prevzatie príslušenstva bolo odmietnuté', emailBody);
 };
 
 const sendGearOrderCancelledEmail = async ({
@@ -3256,21 +3264,21 @@ const sendGearOrderCancelledEmail = async ({
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Gear Order Cancelled</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Objednávka z bazára bola zrušená</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
         <p>
-          We're sorry to inform you that your gear order${itemName ? ` <strong>"${itemName}"</strong>` : ''} has been cancelled by <strong>${cancelledByName}</strong>.
+          Je nám ľúto, ale Vaša objednávka z bazára${itemName ? ` „${itemName}“` : ''} bola zrušená používateľom <strong>${cancelledByName}</strong>.
         </p>
         <div style="background-color: #fff3f3; border-left: 4px solid #e53935; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          <strong>Dôvod:</strong> ${reason || 'No reason provided.'}
+          <strong>Dôvod:</strong> ${reason || 'Dôvod nebol uvedený.'}
         </div>
         <p style="font-size: 14px; color: #555;">
-          If a payment was already made, our team will review and process a refund where applicable.
+          Ak už bola objednávka zaplatená, náš tím preverí prípadné vrátenie platby.
         </p>
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/my-account/gear-order?tab=cancelled" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">View Orders</a>
+          <a href="${clientUrl}/dashboard/my-account/gear-order?tab=cancelled" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávky</a>
         </div>
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
@@ -3283,7 +3291,7 @@ const sendGearOrderCancelledEmail = async ({
     </div>
   `;
 
-  await sendEmail(sentTo, 'Your Gear Order Has Been Cancelled', emailBody);
+  await sendEmail(sentTo, 'Vaša objednávka z bazára bola zrušená', emailBody);
 };
 
 const sendGearOrderSoldEmail = async ({
@@ -3700,8 +3708,7 @@ const sendPackageDeclinedEmail = async ({
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you believe this decision was made in error or have any questions,
-          please contact us at
+          Ak si myslíte, že došlo k omylu, alebo máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.
@@ -4232,11 +4239,12 @@ const sendGearOrderInvoiceEmail = async (params: GearOrderInvoiceParams): Promis
     </div>
   `;
 
-  await sendEmail(sentTo, `Marketplace Invoice – ${items.length} Item${items.length !== 1 ? 's' : ''} | Frafol`, emailBody);
+  await sendEmail(sentTo, `Faktúra za nákup v bazári – ${items.length} ${items.length === 1 ? 'položka' : 'položky'} | FRAFOL`, emailBody);
 };
 
-export { 
-  otpSendEmail, 
+export {
+  getServiceTypeLabel,
+  otpSendEmail,
   sendBookingNotificationEmail, 
   profileVerifiedEmail, 
   profileDeclinedEmail, 

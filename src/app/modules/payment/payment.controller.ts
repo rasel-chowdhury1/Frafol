@@ -306,7 +306,7 @@ const getMyPayments = catchAsync(async (req: Request, res: Response) => {
   // Assuming user is attached via auth middleware
   const {userId} = req.user;
   if (!userId) {
-    throw new AppError(401, "Unauthorized: User not found");
+    throw new AppError(401, "Unauthorized: Používateľ sa nenašiel");
   }
 
   // Pass userId and query to service

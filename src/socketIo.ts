@@ -10,7 +10,7 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail, getServiceTypeLabel } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
@@ -101,7 +101,7 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
 
     const user = await User.findById(userDetails.userId);
     if (!user) {
-      return next(new Error('Authentication error: User not found'));
+      return next(new Error('Authentication error: Používateľ sa nenašiel'));
     }
 
     socket.user = {
@@ -492,7 +492,7 @@ export const sentNotificationForBookingRequest = async ({
 }): Promise<void> => {
   // âœ… Fetch user info for notification
   const user = await User.findById(userId).select('name email profileImage');
-  if (!user) throw new AppError(404, 'User not found for notification');
+  if (!user) throw new AppError(404, 'Používateľ pre notifikáciu sa nenašiel');
 
   // âœ… Fetch receiver info for notification
   const receiver = await User.findById(receiverId).select(
@@ -510,14 +510,15 @@ export const sentNotificationForBookingRequest = async ({
     case 'direct': {
       const safePackageName = packageName ? `"${packageName}"` : 'a package';
       type = 'DirectBookingRequest';
-      text = `${senderName} has requested a direct booking from your ${safePackageName}.`;
+      text = `${senderName} poslal(a) žiadosť o objednanie balíka „${safePackageName}“.`;
       break;
     }
 
     case 'custom': {
-      const readableType = serviceType?.trim() || 'service';
+      const readableType = getServiceTypeLabel(serviceType?.trim()) || 'služba';
+
       type = 'CustomBookingRequest';
-      text = `${senderName} has sent you a custom ${readableType} booking request from your profile.`;
+      text = `${senderName} Vám poslal(a) nezáväzný dopyt na fotenie alebo natáčanie (${readableType}) cez Váš profil.`;
       break;
     }
 
@@ -570,7 +571,7 @@ export const sentNotificationForOrderAccepted = async ({
 }) => {
   // Fetch client info
   const client = await User.findById(receiverId).select('companyName name email');
-  if (!client) throw new AppError(404, 'Client not found for notification');
+  if (!client) throw new AppError(404, 'Zákazník pre notifikáciu sa nenašiel');
 
   // Fetch service provider info
   const serviceProvider = await User.findById(userId).select(
@@ -578,7 +579,7 @@ export const sentNotificationForOrderAccepted = async ({
   );
 
   if (!serviceProvider)
-    throw new AppError(404, 'Service provider not found for notification');
+    throw new AppError(404, 'Profesionál pre notifikáciu sa nenašiel');
 
   const image = serviceProvider.profileImage || '';
   let text = '';
@@ -587,11 +588,11 @@ export const sentNotificationForOrderAccepted = async ({
   // Build notification text
   if (orderType === 'direct') {
     const pkgText = packageName ? `"${packageName}"` : 'Váš balík';
-    text = `${serviceProvider.name} has accepted your direct booking request for ${pkgText}. Please proceed to payment to confirm the booking.`;
+    text = `${serviceProvider.name} prijal(a) Vašu žiadosť o objednanie balíka ${pkgText}. Pokračujte k platbe, aby ste objednávku potvrdili.`;
     type = 'DirectBookingAccepted';
   } else {
-    const readableType = serviceType || 'service';
-    text = `${serviceProvider.name} has accepted your custom ${readableType} booking request. Please complete the payment to confirm your booking.`;
+    const readableType = getServiceTypeLabel(serviceType?.trim()) || 'fotenie/natáčanie';
+    text = `${serviceProvider.name} pripravil(a) cenovú ponuku na základe Vášho nezáväzného dopytu (${readableType}). Objednávku potvrdíte zaplatením.`;
     type = 'CustomBookingAccepted';
   }
 
@@ -637,14 +638,14 @@ export const sentNotificationForPaymentSuccess = async ({
 }) => {
   // Fetch client info
   const client = await User.findById(userId).select('name email profileImage');
-  if (!client) throw new AppError(404, 'Client not found for notification');
+  if (!client) throw new AppError(404, 'Zákazník pre notifikáciu sa nenašiel');
 
   // Fetch service provider info
   const serviceProvider = await User.findById(receiverId).select(
     'name email profileImage',
   );
   if (!serviceProvider)
-    throw new AppError(404, 'Service provider not found for notification');
+    throw new AppError(404, 'Profesionál pre notifikáciu sa nenašiel');
 
   const image = client.profileImage || '';
   let text = '';
@@ -653,11 +654,12 @@ export const sentNotificationForPaymentSuccess = async ({
   // Build notification text
   if (orderType === 'direct') {
     const pkgText = packageName ? `"${packageName}"` : 'Váš balík';
-    text = `${client.name} has successfully completed payment for ${pkgText}. The order is now in progress.`;
+    text = `${client.name} úspešne zaplatil(a) za balík ${pkgText}. Objednávka práve prebieha.`;
     type = 'DirectBookingInProgress';
   } else {
-    const readableType = serviceType || 'service';
-    text = `${client.name} has completed payment for your custom ${readableType} booking. The order is now in progress.`;
+    const readableType = getServiceTypeLabel(serviceType?.trim()) || 'fotenie/natáčanie';
+
+    text = `${client.name} zaplatil(a) za individuálnu foto/video objednávku (${readableType}). Práca na objednávke prebieha.`;
     type = 'CustomBookingInProgress';
   }
 
@@ -713,12 +715,12 @@ export const sentNotificationForDeliveryRequest = async ({
   console.log("receiver email =>>> ", receiver)
 
   if (!sender || !receiver)
-    throw new AppError(404, 'User not found for notification');
+    throw new AppError(404, 'Používateľ pre notifikáciu sa nenašiel');
 
   const text =
     orderType === 'direct'
-      ? `${sender.name} has submitted the delivery for your ${serviceType || 'Objednávka'}. Please review and confirm.`
-      : `${sender.name} has sent a delivery request for your custom ${serviceType || 'booking'}. Please review.`;
+      ? `${sender.name} odovzdal(a) hotovú prácu k objednávke ${serviceType || 'Objednávka'}. Skontrolujte ju a potvrďte prevzatie.`
+      : `${sender.name} odoslal(a) hotovú prácu k individuálnej objednávke ${serviceType || 'fotenia/natáčania'}. Skontrolujte ju.`;
 
   const notificationPayload = {
     userId, // sender = service provider
@@ -766,13 +768,13 @@ export const sentNotificationForDeliveryAccepted = async ({
   const receiver = await User.findById(receiverId).select('name email');
 
   if (!sender || !receiver)
-    throw new AppError(404, 'User not found for notification');
+    throw new AppError(404, 'Používateľ pre notifikáciu sa nenašiel');
 
   // ðŸ”¹ Build notification message
   const text =
     orderType === 'direct'
-      ? `${sender.name} has accepted your delivery request for ${serviceType || 'Objednávka'}${packageName ? ` (${packageName})` : ''}. Great job!`
-      : `${sender.name} has accepted your delivery request for the custom ${serviceType || 'booking'}. Congratulations!`;
+      ? `${sender.name} potvrdil(a) prevzatie hotovej práce k objednávke ${getServiceTypeLabel(serviceType?.trim()) || 'Objednávka'}${packageName ? ` (${packageName})` : ''}. Výborne!`
+      : `${sender.name} potvrdil(a) prevzatie hotovej práce k individuálnej objednávke ${getServiceTypeLabel(serviceType?.trim()) || 'fotenia/natáčania'}. Gratulujeme!`;
 
   const notificationPayload = {
     userId, // sender = client
@@ -815,7 +817,7 @@ export const sentNotificationForReviewRequest = async ({
 
   if (!serviceProvider || !customer) return;
 
-  const text = `Your order with ${serviceProvider.name} has been delivered. Please leave a review to share your experience.`;
+  const text = `Vaša objednávka od ${serviceProvider.name} bola dokončená. Podeľte sa o svoju skúsenosť v recenzii.`;
 
   const notificationPayload = {
     userId: serviceProviderId, // actor = service provider whose order was delivered
@@ -861,14 +863,16 @@ export const sentNotificationForOrderDeclined = async ({
   const receiver = await User.findById(receiverId).select('name email');
 
   if (!sender || !receiver)
-    throw new AppError(404, 'User not found for notification');
+    throw new AppError(404, 'Používateľ pre notifikáciu sa nenašiel');
+
+  const levelType = getServiceTypeLabel(serviceType?.trim());
 
   const text =
     status === 'deliveryRequestDeclined'
-      ? `${sender.name} has declined the delivery request for your ${orderType === 'direct' ? packageName || serviceType || 'Objednávka' : `custom ${serviceType || 'booking'}`}.`
+      ? `${sender.name} odmietol/odmietla prevzatie hotovej práce k objednávke ${orderType === 'direct' ? packageName || levelType || 'Objednávka' : `individuálna ${levelType || 'objednávka'}`}.`
       : orderType === 'direct'
-        ? `${sender.name} has declined your direct order request${serviceType ? ` for ${serviceType}` : ''}.`
-        : `${sender.name} has declined your custom ${serviceType || 'booking'} request.`;
+        ? `${sender.name} odmietol/odmietla Vašu žiadosť o balík${levelType ? ` služby ${levelType}` : ''}.`
+        : `${sender.name} odmietol/odmietla Váš nezáväzný dopyt na ${levelType || 'fotenie/natáčanie'}.`;
 
   const notificationPayload = {
     userId,
@@ -916,10 +920,12 @@ export const sentNotificationForOrderCancelled = async ({
 
   if (!sender || !receiver) return;
 
+  let levelType = getServiceTypeLabel(serviceType?.trim());
+
   const text =
     orderType === 'direct'
-      ? `${sender.name} has cancelled the ${packageName || serviceType || 'Objednávka'}.`
-      : `${sender.name} has cancelled your custom ${serviceType || 'booking'}.`;
+      ? `${sender.name} zrušil(a) objednávku ${packageName || levelType || 'Objednávka'}.'}.`
+      : `${sender.name} zrušil(a) Vašu individuálnu objednávku ${levelType || 'fotenia/natáčania'}.`;
 
   const payload = {
     userId: cancelledBy,
@@ -968,10 +974,12 @@ export const sentNotificationForCancelRequest = async ({
 
   if (!sender || !receiver) return;
 
+  let levelType = getServiceTypeLabel(serviceType?.trim());
+
   const text =
     orderType === 'direct'
-      ? `${sender.name} has requested to cancel the ${serviceType || 'Objednávka'}${reason ? `: "${reason}"` : '.'}`
-      : `${sender.name} has requested to cancel your custom ${serviceType || 'booking'}${reason ? `: "${reason}"` : '.'}`;
+      ? `${sender.name} požiadal(a) o zrušenie objednávky ${levelType || 'Objednávka'}${reason ? `: „${reason}“` : '.'}`
+      : `${sender.name} požiadal(a) o zrušenie Vašej individuálnej objednávky ${levelType || 'fotenia/natáčania'}${reason ? `: „${reason}“` : '.'}`;
 
   const payload = {
     userId: requestedBy,
@@ -1014,7 +1022,7 @@ export const sentNotificationForProfileDeclined = async ({
 
   if (!user) return;
 
-  const text = `Your professional profile verification has been declined. Reason: "${reason}"`;
+  const text = `Overenie Vášho profesionálneho profilu bolo zamietnuté. Dôvod: „${reason}“`;
 
   const payload = {
     userId: receiverId,
@@ -1053,7 +1061,7 @@ export const sentNotificationForAccountDeleteRequest = async ({
   console.log("admins =>> ", admins)
   if (!user || !admins.length) return;
 
-  const text = `${user.name} has requested to delete their account.${reason ? ` Reason: "${reason}"` : ''}`;
+  const text = `${user.name} požiadal(a) o odstránenie svojho účtu.${reason ? ` Dôvod: „${reason}“` : ''}`;
 
 
    await Promise.all(
@@ -1101,7 +1109,7 @@ export const sentNotificationForSubscriptionCancelledByAdmin = async ({
 
   if (!user) return;
 
-  const text = `Your Frafol Choice subscription has been cancelled by our admin team.${reason ? ` Reason: "${reason}"` : ''}`;
+  const text = `Služba Odporúča Frafol bola zrušená administrátorom.${reason ? ` Dôvod: "${reason}"` : ''}`;
 
   const payload = {
     userId,
@@ -1135,7 +1143,7 @@ export const sentNotificationForCommunityRejected = async ({
 
   if (!receiver) return;
 
-  const text = `Your community post "${communityTitle}" has been rejected by the admin. Reason: "${reason}"`;
+  const text = `Váš príspevok vo fóre „${communityTitle}“ bol zamietnutý administrátorom. Dôvod: „${reason}“`;
 
   const payload = {
     userId: receiverId,
@@ -1176,7 +1184,7 @@ export const sentNotificationForCommunityDeleted = async ({
 
   if (!receiver) return;
 
-  const text = `Your community post "${communityTitle}" has been removed by the system admin. Reason: "${reason}"`;
+  const text = `Váš príspevok vo fóre „${communityTitle}“ bol odstránený administrátorom. Dôvod: „${reason}“`;
 
   const payload = {
     userId: receiverId,
@@ -1233,8 +1241,8 @@ export const sentNotificationForCommentOrReply = async ({
   if (!actor || !receiver) return;
 
   const text = isReply
-    ? `${actor.name} replied to a comment on your post "${communityTitle}": "${commentText}"`
-    : `${actor.name} commented on your post "${communityTitle}": "${commentText}"`;
+    ? `${actor.name} odpovedal(a) na komentár k Vášmu príspevku "${communityTitle}": "${commentText}"`
+    : `${actor.name} okomentoval(a) Váš príspevok "${communityTitle}": "${commentText}"`;
 
   const payload = {
     userId: actorId,
@@ -1290,7 +1298,7 @@ export const sentNotificationForCancelRequestDeclined = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} has declined your cancellation request for the ${serviceType || 'Objednávka'}${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `${sender.name} odmietol/odmietla Vašu žiadosť o zrušenie objednávky ${serviceType || 'Objednávka'}${reason ? `. Dôvod: „${reason}“` : '.'}`;
 
   const payload = {
     userId: declinedBy,
@@ -1331,7 +1339,7 @@ export const sentNotificationForExtensionRequest = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} has requested a delivery date extension for the ${serviceType || 'Objednávka'}${reason ? `: "${reason}"` : '.'}`;
+  const text = `${sender.name} požiadal(a) o predĺženie termínu odovzdania k objednávke ${getServiceTypeLabel(serviceType?.trim()) || 'Objednávka'}${reason ? `: „${reason}“` : '.'}`;
 
   const payload = {
     userId: requestedBy,
@@ -1374,9 +1382,9 @@ export const sentNotificationForExtensionAccepted = async ({
 
   const dateStr = newDeliveryDate
     ? new Date(newDeliveryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-    : 'the new date';
+    : 'nový termín';
 
-  const text = `${sender.name} has accepted your delivery date extension request for the ${serviceType || 'Objednávka'}. New delivery date: ${dateStr}.`;
+  const text = `${sender.name} schválil(a) predĺženie termínu odovzdania k objednávke ${getServiceTypeLabel(serviceType?.trim()) || 'Objednávka'}. Nový termín odovzdania: ${dateStr}.`;
 
   const payload = {
     userId: acceptedBy,
@@ -1417,7 +1425,7 @@ export const sentNotificationForExtensionRejected = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} has rejected your delivery date extension request for the ${serviceType || 'Objednávka'}${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `${sender.name} odmietol/odmietla predĺženie termínu odovzdania k objednávke ${getServiceTypeLabel(serviceType?.trim()) || 'Objednávka'}${reason ? `. Dôvod: „${reason}“` : '.'}`;
 
   const payload = {
     userId: rejectedBy,
@@ -1484,7 +1492,7 @@ export const sentNotificationForGearMarketplaceDeclined = async ({
   const receiver = await User.findById(receiverId).select('name email');
   if (!receiver) return;
 
-  const text = `Your gear item "${itemName}" has been declined by the admin${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `Vaše príslušenstvo „${itemName}“ nebolo schválené na zverejnenie v bazári FRAFOL${reason ? `. Dôvod: „${reason}“` : '.'}`;
 
   const payload = {
     userId: receiverId,
@@ -1520,7 +1528,7 @@ export const sentNotificationForGearOrderPayoutCompleted = async ({
 
   if (!seller) return;
 
-  const text = `Your payment for the gear order${itemName ? ` "${itemName}"` : ''} (Order ID: ${orderId}) has been processed and marked as completed.`;
+  const text = `Platba za objednávku z bazára${itemName ? ` „${itemName}“` : ''} (číslo objednávky: ${orderId}) bola spracovaná a označená ako dokončená.`;
 
   const payload = {
     userId: sellerId,
@@ -1557,7 +1565,7 @@ export const sentNotificationForWorkshopPayoutCompleted = async ({
 
   if (!instructor) return;
 
-  const text = `Your payment for the workshop${workshopTitle ? ` "${workshopTitle}"` : ''} (Order ID: ${orderId}) has been processed and marked as completed.`;
+  const text = `Platba za kurz${workshopTitle ? ` „${workshopTitle}“` : ''} (číslo objednávky: ${orderId}) bola spracovaná a označená ako dokončená.`;
 
   const payload = {
     userId: instructorId,
@@ -1600,9 +1608,9 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
 
   const orderLabel = orderType === 'direct'
     ? packageName || serviceType || 'Objednávka'
-    : `custom ${serviceType || 'booking'}`;
+    : `formulár – ${serviceType || 'booking'}`;
 
-  const text = `Your payment for the ${orderLabel} (Order ID: ${orderId}) has been processed and marked as completed.`;
+  const text = `Platba za ${orderLabel} (číslo objednávky: ${orderId}) bola spracovaná a označená ako dokončená.`;
 
   const payload = {
     userId: serviceProviderId,
@@ -1640,7 +1648,7 @@ export const sentNotificationForGearDeliveryRequest = async ({
 
   if (!seller || !client) return;
 
-  const text = `${seller.name} has marked your gear order${itemName ? ` "${itemName}"` : ''} as delivered. Please confirm receipt.`;
+  const text = `${seller.name} označil(a) objednávku príslušenstva${itemName ? ` „${itemName}“` : ''} ako odovzdanú. Po prevzatí, prosím, potvrďte doručenie.`;
 
   const payload = {
     userId: sellerId,
@@ -1675,7 +1683,7 @@ export const sentNotificationForGearDeliveryAccepted = async ({
 
   if (!seller || !client) return;
 
-  const text = `${client.name} has confirmed receipt of the gear order${itemName ? ` "${itemName}"` : ''}.`;
+  const text = `${client.name} potvrdil(a) prevzatie príslušenstva z objednávky${itemName ? ` „${itemName}“` : ''}.`;
 
   const payload = {
     userId: clientId,
@@ -1712,7 +1720,7 @@ export const sentNotificationForGearDeliveryDeclined = async ({
 
   if (!seller || !client) return;
 
-  const text = `${client.name} has declined the delivery for the gear order${itemName ? ` "${itemName}"` : ''}${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `${client.name} odmietol/odmietla potvrdiť prevzatie príslušenstva z objednávky${itemName ? ` „${itemName}“` : ''}${reason ? `. Dôvod: "${reason}"` : '.'}`;
 
   const payload = {
     userId: clientId,
@@ -1750,7 +1758,7 @@ export const sentNotificationForGearOrderCancelled = async ({
 
   if (!canceller || !client) return;
 
-  const text = `${canceller.name} has cancelled your gear order${itemName ? ` "${itemName}"` : ''}${reason ? `. Reason: "${reason}"` : '.'}`;
+  const text = `${canceller.name} zrušil(a) Vašu objednávku z bazára${itemName ? ` „${itemName}“` : ''}${reason ? `. Dôvod: „${reason}“` : '.'}`;
 
   const payload = {
     userId: cancelledBy,
@@ -1788,8 +1796,8 @@ export const sentNotificationForGearOrderSold = async ({
 
   const itemNames = items.map((i) => i.itemName).join(', ');
   const text = items.length > 1
-    ? `${client.name} purchased ${items.length} of your gear items: ${itemNames}.`
-    : `${client.name} purchased your gear item "${itemNames}".`;
+    ? `${client.name} si kúpil(a) ${items.length} kusov príslušenstva z Vašej ponuky: ${itemNames}.`
+    : `${client.name} si kúpil(a) Vaše príslušenstvo „${itemNames}“.`;
 
   const payload = {
     userId: clientId,
@@ -1821,7 +1829,7 @@ export const sentNotificationForWorkshopApproved = async ({
 
   if (!receiver) return;
 
-  const text = `Congratulations! Your workshop "${workshopTitle}" has been approved by the admin and is now live.`;
+  const text = `Gratulujeme! Váš kurz „${workshopTitle}“ bol schválený a je teraz zverejnený na platforme FRAFOL.`;
 
   const payload = {
     userId: receiverId,
@@ -1857,7 +1865,7 @@ export const sentNotificationForWorkshopDeclined = async ({
 
   if (!receiver) return;
 
-  const text = `Your workshop "${workshopTitle}" has been declined by the admin. Reason: "${reason}"`;
+  const text = `Je nám ľúto, ale Váš kurz „${workshopTitle}“ nebol schválený na zverejnenie na platforme FRAFOL. Dôvod: „${reason}“`;
 
   const payload = {
     userId: receiverId,
@@ -1898,7 +1906,7 @@ export const sentNotificationForWorkshopNewParticipant = async ({
 
   if (!instructor || !participant) return;
 
-  const text = `${participant.name} has joined your workshop "${workshopTitle}" as a participant.`;
+  const text = `${participant.name} sa práve prihlásil(a) na Váš kurz „${workshopTitle}“.`;
 
   const payload = {
     userId: participantId,
@@ -1933,7 +1941,7 @@ export const sentNotificationForPackageApproved = async ({
 
   if (!receiver) return;
 
-  const text = `Congratulations! Váš balík. "${packageTitle}" has been approved by the admin and is now live.`;
+  const text = `Gratulujeme! Váš balík „${packageTitle}“ bol schválený a je teraz dostupný na platforme FRAFOL.`;
 
   const payload = {
     userId: receiverId,
@@ -1973,7 +1981,7 @@ export const sentNotificationForPackageDeclined = async ({
 
   if (!receiver) return;
 
-  const text = `Váš balík "${packageTitle}" has been declined by the admin. Reason: "${reason}"`;
+  const text = `Váš balík „${packageTitle}“ nebol schválený na zverejnenie na platforme FRAFOL. Dôvod: „${reason}“`;
 
   const payload = {
     userId: receiverId,
@@ -2024,9 +2032,9 @@ export const sentNotificationForRefundRequired = async ({
 
   if (!canceller || !admins.length) return;
 
-  const amountText = paidAmount !== undefined ? ` Paid amount: ${paidAmount.toFixed(2)} EUR.` : '';
-  const customerEmailText = customer?.email ? ` Customer: ${customer.email}.` : '';
-  const text = `Order #${orderId} for ${serviceType || 'a service'} has been cancelled by ${canceller.name}. A refund may be required.${customerEmailText}${amountText}`;
+  const amountText = paidAmount !== undefined ? ` Zaplatená suma: ${paidAmount.toFixed(2)} EUR.` : '';
+  const customerEmailText = customer?.email ? ` Zákazník: ${customer.email}.` : '';
+  const text = `Objednávka č. ${orderId} (${serviceType?.trim() || 'služba'}) bola zrušená používateľom ${canceller.name}. Môže byť potrebné vrátenie platby.${customerEmailText}${amountText}`;
 
   await Promise.all(
     admins.map(async (admin) => {
@@ -2075,7 +2083,7 @@ export const sendNotificationForNewMessage = async ({
   const receiver = await User.findById(receiverId).select('name email emailNotificationsEnabled');
 
   if (!sender || !receiver) {
-    throw new AppError(404, 'User not found for message notification');
+    throw new AppError(404, 'Používateľ pre upozornenie na správu sa nenašiel');
   }
 
   // ðŸ”” Emit unread message count to receiver via socket
