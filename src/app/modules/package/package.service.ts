@@ -224,14 +224,17 @@ const declinePackageById = async (id: string, reason: string) => {
 const deletePackage = async (
   packageId: string,
   userId: string,
-  role: "admin" | "user" | "photographer" | "videographer" | "both"
+  role: "admin" | "super-admin" | "user" | "photographer" | "videographer" | "both"
 ) => {
   if (!packageId) throw new AppError(400, "Package ID is required");
 
   const filter: any = { _id: packageId, isDeleted: false };
 
-  // Admin can delete any package
-  if (role !== "admin") {
+  console.log({packageId,userId,role})
+  console.log({filter})
+
+  // Only admin and super-admin can delete any package
+  if (role !== "admin" && role !== "super-admin") {
     filter.authorId = userId;
   }
 
@@ -240,6 +243,8 @@ const deletePackage = async (
     { isDeleted: true },
     { new: true }
   );
+
+
 
   if (!deletedPackage) {
     throw new AppError(404, "Package not found or you are not authorized to delete it");

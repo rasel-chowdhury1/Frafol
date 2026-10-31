@@ -77,7 +77,7 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
     const packageName =
       eventOrder.packageId && (eventOrder.packageId as any).title
         ? (eventOrder.packageId as any).title
-        : undefined;
+        : eventOrder?.title;
 
     Payment.findOne({ eventOrderId: eventOrder._id })
       .then((payment) =>
@@ -580,7 +580,7 @@ const acceptDirectOrder = async (orderId: string, serviceProviderId: string) => 
   const packageName =
     existingOrder.packageId && (existingOrder.packageId as any).title
       ? (existingOrder.packageId as any).title
-      : undefined;
+      : existingOrder?.title;
 
   // 🚀 Send notification asynchronously (non-blocking)
   sentNotificationForOrderAccepted({
@@ -601,7 +601,6 @@ const acceptCustomOrder = async (
   payload: Partial<IEventOrder>
 ) => {
   
-  console.log("payload accepte custom order route =>>> ", payload)
   const { price, priceWithServiceFee, totalPrice, vatAmount, deliveryDate, description } = payload;
 
   // Validation for required pricing fields
@@ -654,7 +653,7 @@ const acceptCustomOrder = async (
   const packageName =
     existingOrder.packageId && (existingOrder.packageId as any).title
       ? (existingOrder.packageId as any).title
-      : undefined;
+      : existingOrder?.title;
 
   // 🚀 Send notification asynchronously
   sentNotificationForOrderAccepted({
@@ -733,7 +732,7 @@ const requestOrderDelivery = async (
   const packageName =
     order.packageId && (order.packageId as any).title
       ? (order.packageId as any).title
-      : undefined;
+      : order.title;
 
   console.log('orders =>>> ', order)
   // 🔹 Send notification to client
@@ -930,7 +929,9 @@ const declineOrderRequest = async (
 ) => {
   
   // 1️⃣ Find the order
-  const order = await EventOrder.findById(orderId).populate("packageId", "title");
+  const order = await EventOrder.findById(orderId).populate<{
+  packageId: { _id: Types.ObjectId; title: string } | null;
+}>("packageId", "title");
   if (!order) throw new AppError(404, "Order not found");
 
 
@@ -987,7 +988,7 @@ const declineOrderRequest = async (
     userId: new mongoose.Types.ObjectId(clientId), // sender = client
     receiverId, // receiver = service provider
     serviceType: order.serviceType,
-    packageName: order.packageId ? order.packageId.title : undefined,
+    packageName: order.packageId?.title ?? order.title,
     status,
     reason,
   }).catch((err) => console.error("Notification failed:", err));
@@ -1168,6 +1169,7 @@ const cancelOrder = async (orderId: string, userId: string) => {
     orderType: order.orderType,
     cancelledBy: new mongoose.Types.ObjectId(userId),
     receiverId: order.cancelRequestedBy as mongoose.Types.ObjectId,
+    title: order.title || "",
     serviceType: order.serviceType,
   }).catch((err) => console.error('Cancel approved notification failed:', err));
 
@@ -1202,6 +1204,7 @@ const cancelEventOrderByAdmin = async (orderId: string, userId: string, reason: 
     orderType: order.orderType,
     cancelledBy: new mongoose.Types.ObjectId(userId),
     receiverId: order.userId,
+    title: order.title || "",
     serviceType: order.serviceType,
   }).catch((err) => console.error('Admin cancel notification (client) failed:', err));
 
@@ -1209,6 +1212,7 @@ const cancelEventOrderByAdmin = async (orderId: string, userId: string, reason: 
     orderType: order.orderType,
     cancelledBy: new mongoose.Types.ObjectId(userId),
     receiverId: order.serviceProviderId,
+    title: order.title || "",
     serviceType: order.serviceType,
   }).catch((err) => console.error('Admin cancel notification (professional) failed:', err));
 

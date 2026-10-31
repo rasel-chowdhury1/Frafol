@@ -24,6 +24,7 @@ const createEventOrder = catchAsync(async (req: Request, res: Response) => {
   // 🎯 DIRECT ORDER LOGIC
   // ==============================
   if (orderType === "direct") {
+    
     if (!req.body.packageId) {
       throw new AppError(400, "packageId is required for direct orders");
     }

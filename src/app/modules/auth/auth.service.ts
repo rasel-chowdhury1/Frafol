@@ -118,7 +118,7 @@ const forgotPasswordByEmail = async (email: string) => {
   process.nextTick(async () => {
     await otpSendEmail({
       sentTo: email,
-      subject: 'Your one time otp for forget password',
+      subject: 'Kód na obnovenie hesla',
       name: '',
       otp,
       expiredAt: expiredAt,

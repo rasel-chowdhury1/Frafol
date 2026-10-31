@@ -259,7 +259,7 @@ export const initSocketIO = async (server: HttpServer): Promise<void> => {
                   sendNotificationForNewMessage({
                     senderId: new mongoose.Types.ObjectId(socket.user?._id),
                     receiverId: new mongoose.Types.ObjectId(receiverId.toString()),
-                    messageText: text || 'ðŸ“· Sent an image',
+                    messageText: text || 'Poslal/a fotku.',
                   }).catch((err) => {
                     console.error('Notification failed:', err);
                   });
@@ -627,12 +627,14 @@ export const sentNotificationForPaymentSuccess = async ({
   orderType,
   userId, // client ID
   receiverId, // service provider ID
+  title,
   serviceType,
   packageName,
 }: {
   orderType: 'direct' | 'custom';
   userId: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
+  title: string;
   serviceType?: string;
   packageName?: string;
 }) => {
@@ -681,6 +683,7 @@ export const sentNotificationForPaymentSuccess = async ({
       sentTo: serviceProvider.email,
       receiverName: serviceProvider.name || '',
       clientName: client.name || '',
+      title,
       orderType,
       serviceType,
       packageName,
@@ -906,12 +909,14 @@ export const sentNotificationForOrderCancelled = async ({
   orderType,
   cancelledBy,
   receiverId,
+  title,
   serviceType,
   packageName,
 }: {
   orderType: 'direct' | 'custom';
   cancelledBy: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
+  title: string;
   serviceType?: string;
   packageName?: string;
 }) => {
@@ -947,6 +952,7 @@ export const sentNotificationForOrderCancelled = async ({
       sentTo: receiver.email,
       receiverName: receiver.name || '',
       senderName: sender.name || '',
+      title,
       orderType,
       serviceType,
       packageName,
@@ -1212,6 +1218,79 @@ export const sentNotificationForCommunityDeleted = async ({
 };
 
 
+// export const sentNotificationForCommentOrReply = async ({
+//   actorId,
+//   receiverId,
+//   communityTitle,
+//   isReply,
+//   commentText,
+// }: {
+//   actorId: mongoose.Types.ObjectId;
+//   receiverId: mongoose.Types.ObjectId;
+//   communityTitle: string;
+//   isReply: boolean;
+//   commentText: string;
+// }) => {
+
+//   console.log("sent notification =>>>> ", {
+//   actorId,
+//   receiverId,
+//   communityTitle,
+//   isReply,
+//   commentText,
+// })
+
+//   if (actorId.toString() === receiverId.toString()) {
+//       console.log("Skipping notification: actor and receiver are same user");
+//       return;
+//     }
+
+//   const actor = await User.findById(actorId).select('name profileImage ');
+//   const receiver = await User.findById(receiverId).select('name email emailNotificationsEnabled');
+
+//   if (!actor || !receiver) return;
+
+//   const text = isReply
+//     ? `${actor.name} odpovedal(a) na komentár k Vášmu príspevku "${communityTitle}": "${commentText}"`
+//     : `${actor.name} okomentoval(a) Váš príspevok "${communityTitle}": "${commentText}"`;
+
+//   const payload = {
+//     userId: actorId,
+//     receiverId,
+//     userMsg: {
+//       image: actor.profileImage || '',
+//       text,
+//       photos: [],
+//     },
+//     type: isReply ? 'CommentReply' : 'NewComment',
+//   };
+
+//   console.log({
+//   actorId,
+//   receiverId,
+//   communityTitle,
+//   isReply,
+//   commentText,
+// })
+//   console.log("payload of sent notificatio=>>> ", payload)
+
+//   await emitNotification(payload).catch((err) =>
+//     console.error('Socket error:', err),
+//   );
+
+//   if (receiver.email && receiver.emailNotificationsEnabled !== false) {
+//     sendCommentOrReplyEmail({
+//       sentTo: receiver.email,
+//       receiverId: receiver._id.toString(),
+//       receiverName: receiver.name || '',
+//       actorName: actor.name || '',
+//       communityTitle,
+//       commentText,
+//       isReply,
+//     }).catch((err) => console.error('Email failed:', err));
+//   }
+// };
+
 export const sentNotificationForCommentOrReply = async ({
   actorId,
   receiverId,
@@ -1225,59 +1304,111 @@ export const sentNotificationForCommentOrReply = async ({
   isReply: boolean;
   commentText: string;
 }) => {
+  try {
+    // Do not send notification/email to yourself
+    if (actorId.toString() === receiverId.toString()) {
+      console.log("Skipping notification: actor and receiver are same user");
+      return;
+    }
 
-  console.log("sent notification =>>>> ", {
-  actorId,
-  receiverId,
-  communityTitle,
-  isReply,
-  commentText,
-})
-  if (actorId.toString() === receiverId.toString()) return;
+    // Get actor information
+    const actor = await User.findById(actorId)
+      .select("name profileImage")
+      .lean();
 
-  const actor = await User.findById(actorId).select('name profileImage');
-  const receiver = await User.findById(receiverId).select('name email emailNotificationsEnabled');
+    // Get receiver information
+    const receiver = await User.findById(receiverId)
+      .select("name email emailNotificationsEnabled")
+      .lean();
 
-  if (!actor || !receiver) return;
+    if (!actor) {
+      console.error("Actor not found:", actorId);
+      return;
+    }
 
-  const text = isReply
-    ? `${actor.name} odpovedal(a) na komentár k Vášmu príspevku "${communityTitle}": "${commentText}"`
-    : `${actor.name} okomentoval(a) Váš príspevok "${communityTitle}": "${commentText}"`;
+    if (!receiver) {
+      console.error("Receiver not found:", receiverId);
+      return;
+    }
 
-  const payload = {
-    userId: actorId,
-    receiverId,
-    userMsg: {
-      image: actor.profileImage || '',
-      text,
-      photos: [],
-    },
-    type: isReply ? 'CommentReply' : 'NewComment',
-  };
+    console.log("=== COMMENT/REPLY NOTIFICATION ===");
+    console.log("Actor:", {
+      id: actorId.toString(),
+      name: actor.name,
+    });
 
-  console.log({
-  actorId,
-  receiverId,
-  communityTitle,
-  isReply,
-  commentText,
-})
-  console.log("payload of sent notificatio=>>> ", payload)
+    console.log("Receiver:", {
+      id: receiverId.toString(),
+      name: receiver.name,
+      email: receiver.email,
+      emailNotificationsEnabled: receiver.emailNotificationsEnabled,
+    });
 
-  await emitNotification(payload).catch((err) =>
-    console.error('Socket error:', err),
-  );
+    console.log("Is Reply:", isReply);
+    console.log("Community:", communityTitle);
+    console.log("Comment:", commentText);
 
-  if (receiver.email && receiver.emailNotificationsEnabled !== false) {
-    sendCommentOrReplyEmail({
-      sentTo: receiver.email,
-      receiverId: receiver._id.toString(),
-      receiverName: receiver.name || '',
-      actorName: actor.name || '',
-      communityTitle,
-      commentText,
-      isReply,
-    }).catch((err) => console.error('Email failed:', err));
+    const text = isReply
+      ? `${actor.name} odpovedal(a) na komentár k Vášmu príspevku "${communityTitle}": "${commentText}"`
+      : `${actor.name} okomentoval(a) Váš príspevok "${communityTitle}": "${commentText}"`;
+
+    // =========================
+    // SOCKET NOTIFICATION
+    // =========================
+
+    const payload = {
+      userId: actorId,
+      receiverId,
+      userMsg: {
+        image: actor.profileImage || "",
+        text,
+        photos: [],
+      },
+      type: isReply ? "CommentReply" : "NewComment",
+    };
+
+    await emitNotification(payload).catch((err) => {
+      console.error("Socket notification failed:", err);
+    });
+
+    // =========================
+    // EMAIL NOTIFICATION
+    // =========================
+
+    if (!receiver.email) {
+      console.log("Email not sent: receiver has no email");
+      return;
+    }
+
+    if (receiver.emailNotificationsEnabled === false) {
+      console.log(
+        "Email not sent: receiver disabled email notifications"
+      );
+      return;
+    }
+
+    console.log("Sending email to:", receiver.email);
+
+    try {
+      await sendCommentOrReplyEmail({
+        sentTo: receiver.email,
+        receiverId: receiver._id.toString(),
+        receiverName: receiver.name || "",
+        actorName: actor.name || "",
+        communityTitle,
+        commentText,
+        isReply,
+      });
+
+      console.log("✅ Comment/reply email sent successfully");
+    } catch (error) {
+      console.error("❌ Comment/reply email failed:", error);
+    }
+  } catch (error) {
+    console.error(
+      "❌ sentNotificationForCommentOrReply failed:",
+      error
+    );
   }
 };
 
@@ -1608,7 +1739,7 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
 
   const orderLabel = orderType === 'direct'
     ? packageName || serviceType || 'Objednávka'
-    : `formulár – ${serviceType || 'booking'}`;
+    : `${packageName} – ${serviceType || 'Rezervácia'}`;
 
   const text = `Platba za ${orderLabel} (číslo objednávky: ${orderId}) bola spracovaná a označená ako dokončená.`;
 

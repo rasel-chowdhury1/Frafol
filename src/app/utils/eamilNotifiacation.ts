@@ -1513,7 +1513,7 @@ const sendOrderAcceptedEmail = async ({
   const orderLabel =
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík.'
-      : `formulár – ${serviceType || 'booking'}`;
+      : `${packageName} – ${serviceType || 'Rezervácia'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1581,6 +1581,7 @@ const sendPaymentSuccessEmail = async ({
   sentTo,
   receiverName,
   clientName,
+  title,
   orderType,
   serviceType,
   packageName,
@@ -1588,6 +1589,7 @@ const sendPaymentSuccessEmail = async ({
   sentTo: string;
   receiverName: string;
   clientName: string;
+  title: string;
   orderType: 'direct' | 'custom';
   serviceType?: string;
   packageName?: string;
@@ -1595,7 +1597,7 @@ const sendPaymentSuccessEmail = async ({
   const orderLabel =
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík'
-      : `formulár – ${serviceType || 'booking'}`;
+      : `${title} – ${serviceType || 'rezerváciu'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1728,8 +1730,8 @@ const sendNewMessageEmail = async ({
         </p>
 
         <p style="margin-top: 32px;">
-          S pozdravom,<br />
-          <strong>Frafol</strong>
+          S pozdravom<br />
+          Frafol
         </p>
 
       </div>
@@ -1963,7 +1965,7 @@ const sendReviewSubmittedEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/reviews" style="
+          <a href="${clientUrl}/dashboard/professional/review" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -2285,7 +2287,7 @@ const sendDeliveryRequestEmail = async ({
       ? packageName
         ? `"${packageName}"`
         : 'Vaša objednávka'
-      : `formulár – ${serviceType || 'booking'}`;
+      : `${packageName} – ${serviceType || 'booking'}`;
 
   const emailBody = `
     <div style="
@@ -2689,8 +2691,8 @@ const sendOrderDeclinedEmail = async ({
 
   const orderLabel =
     orderType === 'direct'
-      ? packageName || serviceType || 'order'
-      : `formulár – ${serviceType || 'booking'}`;
+      ? packageName || serviceType || 'Objednávka'
+      : `${packageName} – ${serviceType || 'Rezervácia'}`;
 
   const bodyText = isDeliveryDeclined
     ? `klient <strong>${senderName}</strong> požiadal o úpravu objednávky <strong>${orderLabel}</strong>. Po vykonaní úprav ju môžete vo svojom profile znova odovzdať.`
@@ -2767,6 +2769,7 @@ const sendOrderCancelledEmail = async ({
   sentTo,
   receiverName,
   senderName,
+  title,
   orderType,
   serviceType,
   packageName,
@@ -2774,14 +2777,15 @@ const sendOrderCancelledEmail = async ({
   sentTo: string;
   receiverName: string;
   senderName: string;
+  title: string;
   orderType: 'direct' | 'custom';
   serviceType?: string;
   packageName?: string;
 }): Promise<void> => {
   const orderLabel =
     orderType === 'direct'
-      ? packageName || serviceType || 'order'
-      : `formulár – ${serviceType || 'booking'}`;
+      ? packageName || serviceType || 'Objednávka'
+      : `${title} - ${serviceType || 'rezerváciu'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -3029,8 +3033,8 @@ const sendEventOrderPayoutCompletedEmail = async ({
   currency?: string;
 }): Promise<void> => {
   const orderLabel = orderType === 'direct'
-    ? packageName || serviceType || 'order'
-    : `formulár – ${serviceType || 'booking'}`;
+    ? packageName || serviceType || 'Objednávka'
+    : `${packageName} – ${serviceType || 'Rezervácia'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -3177,15 +3181,22 @@ const sendGearDeliveryAcceptedEmail = async ({
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
+
         <p>
           Dobrá správa! <strong>${clientName}</strong> potvrdil(a) prevzatie príslušenstva z objednávky${itemName ? ` „${itemName}“` : ''}.
         </p>
+
         <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
-          Objednávka bola úspešne dokončená!
+          <strong>Objednávka bola úspešne dokončená!</strong>
+          <p style="margin: 10px 0 0; font-weight: bold;">
+            Peniaze budú pripísané na účet do 15 kalendárnych dní.
+          </p>
         </div>
+
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
+          <a href="${clientUrl}/dashboard/professional/gear-order" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
         </div>
+
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
@@ -3407,8 +3418,7 @@ const sendWorkshopDeclinedEmail = async ({
         </div>
 
         <p style="font-size: 14px; color: #555;">
-          If you believe this decision was made in error or have any questions,
-          please contact us at
+          Ak si myslíte, že došlo k omylu, alebo máte akékoľvek otázky, kontaktujte nás na adrese
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
             ${supportEmail}
           </a>.

@@ -53,7 +53,9 @@ const createPaymentSession = async (payload: {
  * 🔹 Confirm Stripe Payment
  */
 const confirmPayment = async (sessionId: string) => {
+
   const dbSession = await mongoose.startSession();
+
   dbSession.startTransaction();
 
 
@@ -88,9 +90,6 @@ const confirmPayment = async (sessionId: string) => {
     const payment = await Payment.findOne({ transactionId: sessionId }).session(
       dbSession,
     );
-
-
-
 
 
     if (!payment) {
@@ -133,6 +132,7 @@ const confirmPayment = async (sessionId: string) => {
             orderType: updatedOrder.orderType as "direct" | "custom",
             userId: new mongoose.Types.ObjectId(payment.userId),
             receiverId: new mongoose.Types.ObjectId(payment.serviceProviderId),
+            title: updatedOrder.title || "",
             serviceType: updatedOrder.serviceType,
             packageName: updatedOrder.packageName || undefined,
           });
@@ -238,7 +238,9 @@ const confirmPayment = async (sessionId: string) => {
               .populate('gearMarketplaceId', 'name price vatAmount totalVatAmount mainPrice condition shippingCompany')
               .lean();
 
-            const client = await User.findById(payment.userId).select('name email').lean();
+            
+
+            const client = await User.findById(payment.userId).select('name email role').lean();
             if (!client?.email) return;
 
             const firstOrder = populatedOrders[0] as any;
@@ -258,7 +260,8 @@ const confirmPayment = async (sessionId: string) => {
             const subtotal = items.reduce((s: number, i: any) => s + i.totalPrice, 0);
             const totalShipping = items.reduce((s: number, i: any) => s + i.shippingCost, 0);
 
-            let invoiceUrl = '';
+            let invoiceUrl = `${config.FRONTEND_URL}`;
+
 
             if (client.role === 'user' || client.role === 'company') {
               invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/gear-order?tab=currentOrder`;
@@ -389,7 +392,7 @@ const confirmPayment = async (sessionId: string) => {
               const totalPrice = ws.mainPrice || payment.amount;
 
 
-                let invoiceUrl = '';
+                let invoiceUrl = `${config.FRONTEND_URL}`;
 
                 if (client.role === 'user' || client.role === 'company') {
                   invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/my-workshop`;

@@ -151,7 +151,12 @@ const declinePackageById = catchAsync(async (req: Request, res: Response) => {
 
 const deletePackage = catchAsync(async (req: Request, res: Response) => {
   
-  const {userId, role} = req.user;
+  const {role} = req.user;
+
+  console.log("req user ==>>> ", req.user);
+  console.log("req params ==>>> ", req.params);
+
+
   await PackageService.deletePackage(req.params.id, req.user.userId, role);
 
   sendResponse(res, {

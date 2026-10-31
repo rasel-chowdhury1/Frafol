@@ -439,8 +439,12 @@ const deleteCommunity = async (
     throw new AppError(404, "Community not found");
   }
 
-  // ✅ Authorization: only owner or admin
-  if (community.authorId.toString() !== userId && userRole !== "admin") {
+  // ✅ Authorization: only owner, admin, or super-admin
+  if (
+    community.authorId.toString() !== userId &&
+    userRole !== "admin" &&
+    userRole !== "super-admin"
+  ) {
     throw new AppError(403, "Unauthorized to delete this community post");
   }
 

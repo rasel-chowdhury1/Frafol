@@ -58,6 +58,7 @@ async function main() {
       console.log(
         colors.green(`---> Frafol server is listening on  : http://${config.ip}:${config.port}`).bold,
       );
+      
     // Initialize Socket.IO
     initSocketIO(socketServer);
 

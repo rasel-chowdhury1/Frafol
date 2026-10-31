@@ -22,6 +22,120 @@ const unlikeCommunity = async (communityId: string, userId: string) => {
   );
 };
 
+// const addCommentOrReply = async (
+//   communityId: string,
+//   userId: string,
+//   text: string,
+//   commentId?: string
+// ) => {
+//   const community = await Community.findById(communityId)
+//     .select("authorId title")
+//     .lean();
+
+//   if (!community) {
+//     throw new AppError(
+//       httpStatus.NOT_FOUND,
+//       "Community not found"
+//     );
+//   }
+
+//   const actorId = new Types.ObjectId(userId);
+
+//   let receiverId = community.authorId;
+//   let isReply = false;
+//   let result;
+
+//   // =========================
+//   // REPLY
+//   // =========================
+//   if (commentId) {
+//     const targetCommentId = new Types.ObjectId(commentId);
+
+//     result = await CommunityEngagementStats.findOneAndUpdate(
+//       {
+//         communityId: new Types.ObjectId(communityId),
+//         "comments._id": targetCommentId,
+//       },
+//       {
+//         $push: {
+//           "comments.$.replies": {
+//             user: actorId,
+//             text,
+//           },
+//         },
+//       },
+//       {
+//         new: true,
+//       }
+//     ).lean();
+
+//     if (!result) {
+//       throw new AppError(
+//         httpStatus.NOT_FOUND,
+//         "Comment not found"
+//       );
+//     }
+
+//     // Find the comment that received the reply
+//     const comment = result.comments.find(
+//       (comment) => comment._id.toString() === commentId
+//     );
+
+//     if (!comment) {
+//       throw new AppError(
+//         httpStatus.NOT_FOUND,
+//         "Comment not found"
+//       );
+//     }
+
+//     // Reply notification goes to comment owner
+//     receiverId = comment.user;
+//     isReply = true;
+//   }
+
+//   // =========================
+//   // NEW COMMENT
+//   // =========================
+//   else {
+//     result = await CommunityEngagementStats.findOneAndUpdate(
+//       {
+//         communityId: new Types.ObjectId(communityId),
+//       },
+//       {
+//         $push: {
+//           comments: {
+//             user: actorId,
+//             text,
+//           },
+//         },
+//       },
+//       {
+//         upsert: true,
+//         new: true,
+//       }
+//     ).lean();
+
+//     // New comment notification goes to community owner
+//     receiverId = community.authorId;
+//   }
+
+//   // =========================
+//   // NOTIFICATION
+//   // =========================
+
+//   await sentNotificationForCommentOrReply({
+//     actorId,
+//     receiverId,
+//     communityTitle: community.title,
+//     isReply,
+//     commentText: text,
+//   }).catch((err) => {
+//     console.error("Notification failed:", err);
+//   });
+
+//   return result;
+// };
+
 const addCommentOrReply = async (
   communityId: string,
   userId: string,
@@ -40,20 +154,55 @@ const addCommentOrReply = async (
   }
 
   const actorId = new Types.ObjectId(userId);
+  const communityObjectId = new Types.ObjectId(communityId);
 
   let receiverId = community.authorId;
   let isReply = false;
   let result;
 
-  // =========================
-  // REPLY
-  // =========================
+  // =====================================================
+  // REPLY TO COMMENT
+  // =====================================================
+
   if (commentId) {
     const targetCommentId = new Types.ObjectId(commentId);
 
+    // First find the existing comment
+    const engagementStats = await CommunityEngagementStats.findOne({
+      communityId: communityObjectId,
+      "comments._id": targetCommentId,
+    }).lean();
+
+    if (!engagementStats) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Comment not found"
+      );
+    }
+
+    // Find exact comment
+    const comment = engagementStats.comments.find(
+      (comment) =>
+        comment._id.toString() === targetCommentId.toString()
+    );
+
+    if (!comment) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Comment not found"
+      );
+    }
+
+    // IMPORTANT:
+    // Reply notification goes to the user who wrote
+    // the original comment.
+    receiverId = comment.user;
+    isReply = true;
+
+    // Add reply
     result = await CommunityEngagementStats.findOneAndUpdate(
       {
-        communityId: new Types.ObjectId(communityId),
+        communityId: communityObjectId,
         "comments._id": targetCommentId,
       },
       {
@@ -75,31 +224,19 @@ const addCommentOrReply = async (
         "Comment not found"
       );
     }
-
-    // Find the comment that received the reply
-    const comment = result.comments.find(
-      (comment) => comment._id.toString() === commentId
-    );
-
-    if (!comment) {
-      throw new AppError(
-        httpStatus.NOT_FOUND,
-        "Comment not found"
-      );
-    }
-
-    // Reply notification goes to comment owner
-    receiverId = comment.user;
-    isReply = true;
   }
 
-  // =========================
+  // =====================================================
   // NEW COMMENT
-  // =========================
+  // =====================================================
+
   else {
+    // New comment notification goes to community owner
+    receiverId = community.authorId;
+
     result = await CommunityEngagementStats.findOneAndUpdate(
       {
-        communityId: new Types.ObjectId(communityId),
+        communityId: communityObjectId,
       },
       {
         $push: {
@@ -114,14 +251,11 @@ const addCommentOrReply = async (
         new: true,
       }
     ).lean();
-
-    // New comment notification goes to community owner
-    receiverId = community.authorId;
   }
 
-  // =========================
-  // NOTIFICATION
-  // =========================
+  // =====================================================
+  // SEND NOTIFICATION
+  // =====================================================
 
   await sentNotificationForCommentOrReply({
     actorId,
@@ -129,8 +263,6 @@ const addCommentOrReply = async (
     communityTitle: community.title,
     isReply,
     commentText: text,
-  }).catch((err) => {
-    console.error("Notification failed:", err);
   });
 
   return result;

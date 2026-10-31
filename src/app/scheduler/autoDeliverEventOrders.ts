@@ -3,8 +3,8 @@ import { EventOrder } from '../modules/eventOrder/eventOrder.model';
 import { GearOrder } from '../modules/gearOrder/gearOrder.model';
 import { logger } from '../utils/logger';
 
-const AUTO_DELIVER_DAYS = 5;
-const AUTO_CANCEL_DAYS = 7;
+const AUTO_DELIVER_DAYS = 7;
+const AUTO_CANCEL_DAYS = 3;
 
 // ─── Auto-deliver ────────────────────────────────────────────────────────────
 const runAutoDeliverJob = async () => {
@@ -61,7 +61,7 @@ const runAutoCancelUnpaidJob = async () => {
       order.statusTimestamps.cancelledAt = now;
       order.statusHistory.push({
         status: 'cancelled',
-        reason: 'Auto-cancelled after 7 days — payment not received',
+        reason: 'Auto-cancelled after 3 days — payment not received',
         changedAt: now,
       });
       return order.save();
