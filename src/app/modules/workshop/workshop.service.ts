@@ -6,8 +6,21 @@ import AppError from "../../error/AppError";
 import { WorkshopParticipant } from "../workshopParticipant/workshopParticipant.model";
 import httpStatus from 'http-status';
 import mongoose from "mongoose";
-import { sentNotificationForWorkshopApproved, sentNotificationForWorkshopDeclined } from "../../../socketIo";
+import {
+  sentNotificationForWorkshopApproved,
+  sentNotificationForWorkshopDeclined,
+  sentNotificationForWorkshopCompletedToInstructor,
+  sentNotificationForWorkshopCompletedToClient,
+} from "../../../socketIo";
 import { CommissionSetupService } from "../../commissionSetup/commissionSetup.service";
+import { User } from "../user/user.model";
+import { Payment } from "../payment/payment.model";
+import config from "../../config";
+import { USER_ROLE } from "../user/user.constants";
+import {
+  sendWorkshopInvoiceEmail,
+  sendWorkshopProfessionalFinalInvoiceEmail,
+} from "../../utils/eamilNotifiacation";
 
 
 const createWorkshop = async (payload: IWorkshop) => {
@@ -320,6 +333,197 @@ const deleteWorkshop = async (id: string, userId: string, role: string) => {
   );
 };
 
+const processWorkshopCompletion = async (workshopId: string | mongoose.Types.ObjectId) => {
+  const workshop = await Workshop.findById(workshopId);
+  if (!workshop || workshop.isDeleted) {
+    return null;
+  }
+
+  // Idempotency: don't re-send if postWorkshopEmailsSent is already true
+  if (workshop.postWorkshopEmailsSent) {
+    return workshop;
+  }
+
+  const [instructor, participants] = await Promise.all([
+    User.findById(workshop.authorId)
+      .select('name email role companyName ico dic ic_dph address town country isRegisterAsCompany')
+      .lean(),
+    WorkshopParticipant.find({
+      workshopId: workshop._id,
+      isDeleted: false,
+      paymentStatus: 'completed',
+    }),
+  ]);
+
+  const workshopDateStr = workshop.date
+    ? new Date(workshop.date).toLocaleDateString('en-GB')
+    : '';
+  const workshopLocation =
+    workshop.locationType === 'online'
+      ? workshop.workshopLink || ''
+      : workshop.location || '';
+
+  // 1. Send final invoice emails to all enrolled clients (participants)
+  for (const participant of participants) {
+    try {
+      const [clientUser, payment] = await Promise.all([
+        User.findById(participant.clientId).select('name email role').lean(),
+        Payment.findOne({
+          workshopId: workshop._id,
+          userId: participant.clientId,
+          paymentStatus: 'completed',
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+      ]);
+
+      const clientEmail = (clientUser as any)?.email;
+      if (clientEmail) {
+        let invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/my-workshop`;
+        if (
+          clientUser?.role &&
+          ['photographer', 'videographer', 'both'].includes(clientUser.role)
+        ) {
+          invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/workshop`;
+        }
+
+        const basePrice = workshop.price || 0;
+        const vatAmount = workshop.vatAmount || 0;
+        const totalPrice =
+          payment?.amount || workshop.mainPrice || workshop.price || 0;
+
+        await sendWorkshopInvoiceEmail({
+          sentTo: clientEmail,
+          customerName:
+            (clientUser as any)?.name || participant.name || 'Účastník',
+          workshopTitle: workshop.title,
+          workshopDate: workshopDateStr,
+          workshopTime: workshop.time || '',
+          location: workshopLocation,
+          locationType: workshop.locationType,
+          basePrice,
+          vatPercent: workshop.vatPercent || 0,
+          vatAmount,
+          totalPrice,
+          orderId: participant.orderId,
+          transactionId: payment?.transactionId || participant.orderId,
+          paymentDate: payment?.createdAt
+            ? new Date(payment.createdAt).toLocaleDateString('en-GB')
+            : participant.createdAt
+            ? new Date(participant.createdAt).toLocaleDateString('en-GB')
+            : new Date().toLocaleDateString('en-GB'),
+          streetAddress: participant.streetAddress,
+          town: participant.town,
+          country: participant.country,
+          isRegisterAsCompany: participant.isRegisterAsCompany,
+          companyName: participant.companyName,
+          ICO: participant.ICO,
+          DIC: participant.DIC,
+          IC_DPH: participant.IC_DPH,
+          instructorName: (instructor as any)?.name,
+          invoiceUrl,
+          invoiceType: 'completed',
+        });
+      }
+
+      // In-app socket notification for client
+      sentNotificationForWorkshopCompletedToClient({
+        clientId: participant.clientId as any,
+        workshopTitle: workshop.title,
+      }).catch((err) =>
+        console.error('Failed to send workshop client socket notification:', err),
+      );
+
+      participant.isCompleted = true;
+      participant.finalInvoiceSent = true;
+      await participant.save();
+    } catch (clientErr) {
+      console.error(
+        `Failed to process workshop final invoice for participant ${participant._id}:`,
+        clientErr,
+      );
+    }
+  }
+
+  // 2. Send final invoice email with 15-day payout notice to the professional (instructor)
+  if ((instructor as any)?.email) {
+    try {
+      const totalParticipants = participants.length;
+      let totalEarnings = participants.reduce(
+        (sum, p) => sum + (p.instructorPayment?.amount || 0),
+        0,
+      );
+      const totalRevenue = participants.reduce(
+        (sum, p) => sum + (workshop.mainPrice || workshop.price || 0),
+        0,
+      );
+
+      // Fallback if instructorPayment amount was not explicitly recorded
+      if (totalEarnings === 0 && totalParticipants > 0) {
+        totalEarnings = (workshop.price || workshop.mainPrice || 0) * totalParticipants;
+      }
+
+      const participantItems = participants.map((p) => ({
+        name: p.name || 'Účastník',
+        orderId: p.orderId,
+        amount: p.instructorPayment?.amount || workshop.price || 0,
+      }));
+
+      await sendWorkshopProfessionalFinalInvoiceEmail({
+        sentTo: (instructor as any).email,
+        professionalName: (instructor as any).name || 'Lektor',
+        workshopTitle: workshop.title,
+        workshopDate: workshopDateStr,
+        workshopTime: workshop.time || '',
+        location: workshopLocation,
+        locationType: workshop.locationType,
+        totalParticipants,
+        totalEarnings,
+        totalRevenue: totalRevenue > 0 ? totalRevenue : undefined,
+        basePrice: workshop.price,
+        currency: 'EUR',
+        participants: participantItems,
+        streetAddress: workshop.streetAddress || (instructor as any)?.address,
+        town: workshop.town || (instructor as any)?.town,
+        country: workshop.country || (instructor as any)?.country,
+        isRegisterAsCompany:
+          workshop.isRegisterAsCompany ||
+          (instructor as any)?.isRegisterAsCompany,
+        companyName:
+          workshop.companyName || (instructor as any)?.companyName,
+        ICO: workshop.ICO || (instructor as any)?.ico,
+        DIC: workshop.DIC || (instructor as any)?.dic,
+        IC_DPH: workshop.IC_DPH || (instructor as any)?.ic_dph,
+        invoiceUrl: `${config.FRONTEND_URL}/dashboard/professional/workshop`,
+      });
+
+      // In-app socket notification for instructor
+      sentNotificationForWorkshopCompletedToInstructor({
+        instructorId: workshop.authorId as any,
+        workshopTitle: workshop.title,
+      }).catch((err) =>
+        console.error(
+          'Failed to send workshop instructor socket notification:',
+          err,
+        ),
+      );
+    } catch (instErr) {
+      console.error(
+        `Failed to send workshop final invoice to instructor ${workshop.authorId}:`,
+        instErr,
+      );
+    }
+  }
+
+  // 3. Mark workshop as completed & post-workshop emails sent
+  workshop.isCompleted = true;
+  workshop.completedAt = new Date();
+  workshop.postWorkshopEmailsSent = true;
+  await workshop.save();
+
+  return workshop;
+};
+
 export const WorkshopService = {
   createWorkshop,
   getAllWorkshops,
@@ -333,4 +537,5 @@ export const WorkshopService = {
   updateApprovalStatusByAdmin,
   declineWorkshopById,
   deleteWorkshop,
+  processWorkshopCompletion,
 };

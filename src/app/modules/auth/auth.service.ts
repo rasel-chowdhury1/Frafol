@@ -20,7 +20,7 @@ const login = async (payload: TLogin) => {
   }
 
   if (!(await User.isPasswordMatched(payload.password, user.password))) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Password does not match');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Nesprávne heslo');
   }
 
   const jwtPayload: {
@@ -191,7 +191,7 @@ const resetPassword = async ({
   confirmPassword: string;
 }) => {
   if (newPassword !== confirmPassword) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Password does not match');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Nesprávne heslo');
   }
 
   if (!token) {

@@ -29,6 +29,9 @@ export interface IWorkshop {
   IC_DPH?: string;
   name?: string;
   isDeleted?: boolean;
+  isCompleted?: boolean;
+  completedAt?: Date;
+  postWorkshopEmailsSent?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

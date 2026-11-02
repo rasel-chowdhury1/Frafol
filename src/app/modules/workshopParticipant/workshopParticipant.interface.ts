@@ -30,6 +30,8 @@ export interface IWorkshopParticipant {
   earlyServiceCommencementAccepted: boolean;
   withdrawalRightAcknowledgementAccepted: boolean;
   isDeleted?: boolean;
+  isCompleted?: boolean;
+  finalInvoiceSent?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

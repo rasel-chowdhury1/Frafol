@@ -135,6 +135,7 @@ const confirmPayment = async (sessionId: string) => {
             title: updatedOrder.title || "",
             serviceType: updatedOrder.serviceType,
             packageName: updatedOrder.packageName || undefined,
+            eventDate: updatedOrder.date,
           });
 
           // ✅ Send invoice email (non-blocking)

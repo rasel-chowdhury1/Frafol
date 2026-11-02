@@ -7,6 +7,7 @@ import {
   sendEventOrderInvoiceEmail,
   sendGearOrderInvoiceEmail,
   sendWorkshopInvoiceEmail,
+  sendWorkshopProfessionalFinalInvoiceEmail,
 } from "../../utils/eamilNotifiacation";
 
 const getRecipient = (req: Request) => {
@@ -49,6 +50,8 @@ const testEventOrderInvoice = catchAsync(async (req: Request, res: Response) => 
     isRegisterAsCompany: false,
     serviceProviderName: "Peter Fotograf",
     invoiceType: "payment",
+    invoiceUrl: "https://frafol.sk/dashboard/my-account/orders",
+    billInfoShow: true,
   });
 
   sendResponse(res, {
@@ -96,6 +99,7 @@ const testGearOrderInvoice = catchAsync(async (req: Request, res: Response) => {
     postCode: "811 01",
     town: "Bratislava",
     loginAsCompany: false,
+    invoiceUrl: "https://frafol.sk/dashboard/my-account/orders",
   });
 
   sendResponse(res, {
@@ -139,8 +143,83 @@ const testWorkshopInvoice = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const testWorkshopCompletedClient = catchAsync(async (req: Request, res: Response) => {
+  const to = getRecipient(req);
+
+  await sendWorkshopInvoiceEmail({
+    sentTo: to,
+    customerName: "Ján Testovací (Klient)",
+    workshopTitle: "Masterclass portrétnej fotografie",
+    workshopDate: today(),
+    workshopTime: "10:00 - 15:00",
+    location: "Ateliér Bratislava, Mlynské Nivy",
+    locationType: "offline",
+    basePrice: 150,
+    vatPercent: 20,
+    vatAmount: 30,
+    totalPrice: 180,
+    orderId: "WORKSHOP-20261031-0001",
+    transactionId: "txn_test_client_final_12345",
+    paymentDate: today(),
+    streetAddress: "Hlavná 15",
+    town: "Bratislava",
+    country: "Slovensko",
+    isRegisterAsCompany: false,
+    instructorName: "Peter Hlavný (Lektor)",
+    invoiceType: "completed",
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Client post-workshop completed final invoice test email sent to ${to}`,
+    data: null,
+  });
+});
+
+const testWorkshopCompletedProfessional = catchAsync(async (req: Request, res: Response) => {
+  const to = getRecipient(req);
+
+  await sendWorkshopProfessionalFinalInvoiceEmail({
+    sentTo: to,
+    professionalName: "Peter Hlavný (Lektor)",
+    workshopTitle: "Masterclass portrétnej fotografie",
+    workshopDate: today(),
+    workshopTime: "10:00 - 15:00",
+    location: "Ateliér Bratislava, Mlynské Nivy",
+    locationType: "offline",
+    totalParticipants: 3,
+    totalEarnings: 405, // e.g. 3 * 135 net earnings
+    totalRevenue: 540,
+    basePrice: 150,
+    currency: "EUR",
+    participants: [
+      { name: "Ján Novák", orderId: "WORKSHOP-20261031-0001", amount: 135 },
+      { name: "Martina Kováčová", orderId: "WORKSHOP-20261031-0002", amount: 135 },
+      { name: "Tomáš Horváth", orderId: "WORKSHOP-20261031-0003", amount: 135 },
+    ],
+    isRegisterAsCompany: true,
+    companyName: "Peter Photography s.r.o.",
+    ICO: "12345678",
+    DIC: "2021234567",
+    IC_DPH: "SK2021234567",
+    streetAddress: "Obchodná 25",
+    town: "Bratislava",
+    country: "Slovensko",
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Professional post-workshop final invoice (15-day payout notice) test email sent to ${to}`,
+    data: null,
+  });
+});
+
 export const EmailTestController = {
   testEventOrderInvoice,
   testGearOrderInvoice,
   testWorkshopInvoice,
+  testWorkshopCompletedClient,
+  testWorkshopCompletedProfessional,
 };

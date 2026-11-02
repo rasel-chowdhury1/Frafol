@@ -108,7 +108,7 @@ export const createStripePaymentSession = async (payload: {
     });
 
     if (existingParticipant) {
-      throw new AppError(400, "You are already registered for this workshop");
+      throw new AppError(400, "Na tento workshop ste už prihlásení");
     }
 
     // Check if workshop expired

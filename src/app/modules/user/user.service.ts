@@ -1816,7 +1816,7 @@ const deleteMyAccount = async (id: string, payload: DeleteAccountPayload) => {
   }
 
   if (!(await User.isPasswordMatched(payload.password, user.password))) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Password does not match');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Nesprávne heslo');
   }
 
   const result = await User.findByIdAndUpdate(
@@ -2099,6 +2099,33 @@ const getOverviewOfSpecificUser = async (userId: string) => {
       // Payment stats
       Payment.aggregate([
         { $match: { userId: userObjectId, paymentStatus: 'completed' } },
+        {
+          $lookup: {
+            from: EventOrder.collection.name,
+            localField: 'eventOrderId',
+            foreignField: '_id',
+            as: 'eventOrder',
+          },
+        },
+        {
+          $lookup: {
+            from: GearOrder.collection.name,
+            localField: 'gearOrderIds',
+            foreignField: '_id',
+            as: 'gearOrders',
+          },
+        },
+        // Exclude refunded/cancelled orders that were already paid
+        {
+          $match: {
+            eventOrder: {
+              $not: { $elemMatch: { status: 'cancelled', paymentStatus: 'Paid' } },
+            },
+            gearOrders: {
+              $not: { $elemMatch: { orderStatus: 'cancelled', paymentStatus: 'received' } },
+            },
+          },
+        },
         { $group: { _id: null, totalSpent: { $sum: '$amount' } } },
       ]),
 

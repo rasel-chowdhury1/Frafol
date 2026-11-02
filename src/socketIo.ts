@@ -630,6 +630,7 @@ export const sentNotificationForPaymentSuccess = async ({
   title,
   serviceType,
   packageName,
+  eventDate,
 }: {
   orderType: 'direct' | 'custom';
   userId: mongoose.Types.ObjectId;
@@ -637,6 +638,7 @@ export const sentNotificationForPaymentSuccess = async ({
   title: string;
   serviceType?: string;
   packageName?: string;
+  eventDate?: Date;
 }) => {
   // Fetch client info
   const client = await User.findById(userId).select('name email profileImage');
@@ -687,6 +689,7 @@ export const sentNotificationForPaymentSuccess = async ({
       orderType,
       serviceType,
       packageName,
+      eventDate,
     }).catch((err) => console.error('Email notification failed:', err));
   }
 
@@ -1012,6 +1015,44 @@ export const sentNotificationForCancelRequest = async ({
       receiverRole: receiver.role
     }).catch((err) => console.error('Email failed:', err));
   }
+};
+
+export const sentNotificationForWorkshopCompletedToInstructor = async ({
+  instructorId,
+  workshopTitle,
+}: {
+  instructorId: mongoose.Types.ObjectId;
+  workshopTitle: string;
+}) => {
+  const text = `Váš kurz "${workshopTitle}" bol úspešne ukončený. Záverečná faktúra bola vystavená. Peniaze vám budú odoslané na účet do 15 kalendárnych dní.`;
+
+  const payload = {
+    userId: instructorId,
+    receiverId: instructorId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'WorkshopCompleted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+};
+
+export const sentNotificationForWorkshopCompletedToClient = async ({
+  clientId,
+  workshopTitle,
+}: {
+  clientId: mongoose.Types.ObjectId;
+  workshopTitle: string;
+}) => {
+  const text = `Kurz "${workshopTitle}" bol úspešne ukončený. Vašu záverečnú faktúru nájdete vo vašom profile.`;
+
+  const payload = {
+    userId: clientId,
+    receiverId: clientId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'WorkshopCompleted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
 };
 
 
@@ -1775,7 +1816,7 @@ export const sentNotificationForGearDeliveryRequest = async ({
   itemName?: string;
 }) => {
   const seller = await User.findById(sellerId).select('name profileImage');
-  const client = await User.findById(clientId).select('name email');
+  const client = await User.findById(clientId).select('name email role');
 
   if (!seller || !client) return;
 
@@ -1794,6 +1835,7 @@ export const sentNotificationForGearDeliveryRequest = async ({
     sendGearDeliveryRequestEmail({
       sentTo: client.email,
       receiverName: client.name || '',
+      receiverRole: client.role,
       senderName: seller.name || '',
       itemName,
     }).catch((err) => console.error('Email failed:', err));

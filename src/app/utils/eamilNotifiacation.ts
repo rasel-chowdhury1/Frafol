@@ -632,6 +632,10 @@ const frafolChoiceEmail = async ({
       </table>
       <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
 
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${clientUrl}/dashboard/professional/frafol-choice" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Zobraziť a stiahnuť faktúru</a>
+      </div>
+
       ${policiesSection()}
 
       <p style="margin-top:24px;font-size:14px;">
@@ -1114,6 +1118,10 @@ const frafolChoiceRenewalSuccessEmail = async ({
       <hr style="border:none;border-top:1px solid #e0e0e0;margin:16px 0;" />
       <p style="font-size:13px;color:#777;">Faktúru za obnovenie služby nájdete v prílohe e-mailu vo formáte PDF. Uschovajte si ju.</p>
 
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${clientUrl}/dashboard/professional/frafol-choice" style="display:inline-block;padding:12px 22px;background-color:${primaryColor};color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Zobraziť a stiahnuť faktúru</a>
+      </div>
+
       ${policiesSection()}
 
       <p style="margin-top:24px;font-size:14px;">Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a></p>
@@ -1551,7 +1559,7 @@ const sendOrderAcceptedEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/my-account/orders" style="
+          <a href="${clientUrl}/dashboard/my-account/orders?tab=accepted" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1585,6 +1593,7 @@ const sendPaymentSuccessEmail = async ({
   orderType,
   serviceType,
   packageName,
+  eventDate,
 }: {
   sentTo: string;
   receiverName: string;
@@ -1593,11 +1602,15 @@ const sendPaymentSuccessEmail = async ({
   orderType: 'direct' | 'custom';
   serviceType?: string;
   packageName?: string;
+  eventDate?: Date;
 }): Promise<void> => {
   const orderLabel =
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík'
       : `${title} – ${serviceType || 'rezerváciu'}`;
+
+  const orderTab =
+    eventDate && new Date(eventDate) > new Date() ? 'upcoming' : 'inProgress';
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1635,7 +1648,7 @@ const sendPaymentSuccessEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/event-orders" style="
+          <a href="${clientUrl}/dashboard/professional/event-orders?tab=${orderTab}" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -3123,14 +3136,21 @@ const sendWorkshopPayoutCompletedEmail = async ({
 const sendGearDeliveryRequestEmail = async ({
   sentTo,
   receiverName,
+  receiverRole,
   senderName,
   itemName,
 }: {
   sentTo: string;
   receiverName: string;
+  receiverRole?: string;
   senderName: string;
   itemName?: string;
 }): Promise<void> => {
+  const isProfessional = ['photographer', 'videographer', 'both'].includes(receiverRole || '');
+  const confirmPath = isProfessional
+    ? '/dashboard/professional/gear-purchases?tab=toConfirm'
+    : '/dashboard/my-account/gear-order?tab=toConfirm';
+
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
       <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
@@ -3139,21 +3159,28 @@ const sendGearDeliveryRequestEmail = async ({
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
+
         <p>
           Predajca <strong>${senderName}</strong> označil Vašu objednávku ${itemName ? ` <strong>"${itemName}"</strong>` : ''}  ako odoslanú. Po jej prevzatí, prosím, potvrďte doručenie.
         </p>
+
         <div style="background-color: #fdf0ec; border-left: 4px solid ${primaryColor}; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           <strong>Vyžaduje sa Vaše potvrdenie:</strong> Skontrolujte objednávku a potvrďte alebo odmietnite jej prevzatie vo svojom účte.
         </div>
+
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/my-account/gear-order?tab=toConfirm" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Potvrdiť prevzatie</a>
+          <a href="${clientUrl}${confirmPath}" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Potvrdiť prevzatie</a>
         </div>
+
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </p>
+
         ${policiesSection()}
+
         ${regardsSection()}
+        
       </div>
       ${emailFooter()}
     </div>
@@ -3952,7 +3979,8 @@ interface WorkshopInvoiceParams {
   DIC?: string;
   IC_DPH?: string;
   instructorName?: string;
-  invoiceUrl: string;
+  invoiceUrl?: string;
+  invoiceType?: 'payment' | 'completed';
 }
 
 const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<void> => {
@@ -3960,8 +3988,19 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
     sentTo, customerName, workshopTitle, workshopDate, workshopTime,
     location, locationType, basePrice, vatPercent = 0, vatAmount, totalPrice,
     orderId, transactionId, paymentDate, streetAddress, town, country,
-    isRegisterAsCompany, companyName, ICO, DIC, IC_DPH, instructorName,invoiceUrl
+    isRegisterAsCompany, companyName, ICO, DIC, IC_DPH, instructorName,
+    invoiceUrl = `${clientUrl}/dashboard/my-account/my-workshop`,
+    invoiceType = 'payment'
   } = params;
+
+  const isCompleted = invoiceType === 'completed';
+  const headerTitle = isCompleted ? 'Kurz bol úspešne dokončený ✅' : 'Faktúra za prihlásenie na kurz';
+  const introText = isCompleted
+    ? `Váš kurz <strong>„${workshopTitle}“</strong> bol úspešne ukončený. Ďakujeme za vašu účasť! Nižšie nájdete vašu záverečnú faktúru k objednávke.`
+    : 'Vaše prihlásenie na kurz bolo potvrdené. Faktúru nájdete v prílohe tohto e-mailu.';
+  const emailSubject = isCompleted
+    ? `Kurz dokončený – záverečná faktúra – ${workshopTitle} | Frafol`
+    : `Faktúra za kurz – ${workshopTitle} | Frafol`;
 
   const billingRows = isRegisterAsCompany ? `
     <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Spoločnosť</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
@@ -3970,19 +4009,27 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
     ${IC_DPH ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IČ DPH</td><td style="padding:4px 8px;font-size:13px;">${IC_DPH}</td></tr>` : ''}
   ` : '';
 
+  const completedBanner = isCompleted ? `
+    <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #166534; font-weight: bold;">
+      Kurz bol úspešne ukončený. Ďakujeme za vašu účasť!
+    </div>
+  ` : '';
+
   const emailBody = `
     <div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#ffffff;">
 
       <div style="background-color:${primaryColor};text-align:center;padding:24px;">
         <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
-        <h1 style="color:#ffffff;margin:0;font-size:22px;">Faktúra za prihlásenie na kurz</h1>
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">${headerTitle}</h1>
       </div>
 
       <div style="padding:28px;color:#333;">
 
         <p>Dobrý deň,  <strong>${customerName}</strong>,</p>
 
-        <p>Vaše prihlásenie na kurz bolo potvrdené. Faktúru nájdete v prílohe tohto e-mailu.</p>
+        <p>${introText}</p>
+
+        ${completedBanner}
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;">
           <tr>
@@ -4053,7 +4100,7 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
           </tr>
         </table>
 
-                <div style="text-align:center;margin:28px 0;">
+        <div style="text-align:center;margin:28px 0;">
           <a
             href="${invoiceUrl}"
             target="_blank"
@@ -4086,7 +4133,196 @@ const sendWorkshopInvoiceEmail = async (params: WorkshopInvoiceParams): Promise<
     </div>
   `;
 
-  await sendEmail(sentTo, `Faktúra za kurz – ${workshopTitle} | Frafol`, emailBody);
+  await sendEmail(sentTo, emailSubject, emailBody);
+};
+
+export interface WorkshopProfessionalParticipantItem {
+  name: string;
+  orderId: string;
+  amount: number;
+}
+
+export interface WorkshopProfessionalFinalInvoiceParams {
+  sentTo: string;
+  professionalName: string;
+  workshopTitle: string;
+  workshopDate: string;
+  workshopTime: string;
+  location?: string;
+  locationType?: string;
+  totalParticipants: number;
+  totalEarnings: number;
+  totalRevenue?: number;
+  basePrice?: number;
+  currency?: string;
+  participants?: WorkshopProfessionalParticipantItem[];
+  streetAddress?: string;
+  town?: string;
+  country?: string;
+  isRegisterAsCompany?: boolean;
+  companyName?: string;
+  ICO?: string;
+  DIC?: string;
+  IC_DPH?: string;
+  invoiceUrl?: string;
+}
+
+const sendWorkshopProfessionalFinalInvoiceEmail = async (
+  params: WorkshopProfessionalFinalInvoiceParams,
+): Promise<void> => {
+  const {
+    sentTo, professionalName, workshopTitle, workshopDate, workshopTime,
+    location, locationType, totalParticipants, totalEarnings, totalRevenue,
+    basePrice, currency = 'EUR', participants = [], streetAddress, town, country,
+    isRegisterAsCompany, companyName, ICO, DIC, IC_DPH,
+    invoiceUrl = `${clientUrl}/dashboard/professional/workshop`,
+  } = params;
+
+  const billingRows = isRegisterAsCompany ? `
+    <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Spoločnosť</td><td style="padding:4px 8px;font-size:13px;">${companyName || ''}</td></tr>
+    ${ICO ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IČO</td><td style="padding:4px 8px;font-size:13px;">${ICO}</td></tr>` : ''}
+    ${DIC ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">DIČ</td><td style="padding:4px 8px;font-size:13px;">${DIC}</td></tr>` : ''}
+    ${IC_DPH ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">IČ DPH</td><td style="padding:4px 8px;font-size:13px;">${IC_DPH}</td></tr>` : ''}
+  ` : '';
+
+  const participantRows = participants.length
+    ? participants.map(
+        (p) => `
+          <tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:6px 4px;font-size:13px;">${p.name || 'Účastník'}</td>
+            <td style="padding:6px 4px;font-size:13px;font-family:monospace;">${p.orderId}</td>
+            <td style="padding:6px 4px;text-align:right;font-size:13px;font-weight:bold;">${p.amount.toFixed(2)} ${currency}</td>
+          </tr>
+        `,
+      ).join('')
+    : `<tr><td colspan="3" style="padding:8px 4px;color:#777;font-size:13px;">Žiadni účastníci</td></tr>`;
+
+  const emailBody = `
+    <div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;background-color:#ffffff;">
+
+      <div style="background-color:${primaryColor};text-align:center;padding:24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width:150px;display:block;margin:0 auto 12px;" />
+        <h1 style="color:#ffffff;margin:0;font-size:22px;">Kurz bol úspešne dokončený ✅</h1>
+      </div>
+
+      <div style="padding:28px;color:#333;">
+
+        <p>Dobrý deň, <strong>${professionalName}</strong>,</p>
+
+        <p>
+          váš kurz <strong>„${workshopTitle}“</strong> bol úspešne ukončený. Ďakujeme za skvelú organizáciu a realizáciu kurzu! Nižšie nájdete záverečnú faktúru a vyúčtovanie odmeny.
+        </p>
+
+        <!-- 💰 15-day payout notice box -->
+        <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px 20px; border-radius: 6px; margin: 22px 0; font-size: 14px; color: #333333;">
+          <p style="margin: 0 0 6px 0; font-weight: bold; color: #166534; font-size: 16px;">
+            Informácia o vyplatení peňazí
+          </p>
+          <p style="margin: 0; font-size: 14px; color: #15803d; line-height: 1.5;">
+            Peniaze vám budú odoslané na bankový účet uvedený vo vašom profile <strong>do 15 kalendárnych dní</strong>.
+          </p>
+          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #bbf7d0; font-size: 15px; font-weight: bold; color: #166534;">
+            Suma na vyplatenie: ${totalEarnings.toFixed(2)} ${currency}
+          </div>
+        </div>
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Podrobnosti o workshope</p>
+        <div style="background-color:#fdf0ec;border:1px solid ${primaryColor};border-radius:6px;padding:16px;margin-bottom:20px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr>
+              <td style="padding:5px 0;color:#777;">Kurz</td>
+              <td style="padding:5px 0;text-align:right;font-weight:bold;">${workshopTitle}</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 0;color:#777;">Dátum a čas</td>
+              <td style="padding:5px 0;text-align:right;">${workshopDate} o ${workshopTime}</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 0;color:#777;">Formát</td>
+              <td style="padding:5px 0;text-align:right;text-transform:capitalize;">${locationType || 'Osobne'}</td>
+            </tr>
+            ${location ? `<tr><td style="padding:5px 0;color:#777;">Miesto / odkaz</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
+            <tr>
+              <td style="padding:5px 0;color:#777;">Počet účastníkov</td>
+              <td style="padding:5px 0;text-align:right;font-weight:bold;">${totalParticipants}</td>
+            </tr>
+          </table>
+        </div>
+
+        ${streetAddress || isRegisterAsCompany ? `
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Fakturačné údaje lektora</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+          <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Meno</td><td style="padding:4px 8px;font-size:13px;">${professionalName}</td></tr>
+          ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Adresa</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
+          ${billingRows}
+        </table>
+        <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;" />
+        ` : ''}
+
+        ${participants.length ? `
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Zoznam prihlásených účastníkov</p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
+          <thead>
+            <tr style="border-bottom:2px solid #e0e0e0;text-align:left;color:#777;">
+              <th style="padding:6px 4px;">Meno účastníka</th>
+              <th style="padding:6px 4px;">ID objednávky</th>
+              <th style="padding:6px 4px;text-align:right;">Odmena</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${participantRows}
+          </tbody>
+        </table>
+        ` : ''}
+
+        <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Zhrnutie vyúčtovania</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          ${basePrice !== undefined ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Základná cena za účastníka</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${basePrice.toFixed(2)} ${currency}</td></tr>` : ''}
+          <tr>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Celkový počet účastníkov</td>
+            <td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${totalParticipants}</td>
+          </tr>
+          ${totalRevenue !== undefined ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;color:#555;">Celková vybraná suma</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;text-align:right;">${totalRevenue.toFixed(2)} ${currency}</td></tr>` : ''}
+          <tr>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;color:${primaryColor};">Celková suma na vyplatenie</td>
+            <td style="padding:10px 0;font-weight:bold;font-size:16px;text-align:right;color:${primaryColor};">${totalEarnings.toFixed(2)} ${currency}</td>
+          </tr>
+        </table>
+
+        <div style="text-align:center;margin:28px 0;">
+          <a
+            href="${invoiceUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              display:inline-block;
+              background-color:${primaryColor};
+              color:#ffffff;
+              text-decoration:none;
+              padding:12px 24px;
+              border-radius:6px;
+              font-size:14px;
+              font-weight:bold;
+            "
+          >
+            Zobraziť kurz a vyúčtovanie
+          </a>
+        </div>
+
+        ${policiesSection()}
+
+        <p style="margin-top:24px;font-size:14px;">
+          Máte otázky? Kontaktujte nás na <a href="mailto:${supportEmail}" style="color:${primaryColor};text-decoration:none;">${supportEmail}</a>.
+        </p>
+
+        ${regardsSection()}
+      </div>
+
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Kurz ukončený – záverečná faktúra a informácia o platbe: "${workshopTitle}" | Frafol`, emailBody);
 };
 
 interface GearInvoiceItem {
@@ -4306,5 +4542,6 @@ export {
   sendPackageDeclinedEmail, 
   sendEventOrderInvoiceEmail, 
   sendWorkshopInvoiceEmail, 
+  sendWorkshopProfessionalFinalInvoiceEmail,
   sendGearOrderInvoiceEmail 
 };

@@ -11,7 +11,7 @@ const subscribeByEmail = async (email: string): Promise<ISubscribe> => {
   const existing = await Subscribe.findOne({ email });
 
   if (existing) {
-    throw new AppError(400, "This email is already subscribed");
+    throw new AppError(400, "Tento email je už prihláseny");
   }
 
   // Create verification token

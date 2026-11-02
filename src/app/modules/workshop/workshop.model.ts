@@ -37,6 +37,9 @@ const workshopSchema = new Schema<IWorkshop>(
     IC_DPH: { type: String },
     name: { type: String },
     isDeleted: { type: Boolean, default: false },
+    isCompleted: { type: Boolean, default: false },
+    completedAt: { type: Date },
+    postWorkshopEmailsSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

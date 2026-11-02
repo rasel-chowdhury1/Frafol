@@ -22,6 +22,15 @@ router
     "/workshop-invoice",
     // auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
     EmailTestController.testWorkshopInvoice
+  )
+  .get(
+    "/workshop-completed-client",
+    EmailTestController.testWorkshopCompletedClient
+  )
+  
+  .get(
+    "/workshop-completed-professional",
+    EmailTestController.testWorkshopCompletedProfessional
   );
 
 export const EmailTestRoutes = router;

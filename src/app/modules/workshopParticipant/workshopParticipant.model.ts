@@ -62,6 +62,8 @@ const workshopParticipantSchema = new Schema<IWorkshopParticipant>(
     },
 
     isDeleted: { type: Boolean, default: false },
+    isCompleted: { type: Boolean, default: false },
+    finalInvoiceSent: { type: Boolean, default: false },
   },
   {
     timestamps: true,
