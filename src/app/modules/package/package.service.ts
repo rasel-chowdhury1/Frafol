@@ -170,12 +170,15 @@ const updatePackage = async (id: string, userId: string, payload: IUpdatePackage
 };
 
 const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: string) => {
-  const updateData: Record<string, any> = { approvalStatus: status };
-  if (status === 'rejected' && reason) {
+
+  const approvalStatus = status === 'cancelled' ? 'rejected' : status;
+
+  const updateData: Record<string, any> = { approvalStatus };
+
+  if (approvalStatus === 'rejected' && reason) {
     updateData.declineReason = reason;
   }
 
-  console.log("update approval status data =>> ", updateData)
 
   const pkg = await Package.findOneAndUpdate(
     { _id: id, isDeleted: false },
@@ -183,16 +186,16 @@ const updateApprovalStatusByAdmin = async (id: string, status: string, reason?: 
     { new: true }
   ).populate({ path: 'authorId', select: 'name email' });
 
-  if (pkg && status === 'approved') {
+
+  if (pkg && approvalStatus === 'approved') {
     sentNotificationForPackageApproved({
-      receiverId: pkg.authorId as mongoose.Types.ObjectId,
+      receiverId: pkg.authorId._id as mongoose.Types.ObjectId,
       packageTitle: pkg.title,
     }).catch((err) => console.error('Package approved notification failed:', err));
-  } else if (pkg && status === 'rejected' && reason) {
+  } else if (pkg && approvalStatus === 'rejected' && reason) {
 
-    console.log('hitted email of package declined')
     sentNotificationForPackageDeclined({
-      receiverId: pkg.authorId as mongoose.Types.ObjectId,
+      receiverId: pkg.authorId._id as mongoose.Types.ObjectId,
       packageTitle: pkg.title,
       reason,
     }).catch((err) => console.error('Package declined notification failed:', err));
@@ -211,6 +214,7 @@ const declinePackageById = async (id: string, reason: string) => {
   if (!pkg) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Failed to decline the package or package not found');
   }
+
 
   sentNotificationForPackageDeclined({
     receiverId: pkg.authorId as mongoose.Types.ObjectId,

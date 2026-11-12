@@ -3,6 +3,7 @@ import { getAdminData } from "../DB/adminStrore";
 import { sendEmail } from "./mailSender";
 import { EmailUnsubscribeService } from "../modules/emailUnsubscribe/emailUnsubscribe.service";
 import { generateFrafolChoiceInvoicePdf } from "./invoicePdfGenerator";
+import moment from "moment-timezone";
 
 interface BookingNotificationEmailParams {
   sentTo: string;       // user email
@@ -442,7 +443,7 @@ const profileVerifiedEmail = async ({
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň <strong>${userName}</strong>,</p>
 
-        <p>Na platforme  <strong>FRAFOL</strong> ste dostali novú žiadosť o fotenie alebo natáčanie. Podrobnosti nájdete nižšie.</p>
+        <p>Váš príspevok vo fóre <strong>FRAFOL</strong> nebol schválený na zverejnenie.</p>
 
         <div style="
           background-color: #fdf0ec;
@@ -452,30 +453,17 @@ const profileVerifiedEmail = async ({
           border-radius: 6px;
           margin: 24px 0;
         ">
-          <p style="margin: 0; font-size: 14px; color: #555;">Booking Details</p>
           <p style="margin: 10px 0 0; font-size: 15px; color: #333333; line-height: 1.6;">
             ${messageText}
           </p>
         </div>
 
-        <p style="font-size: 14px; color: #555;">
-          Prihláste sa do svojho účtu FRAFOL, skontrolujte podrobnosti a rozhodnite sa, či žiadosť prijmete.
+        <p style="margin-top: 24px; font-size: 14px;">
+          Ak máte otázky alebo si myslíte, že došlo k omylu, kontaktujte nás na adrese
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">
+            ${supportEmail}
+          </a>.
         </p>
-
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard" style="
-            display: inline-block;
-            padding: 12px 22px;
-            background-color: ${primaryColor};
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-          ">
-            Zobraziť žiadosť o objednávku
-          </a>
-        </div>
 
         ${policiesSection()}
         ${supportEmailSection()}
@@ -625,7 +613,7 @@ const frafolChoiceEmail = async ({
       <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
         ${orderId ? `<tr><td style="padding:6px 0;color:#777;">Číslo objednávky</td><td style="padding:6px 0;text-align:right;">${orderId}</td></tr>` : ''}
         ${planName ? `<tr><td style="padding:6px 0;color:#777;">Program</td><td style="padding:6px 0;text-align:right;">${planName}</td></tr>` : ''}
-        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Trvanie</td><td style="padding:6px 0;text-align:right;">${planDays} days</td></tr>` : ''}
+        ${planDays ? `<tr><td style="padding:6px 0;color:#777;">Trvanie</td><td style="padding:6px 0;text-align:right;">${planDays} dní</td></tr>` : ''}
         ${amount !== undefined ? `<tr><td style="padding:6px 0;color:#777;">Zaplatená suma</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${amount} ${currency}</td></tr>` : ''}
         ${purchaseDate ? `<tr><td style="padding:6px 0;color:#777;">Dátum zakúpenia</td><td style="padding:6px 0;text-align:right;">${purchaseDate}</td></tr>` : ''}
         ${expiryDate ? `<tr><td style="padding:6px 0;color:#777;">Platné do</td><td style="padding:6px 0;text-align:right;color:${primaryColor};font-weight:bold;">${expiryDate}</td></tr>` : ''}
@@ -921,14 +909,17 @@ const bankDetailsChangedEmail = async ({
         <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bankové údaje boli aktualizované</h1>
       </div>
       <div style="padding: 24px; color: #333333;">
+
         <p>Dobrý deň, <strong>${name}</strong>,</p>
+
         <p>vaše bankové údaje na <strong>Frafole</strong> boli úspešne aktualizované.</p>
+
         <div style="background-color: #fff8e1; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           Ak ste túto zmenu nevykonali vy, okamžite nás kontaktujte na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
         </div>
 
-        <p style="margin-top: 32px;">S pozdravom,<br /><strong>Frafol</strong></p>
+        ${regardsSection()}
       </div>
       ${emailFooter()}
     </div>
@@ -1327,6 +1318,7 @@ const sendCommentOrReplyEmail = async ({
   receiverId,
   receiverName,
   actorName,
+  communityId,
   communityTitle,
   commentText,
   isReply,
@@ -1335,6 +1327,7 @@ const sendCommentOrReplyEmail = async ({
   receiverId: string;
   receiverName: string;
   actorName: string;
+  communityId: string;
   communityTitle: string;
   commentText: string;
   isReply: boolean;
@@ -1380,7 +1373,7 @@ const sendCommentOrReplyEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/forums" style="
+          <a href="${clientUrl}/forums/${communityId}" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -1437,7 +1430,7 @@ const sendBookingRequestEmail = async ({
 
   const message = isDirectBooking ? `používateľ <strong>${senderName}</strong> si objednal váš balík ${orderLabel}` : `používateľ <strong>${senderName}</strong> vám poslal nový dopyt s podrobnosťami o ${orderLabel}.`
 
-  const actionRequired = isDirectBooking? 'Skontrolujte podrobnosti objednávky a prijmite alebo zamietnite ju vo svojom účte.' : 'Pozrite si jeho požiadavky a pripravte mu ponuku na mieru.'
+  const actionRequired = isDirectBooking? 'Skontrolujte podrobnosti objednávky a prijmite alebo zamietnite ju vo svojom účte.' : 'Pozrite si požiadavky a pripravte ponuku na mieru.'
 
   const btnName = isDirectBooking?'Zobraziť objednávku': 'Zobraziť dopyt';
 
@@ -1509,6 +1502,7 @@ const sendOrderAcceptedEmail = async ({
   serviceProviderName,
   orderType,
   serviceType,
+  title,
   packageName,
 }: {
   sentTo: string;
@@ -1516,12 +1510,14 @@ const sendOrderAcceptedEmail = async ({
   serviceProviderName: string;
   orderType: 'direct' | 'custom';
   serviceType?: string;
+  title: string;
   packageName?: string;
 }): Promise<void> => {
+
   const orderLabel =
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík.'
-      : `${packageName} – ${serviceType || 'Rezervácia'}`;
+      : `${packageName} – ${title || serviceType || 'Rezervácia'}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -2009,14 +2005,29 @@ const sendCancelRequestDeclinedEmail = async ({
   receiverName,
   declinedByName,
   serviceType,
+  title,
   reason,
+  receiverRole,
+  eventDate,
 }: {
   sentTo: string;
   receiverName: string;
   declinedByName: string;
   serviceType?: string;
+  title: string;
   reason?: string;
+  receiverRole?: string;
+  eventDate?: Date;
 }): Promise<void> => {
+  // Clients (user/company) -> their orders page;
+  // professionals -> upcoming or in-progress tab depending on the event date
+  const isClient = receiverRole === 'user' || receiverRole === 'company';
+  const orderUrl = isClient
+    ? `${clientUrl}/dashboard/my-account/orders?tab=currentOrder`
+    : `${clientUrl}/dashboard/professional/event-orders?tab=${
+        eventDate && new Date(eventDate) > new Date() ? 'upcoming' : 'inProgress'
+      }`;
+
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
 
@@ -2037,7 +2048,7 @@ const sendCancelRequestDeclinedEmail = async ({
         <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          tvorca <strong>${declinedByName}</strong> zamietol vašu žiadosť o zrušenie objednávky <strong>${serviceType || 'order'}</strong>. Objednávka bude pokračovať podľa pôvodnej dohody.
+          tvorca <strong>${declinedByName}</strong> zamietol vašu žiadosť o zrušenie objednávky <strong>${title || serviceType || 'Objednávka'}</strong>. Objednávka bude pokračovať podľa pôvodnej dohody.
         </p>
 
         ${reason ? `
@@ -2055,7 +2066,7 @@ const sendCancelRequestDeclinedEmail = async ({
         </div>` : ''}
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/my-account/orders?tab=currentOrder" style="
+          <a href="${orderUrl}" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -2086,6 +2097,7 @@ const sendCancelRequestEmail = async ({
   receiverName,
   requesterName,
   serviceType,
+  title,
   reason,
   receiverRole
 }: {
@@ -2093,6 +2105,7 @@ const sendCancelRequestEmail = async ({
   receiverName: string;
   requesterName: string;
   serviceType?: string;
+  title: string;
   reason?: string;
   receiverRole: string;
 }): Promise<void> => {
@@ -2102,7 +2115,7 @@ const sendCancelRequestEmail = async ({
     ? `${clientUrl}/dashboard/professional/event-orders?tab=cancelRequest`
     : `${clientUrl}/dashboard/my-account/orders?tab=cancelRequest`;
 
-  const serviceTypeLabel = getServiceTypeLabel(serviceType) || 'order';
+  const serviceTypeLabel = title || getServiceTypeLabel(serviceType) || 'order';
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -2124,7 +2137,7 @@ const sendCancelRequestEmail = async ({
         <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          klient <strong>${requesterName}</strong> požiadal o zrušenie objednávky <strong>${serviceTypeLabel}</strong>. Pozrite si jeho žiadosť a rozhodnite, či ju schválite alebo zamietnete.
+          <strong>${requesterName}</strong> požiadal o zrušenie objednávky <strong>${serviceTypeLabel}</strong>. Pozrite si jeho žiadosť a rozhodnite, či ju schválite alebo zamietnete.
         </p>
 
         ${reason ? `
@@ -2620,12 +2633,14 @@ const sendExtensionRejectedEmail = async ({
   receiverName,
   senderName,
   serviceType,
+  title,
   reason,
 }: {
   sentTo: string;
   receiverName: string;
   senderName: string;
   serviceType?: string;
+  title: string;
   reason?: string;
 }): Promise<void> => {
   const emailBody = `
@@ -2648,7 +2663,7 @@ const sendExtensionRejectedEmail = async ({
         <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
 
         <p>
-          klient <strong>${senderName}</strong> zamietol vašu žiadosť o predĺženie termínu objednávky pre <strong>${serviceType || 'order'}</strong>.
+          klient <strong>${senderName}</strong> zamietol vašu žiadosť o predĺženie termínu objednávky pre <strong>${title || serviceType || 'order'}</strong>.
         </p>
 
         ${reason ? `
@@ -3009,9 +3024,7 @@ const sendGearOrderPayoutCompletedEmail = async ({
             ? `<strong>Suma na vyplatenie:</strong> ${netAmount.toFixed(2)} ${currency}`
             : 'Vyplatenie peňazí za túto objednávku bolo potvrdené.'}
         </div>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/gear-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
-        </div>
+
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
@@ -3067,9 +3080,7 @@ const sendEventOrderPayoutCompletedEmail = async ({
             ? `<strong>Suma na vyplatenie:</strong> ${netAmount.toFixed(2)} ${currency}`
             : 'Vyplatenie peňazí za túto objednávku bolo potvrdené.'}
         </div>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/event-orders" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť objednávku</a>
-        </div>
+
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
@@ -3107,18 +3118,18 @@ const sendWorkshopPayoutCompletedEmail = async ({
       </div>
       <div style="padding: 24px; color: #333333;">
         <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
+        
         <p>
           Platba za kurz${workshopTitle ? ` <strong>„${workshopTitle}“</strong>` : ''} (číslo objednávky: <strong>${orderId}</strong>)
           bola spracovaná a naším tímom označená ako dokončená.
         </p>
+
         <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
           ${amount !== undefined
             ? `<strong>Suma na vyplatenie:</strong> ${amount.toFixed(2)} ${currency}`
             : 'Vyplatenie peňazí za tento kurz bolo potvrdené.'}
         </div>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/professional/workshop" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Zobraziť kurz</a>
-        </div>
+
         <p style="font-size: 14px; color: #555;">
           Ak máte akékoľvek otázky, kontaktujte nás na
           <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
@@ -3790,6 +3801,7 @@ interface EventOrderInvoiceParams {
   paymentDate: string;
   streetAddress?: string;
   town?: string;
+  zipCode?: string;
   country?: string;
   isRegisterAsCompany?: boolean;
   companyName?: string;
@@ -3807,7 +3819,7 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
     sentTo, customerName, recipientName, orderId, orderType, title, serviceType, packageName,
     eventDate, eventTime, location, price, serviceFee, vatAmount = 0,
     couponCode, couponDiscount = 0, totalPrice, transactionId, paymentMethod,
-    paymentDate, streetAddress, town, country, isRegisterAsCompany,
+    paymentDate, streetAddress, town, zipCode, country, isRegisterAsCompany,
     companyName, ICO, DIC, IC_DPH, serviceProviderName, invoiceType = 'payment',invoiceUrl, billInfoShow
   } = params;
 
@@ -3821,6 +3833,21 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
     : `Faktúra – Objednávka ${orderId} | Frafol`;
 
   const serviceTypeLabel = getServiceTypeLabel(serviceType);
+
+  // eventTime may arrive as a full ISO datetime — show only a clean HH:mm
+  const formattedTime = (() => {
+    if (!eventTime) return '';
+    if (!eventTime.includes('T')) return eventTime;
+    const m = moment.tz(eventTime, 'Europe/Bratislava');
+    return m.isValid() ? m.format('HH:mm') : eventTime;
+  })();
+
+  // Full billing address: street, "zip town", country
+  const addressText = [
+    streetAddress,
+    [zipCode, town].filter(Boolean).join(' '),
+    country,
+  ].filter(Boolean).join(', ');
 
   const orderLabel = orderType === 'direct'
     ? `Balík ${packageName ? ` – ${packageName}` : ''}`
@@ -3873,7 +3900,7 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
         <p style="font-weight:bold;font-size:14px;margin-bottom:8px;">Fakturačné údaje</p>
         <table style="width:100%;border-collapse:collapse;">
           <tr><td style="padding:4px 8px;color:#777;font-size:13px;">Meno</td><td style="padding:4px 8px;font-size:13px;">${customerName}</td></tr>
-          ${streetAddress ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Adresa</td><td style="padding:4px 8px;font-size:13px;">${streetAddress}${town ? ', ' + town : ''}${country ? ', ' + country : ''}</td></tr>` : ''}
+          ${addressText ? `<tr><td style="padding:4px 8px;color:#777;font-size:13px;">Adresa</td><td style="padding:4px 8px;font-size:13px;">${addressText}</td></tr>` : ''}
           ${billingRows}
         </table>
 
@@ -3899,7 +3926,7 @@ const sendEventOrderInvoiceEmail = async (params: EventOrderInvoiceParams): Prom
             ${serviceProviderName ? `<tr><td style="padding:5px 0;color:#777;">Poskytovateľ služby</td><td style="padding:5px 0;text-align:right;">${serviceProviderName}</td></tr>` : ''}
             <tr>
               <td style="padding:5px 0;color:#777;">Dátum fotenia/natáčania</td>
-              <td style="padding:5px 0;text-align:right;">${eventDate}${eventTime ? ' o ' + eventTime : ''}</td>
+              <td style="padding:5px 0;text-align:right;">${eventDate}${formattedTime ? ' o ' + formattedTime : ''}</td>
             </tr>
             ${location ? `<tr><td style="padding:5px 0;color:#777;">Miesto</td><td style="padding:5px 0;text-align:right;">${location}</td></tr>` : ''}
           </table>

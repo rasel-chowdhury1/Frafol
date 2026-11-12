@@ -20,6 +20,7 @@ const NotificationSchema = new Schema<INotification>(
         image: { type: String, default: "" }, // Store the image URL or path
         text: { type: String, required: true },  // Store additional data
         photos: { type: [String], default: [] }, // Optional array of photo URLs or paths
+        targetId: { type: String }, // Dynamic id for frontend redirect (e.g. community id)
       },
       required: true, // The message object itself is required
     },
@@ -46,6 +47,7 @@ const NotificationSchema = new Schema<INotification>(
         'WorkshopAdded',
         "WorkshopApproved",
         "WorkshopDeclined",
+        "WorkshopCompleted",
         'WorkshopPayoutCompleted',
         'PackageAdded',
         'PackageApproved',

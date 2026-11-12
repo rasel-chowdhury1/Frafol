@@ -15,6 +15,7 @@ export interface IServiceProviderBreakdown {
 
 export interface IPayment {
   transactionId: string;
+  orderId?: string;
   userId: Types.ObjectId;
   serviceProviderId: Types.ObjectId;
     // Multiple sellers for gear payments

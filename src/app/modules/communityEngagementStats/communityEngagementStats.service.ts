@@ -260,6 +260,7 @@ const addCommentOrReply = async (
   await sentNotificationForCommentOrReply({
     actorId,
     receiverId,
+    communityId: community._id.toString(),
     communityTitle: community.title,
     isReply,
     commentText: text,

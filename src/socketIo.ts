@@ -405,7 +405,7 @@ export const emitNotification = async ({
 }: {
   userId: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
-  userMsg?: { image: string; text: string; photos?: string[], type?: string  };
+  userMsg?: { image: string; text: string; photos?: string[], type?: string, targetId?: string  };
   type?: string;
 }): Promise<void> => {
   if (!io) {
@@ -561,12 +561,14 @@ export const sentNotificationForOrderAccepted = async ({
   userId, // client ID
   receiverId, // service provider ID
   serviceType,
+  title,
   packageName,
 }: {
   orderType: 'direct' | 'custom';
   userId: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
   serviceType?: string;
+  title: string;
   packageName?: string;
 }) => {
   // Fetch client info
@@ -591,7 +593,7 @@ export const sentNotificationForOrderAccepted = async ({
     text = `${serviceProvider.name} prijal(a) Vašu žiadosť o objednanie balíka ${pkgText}. Pokračujte k platbe, aby ste objednávku potvrdili.`;
     type = 'DirectBookingAccepted';
   } else {
-    const readableType = getServiceTypeLabel(serviceType?.trim()) || 'fotenie/natáčanie';
+    const readableType = title ||  getServiceTypeLabel(serviceType?.trim()) || 'fotenie/natáčanie';
     text = `${serviceProvider.name} pripravil(a) cenovú ponuku na základe Vášho nezáväzného dopytu (${readableType}). Objednávku potvrdíte zaplatením.`;
     type = 'CustomBookingAccepted';
   }
@@ -616,6 +618,7 @@ export const sentNotificationForOrderAccepted = async ({
       serviceProviderName: serviceProvider.name || '',
       orderType,
       serviceType,
+      title,
       packageName,
     }).catch((err) => console.error('Email notification failed:', err));
   }
@@ -970,12 +973,14 @@ export const sentNotificationForCancelRequest = async ({
   requestedBy,
   receiverId,
   serviceType,
+  title,
   reason,
 }: {
   orderType: 'direct' | 'custom';
   requestedBy: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
   serviceType?: string;
+  title: string;
   reason?: string;
 }) => {
   const sender = await User.findById(requestedBy).select('name profileImage');
@@ -983,7 +988,7 @@ export const sentNotificationForCancelRequest = async ({
 
   if (!sender || !receiver) return;
 
-  let levelType = getServiceTypeLabel(serviceType?.trim());
+  let levelType = title || getServiceTypeLabel(serviceType?.trim());
 
   const text =
     orderType === 'direct'
@@ -1011,6 +1016,7 @@ export const sentNotificationForCancelRequest = async ({
       receiverName: receiver.name || '',
       requesterName: sender.name || '',
       serviceType,
+      title,
       reason,
       receiverRole: receiver.role
     }).catch((err) => console.error('Email failed:', err));
@@ -1210,7 +1216,7 @@ export const sentNotificationForCommunityRejected = async ({
   if (receiver.email) {
     sendBookingNotificationEmail({
       sentTo: receiver.email,
-      subject: 'Your Community Post Has Been Rejected',
+      subject: 'Váš príspevok vo fóre bol zamietnutý',
       userName: receiver.name || '',
       messageText: text,
     }).catch((err) => console.error('Email failed:', err));
@@ -1335,12 +1341,14 @@ export const sentNotificationForCommunityDeleted = async ({
 export const sentNotificationForCommentOrReply = async ({
   actorId,
   receiverId,
+  communityId,
   communityTitle,
   isReply,
   commentText,
 }: {
   actorId: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
+  communityId: string;
   communityTitle: string;
   isReply: boolean;
   commentText: string;
@@ -1404,6 +1412,7 @@ export const sentNotificationForCommentOrReply = async ({
         image: actor.profileImage || "",
         text,
         photos: [],
+        targetId: communityId,
       },
       type: isReply ? "CommentReply" : "NewComment",
     };
@@ -1436,6 +1445,7 @@ export const sentNotificationForCommentOrReply = async ({
         receiverId: receiver._id.toString(),
         receiverName: receiver.name || "",
         actorName: actor.name || "",
+        communityId,
         communityTitle,
         commentText,
         isReply,
@@ -1458,19 +1468,23 @@ export const sentNotificationForCancelRequestDeclined = async ({
   declinedBy,
   receiverId,
   serviceType,
+  title,
   reason,
+  eventDate,
 }: {
   declinedBy: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
   serviceType?: string;
+  title: string
   reason?: string;
+  eventDate?: Date;
 }) => {
   const sender = await User.findById(declinedBy).select('name profileImage');
-  const receiver = await User.findById(receiverId).select('name email');
+  const receiver = await User.findById(receiverId).select('name email role');
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} odmietol/odmietla Vašu žiadosť o zrušenie objednávky ${serviceType || 'Objednávka'}${reason ? `. Dôvod: „${reason}“` : '.'}`;
+  const text = `${sender.name} odmietol/odmietla Vašu žiadosť o zrušenie objednávky ${title || serviceType || 'Objednávka'}${reason ? `. Dôvod: „${reason}“` : '.'}`;
 
   const payload = {
     userId: declinedBy,
@@ -1489,7 +1503,10 @@ export const sentNotificationForCancelRequestDeclined = async ({
       receiverName: receiver.name || '',
       declinedByName: sender.name || '',
       serviceType,
+      title,
       reason,
+      receiverRole: receiver.role,
+      eventDate,
     }).catch((err) => console.error('Email failed:', err));
   }
 };
@@ -1585,11 +1602,13 @@ export const sentNotificationForExtensionRejected = async ({
   rejectedBy,
   receiverId,
   serviceType,
+  title,
   reason,
 }: {
   rejectedBy: mongoose.Types.ObjectId;
   receiverId: mongoose.Types.ObjectId;
   serviceType?: string;
+  title: string;
   reason?: string;
 }) => {
   const sender = await User.findById(rejectedBy).select('name profileImage');
@@ -1597,7 +1616,7 @@ export const sentNotificationForExtensionRejected = async ({
 
   if (!sender || !receiver) return;
 
-  const text = `${sender.name} odmietol/odmietla predĺženie termínu odovzdania k objednávke ${getServiceTypeLabel(serviceType?.trim()) || 'Objednávka'}${reason ? `. Dôvod: „${reason}“` : '.'}`;
+  const text = `${sender.name} odmietol/odmietla predĺženie termínu odovzdania k objednávke ${title || getServiceTypeLabel(serviceType?.trim()) || 'Objednávka'}${reason ? `. Dôvod: „${reason}“` : '.'}`;
 
   const payload = {
     userId: rejectedBy,
@@ -1616,6 +1635,7 @@ export const sentNotificationForExtensionRejected = async ({
       receiverName: receiver.name || '',
       senderName: sender.name || '',
       serviceType,
+      title,
       reason,
     }).catch((err) => console.error('Email failed:', err));
   }
@@ -1761,6 +1781,7 @@ export const sentNotificationForWorkshopPayoutCompleted = async ({
 
 export const sentNotificationForEventOrderPayoutCompleted = async ({
   serviceProviderId,
+  userId,
   orderId,
   orderType,
   serviceType,
@@ -1768,13 +1789,14 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
   netAmount,
 }: {
   serviceProviderId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   orderId: string;
   orderType: 'direct' | 'custom';
   serviceType?: string;
   packageName?: string;
   netAmount?: number;
 }) => {
-  const serviceProvider = await User.findById(serviceProviderId).select('name email');
+  const serviceProvider = await User.findById(userId).select('name email');
 
   if (!serviceProvider) return;
 
@@ -1792,6 +1814,8 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
   };
 
   await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  console.log("service provider =>>> ", serviceProvider)
 
   if (serviceProvider.email) {
     sendEventOrderPayoutCompletedEmail({
@@ -2150,7 +2174,9 @@ export const sentNotificationForPackageDeclined = async ({
   packageTitle: string;
   reason: string;
 }) => {
+
   const receiver = await User.findById(receiverId).select('name email');
+
 
   if (!receiver) return;
 

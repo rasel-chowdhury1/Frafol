@@ -83,6 +83,7 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
       .then((payment) =>
         sentNotificationForEventOrderPayoutCompleted({
           serviceProviderId: eventOrder.serviceProviderId,
+          userId: eventOrder.userId,
           orderId: eventOrder.orderId,
           orderType: eventOrder.orderType,
           serviceType: eventOrder.serviceType,
@@ -531,6 +532,7 @@ const rejectExtensionRequest = async (
     rejectedBy: order.userId,
     receiverId: order.serviceProviderId,
     serviceType: order.serviceType,
+    title: order.title || "",
     reason,
   }).catch((err) => console.error('Extension rejected notification failed:', err));
 
@@ -588,6 +590,7 @@ const acceptDirectOrder = async (orderId: string, serviceProviderId: string) => 
     userId: existingOrder.serviceProviderId,
     receiverId: existingOrder.userId,
     serviceType: existingOrder.serviceType,
+    title: packageName || "",
     packageName,
   }).catch((err) => console.error("Failed to send direct accept notification:", err));
 
@@ -661,6 +664,7 @@ const acceptCustomOrder = async (
     userId: existingOrder.serviceProviderId,
     receiverId: existingOrder.userId,
     serviceType: existingOrder.serviceType,
+    title: packageName,
     packageName
   }).catch((err) => console.error("Failed to send custom accept notification:", err));
 
@@ -842,7 +846,7 @@ try {
       if (!order.paymentId) return;
 
       const [client, provider, payment] = await Promise.all([
-        User.findById(order.userId).select("name email").lean(),
+        User.findById(order.userId).select("name email address town zipCode country").lean(),
         User.findById(order.serviceProviderId).select("name email").lean(),
         Payment.findById(order.paymentId).lean(),
       ]);
@@ -874,9 +878,11 @@ try {
         paymentDate: payment.createdAt
           ? new Date(payment.createdAt).toLocaleDateString("en-GB")
           : new Date().toLocaleDateString("en-GB"),
-        streetAddress: order.streetAddress,
-        town: order.town,
-        country: order.country,
+        // Fall back to payment / client profile address when the order has none
+        streetAddress: order.streetAddress || payment.streetAddress || (client as any)?.address,
+        town: order.town || payment.town || (client as any)?.town,
+        zipCode: order.zipCode || payment.zipCode || (client as any)?.zipCode,
+        country: order.country || payment.country || (client as any)?.country,
         isRegisterAsCompany: order.isRegisterAsCompany,
         companyName: order.companyName,
         ICO: order.ICO,
@@ -1087,6 +1093,7 @@ const cancelRequest = async (orderId: string, userId: string, reason: string) =>
         ? order.serviceProviderId
         : order.userId,
     serviceType: order.serviceType,
+    title: order.title || "",
     reason,
   }).catch((err) => console.error("Notification failed:", err));
 
@@ -1129,7 +1136,9 @@ console.log({order})
     declinedBy: new mongoose.Types.ObjectId(userId),
     receiverId: order.cancelRequestedBy as mongoose.Types.ObjectId,
     serviceType: order.serviceType,
+    title: order.title || "",
     reason,
+    eventDate: order.date,
   }).catch((err) => console.error('Cancel request declined notification failed:', err));
 
   return order;

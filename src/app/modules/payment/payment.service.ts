@@ -142,7 +142,7 @@ const confirmPayment = async (sessionId: string) => {
           process.nextTick(async () => {
             try {
               const [client, provider] = await Promise.all([
-                User.findById(payment.userId).select('name email').lean(),
+                User.findById(payment.userId).select('name email address town zipCode country').lean(),
                 User.findById(payment.serviceProviderId).select('name').lean(),
               ]);
               if (client?.email) {
@@ -170,9 +170,11 @@ const confirmPayment = async (sessionId: string) => {
                   transactionId: payment.transactionId,
                   paymentMethod: payment.paymentMethod,
                   paymentDate: new Date().toLocaleDateString('en-GB'),
-                  streetAddress: payment.streetAddress,
-                  town: payment.town,
-                  country: payment.country,
+                  // Fall back to order / client profile address when the payment has none
+                  streetAddress: payment.streetAddress || updatedOrder.streetAddress || (client as any).address,
+                  town: payment.town || updatedOrder.town || (client as any).town,
+                  zipCode: payment.zipCode || updatedOrder.zipCode || (client as any).zipCode,
+                  country: payment.country || updatedOrder.country || (client as any).country,
                   isRegisterAsCompany: payment.isRegisterAsCompany,
                   companyName: payment.companyName,
                   ICO: payment.ICO,
@@ -346,6 +348,9 @@ const confirmPayment = async (sessionId: string) => {
 
         const sequence = String(orderCount + 1).padStart(4, '0');
         const customOrderId = `${prefix}-${today}-${sequence}`;
+
+        payment.orderId = customOrderId;
+        await payment.save({ session: dbSession });
 
         // 2️⃣ Create Workshop Participant entry
         const participant = await WorkshopParticipant.create(
@@ -665,12 +670,20 @@ const getPayments = async (query: any) => {
   if (searchTerm) {
     const regex = { $regex: searchTerm, $options: 'i' };
 
-    const [matchingUsers, matchingEventOrders, matchingGearOrdersById, matchingGearItems, matchingWorkshops] = await Promise.all([
+    const [
+      matchingUsers,
+      matchingEventOrders,
+      matchingGearOrdersById,
+      matchingGearItems,
+      matchingWorkshops,
+      matchingWorkshopParticipants,
+    ] = await Promise.all([
       User.find({ $or: [{ name: regex }, { companyName: regex }] }).select('_id'),
       EventOrder.find({ $or: [{ orderId: regex }, { title: regex }] }).select('_id'),
       GearOrder.find({ orderId: regex }).select('_id'),
       GearMarketplace.find({ name: regex }).select('_id'),
       Workshop.find({ title: regex }).select('_id'),
+      WorkshopParticipant.find({ orderId: regex }).select('workshopId clientId'),
     ]);
 
     // Gear orders can match either by their own orderId, or by the
@@ -683,6 +696,7 @@ const getPayments = async (query: any) => {
     const matchingUserIds = matchingUsers.map((u) => u._id);
 
     filter.$or = [
+      { orderId: regex },
       { transactionId: regex },
       { mainOrderIdForGear: regex },
       { paymentType: regex },
@@ -693,6 +707,21 @@ const getPayments = async (query: any) => {
       { eventOrderId: { $in: matchingEventOrders.map((o) => o._id) } },
       { gearOrderIds: { $in: matchingGearOrders.map((o) => o._id) } },
       { workshopId: { $in: matchingWorkshops.map((w) => w._id) } },
+      ...(matchingWorkshopParticipants.length
+        ? [
+            {
+              $and: [
+                { paymentType: 'workshop' },
+                {
+                  $or: matchingWorkshopParticipants.map((wp) => ({
+                    workshopId: wp.workshopId,
+                    userId: wp.clientId,
+                  })),
+                },
+              ],
+            },
+          ]
+        : []),
     ];
   }
 
@@ -722,11 +751,40 @@ const getPayments = async (query: any) => {
   const payments = await paymentQuery.modelQuery;
   const meta = await paymentQuery.countTotal();
 
+  // 🔍 For workshop payments, retrieve orderId from WorkshopParticipant if not already on the payment record
+  const workshopPayments = payments.filter((p: any) => p.paymentType === 'workshop');
+  const participantMap = new Map<string, string>();
+
+  if (workshopPayments.length > 0) {
+    const workshopIds = workshopPayments
+      .map((p: any) => (p.workshopId?._id || p.workshopId)?.toString())
+      .filter(Boolean);
+    const clientIds = workshopPayments
+      .map((p: any) => (p.userId?._id || p.userId)?.toString())
+      .filter(Boolean);
+
+    const participants = await WorkshopParticipant.find({
+      workshopId: { $in: workshopIds },
+      clientId: { $in: clientIds },
+      isDeleted: false,
+    })
+      .select('orderId workshopId clientId createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    for (const part of participants) {
+      const key = `${part.workshopId?.toString()}_${part.clientId?.toString()}`;
+      if (!participantMap.has(key)) {
+        participantMap.set(key, part.orderId);
+      }
+    }
+  }
+
   // ✅ Flatten gear payments — each gear order becomes its own row
   const orders: any[] = [];
 
   for (const payment of payments) {
-    const p = payment.toObject ? payment.toObject() : payment;
+    const p: any = payment.toObject ? payment.toObject() : payment;
 
     if (p.paymentType === 'gear') {
       for (const g of (p.gearOrderIds || []) as any[]) {
@@ -754,10 +812,30 @@ const getPayments = async (query: any) => {
           netEarning: sp?.netAmount ?? 0,
         });
       }
+    } else if (p.paymentType === 'workshop') {
+      const wsId = (p.workshopId?._id || p.workshopId)?.toString();
+      const uId = (p.userId?._id || p.userId)?.toString();
+      const resolvedOrderId = p.orderId || participantMap.get(`${wsId}_${uId}`) || undefined;
+
+      p.orderId = resolvedOrderId;
+      if (p.workshopId && typeof p.workshopId === 'object') {
+        p.workshopId.orderId = resolvedOrderId;
+      }
+
+      // Backfill in background if payment in db doesn't have orderId yet
+      if (!p.orderId && resolvedOrderId) {
+        Payment.updateOne({ _id: p._id }, { orderId: resolvedOrderId }).catch(() => {});
+      }
+
+      orders.push(p);
     } else {
+      if (p.eventOrderId && typeof p.eventOrderId === 'object' && p.eventOrderId.orderId && !p.orderId) {
+        p.orderId = p.eventOrderId.orderId;
+      }
       orders.push(p);
     }
   }
+  
 
   return { meta, orders };
 };
@@ -847,7 +925,33 @@ const getMyPayments = async (userId: string, query: any) => {
   const payments = await qb.modelQuery;
   const meta = await qb.countTotal();
 
-  return { meta, payments };
+  const formattedPayments = await Promise.all(
+    payments.map(async (payment: any) => {
+      const p = payment.toObject ? payment.toObject() : payment;
+      if (p.paymentType === 'workshop') {
+        const wsId = (p.workshopId?._id || p.workshopId)?.toString();
+        const uId = (p.userId?._id || p.userId)?.toString();
+        if (!p.orderId) {
+          const part = await WorkshopParticipant.findOne({
+            workshopId: wsId,
+            clientId: uId,
+            isDeleted: false,
+          })
+            .select('orderId')
+            .lean();
+          p.orderId = part?.orderId || null;
+        }
+        if (p.workshopId && typeof p.workshopId === 'object') {
+          p.workshopId.orderId = p.orderId;
+        }
+      } else if (p.paymentType === 'event' && p.eventOrderId && typeof p.eventOrderId === 'object') {
+        if (!p.orderId) p.orderId = p.eventOrderId.orderId;
+      }
+      return p;
+    }),
+  );
+
+  return { meta, payments: formattedPayments };
 };
 
 export const PaymentService = {

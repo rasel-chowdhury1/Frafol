@@ -2189,6 +2189,7 @@ const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
     totalPendingGearOrders,
     totalUpcomingEvents,
     totalOverallEarningsAgg,
+    workshopEarningsAgg,
     totalReviewsReceived,
   ] = await Promise.all([
     // ✅ Fetch service provider user info
@@ -2208,15 +2209,82 @@ const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
       date: { $gte: new Date() },
     }),
 
-    // 💰 Calculate total earnings from completed payments
+    // 💰 Event + marketplace earnings: only delivered orders count
+    // (cancelled / pending / in-progress orders are excluded)
     Payment.aggregate([
       {
         $match: {
           paymentStatus: 'completed',
+          paymentType: { $in: ['event', 'gear'] },
           $or: [
             { serviceProviderId: providerObjectId },
             { 'serviceProviders.serviceProviderId': providerObjectId },
           ],
+        },
+      },
+      {
+        $lookup: {
+          from: EventOrder.collection.name,
+          localField: 'eventOrderId',
+          foreignField: '_id',
+          as: 'eventOrder',
+        },
+      },
+      {
+        $lookup: {
+          from: GearOrder.collection.name,
+          localField: 'gearOrderIds',
+          foreignField: '_id',
+          as: 'gearOrders',
+        },
+      },
+      {
+        $addFields: {
+          myGearOrders: {
+            $filter: {
+              input: '$gearOrders',
+              as: 'g',
+              cond: { $eq: ['$$g.sellerId', providerObjectId] },
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          $expr: {
+            $or: [
+              {
+                $and: [
+                  { $eq: ['$paymentType', 'event'] },
+                  { $gt: [{ $size: '$eventOrder' }, 0] },
+                  {
+                    $allElementsTrue: {
+                      $map: {
+                        input: '$eventOrder',
+                        as: 'o',
+                        in: { $eq: ['$$o.status', 'delivered'] },
+                      },
+                    },
+                  },
+                ],
+              },
+              {
+                $and: [
+                  { $eq: ['$paymentType', 'gear'] },
+                  { $gt: [{ $size: '$myGearOrders' }, 0] },
+                  {
+                    $allElementsTrue: {
+                      $map: {
+                        input: '$myGearOrders',
+                        as: 'g',
+                        in: { $eq: ['$$g.orderStatus', 'delivered'] },
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
         },
       },
       {
@@ -2252,6 +2320,40 @@ const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
       },
     ]),
 
+    // 🎓 Workshop earnings: only finished workshops (date passed) count
+    WorkshopParticipant.aggregate([
+      {
+        $match: {
+          instructorId: providerObjectId,
+          paymentStatus: 'completed',
+          isDeleted: false,
+        },
+      },
+      {
+        $lookup: {
+          from: Workshop.collection.name,
+          localField: 'workshopId',
+          foreignField: '_id',
+          as: 'workshop',
+        },
+      },
+      // A workshop is finished once its date has passed (or it is marked completed)
+      {
+        $match: {
+          $or: [
+            { 'workshop.isCompleted': true },
+            { 'workshop.date': { $lt: new Date() } },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: '$instructorPayment.amount' },
+        },
+      },
+    ]),
+
     // ⭐ Reviews count
     Review.countDocuments({
       serviceProviderId: providerObjectId,
@@ -2261,9 +2363,8 @@ const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
   ]);
 
   const totalOverallEarnings =
-    totalOverallEarningsAgg.length > 0
-      ? totalOverallEarningsAgg[0].totalEarnings
-      : 0;
+    (totalOverallEarningsAgg[0]?.totalEarnings || 0) +
+    (workshopEarningsAgg[0]?.totalEarnings || 0);
 
   return {
     user: userInfo?.name || '',
@@ -2332,7 +2433,7 @@ const getMyEarnings = async (
       Payment.find(eventPaymentQuery)
         .populate('userId', 'name companyName profileImage email  address town zipCode ico dic ic_dph')
         .populate('serviceProviderId', 'name companyName profileImage email ico dic ic_dph  address town zipCode')
-        .populate('eventOrderId', 'orderId title serviceType orderType date price priceWithServiceFee vatAmount totalPrice'),
+        .populate('eventOrderId', 'orderId title serviceType orderType date price priceWithServiceFee vatAmount totalPrice statusTimestamps'),
       restQuery,
     )
       .filter()
@@ -2344,6 +2445,8 @@ const getMyEarnings = async (
       earningsQuery.modelQuery.lean(),
       earningsQuery.countTotal(),
     ]);
+
+
 
     return {
       meta,
@@ -2523,10 +2626,11 @@ const getMonthlyEarningsOfSpecificProfessional = async (
   const targetYear = year || new Date().getFullYear();
 
   // 🧾 Aggregate earnings grouped by month
-  const monthlyAgg = await Payment.aggregate([
+  const [monthlyAgg, workshopMonthlyAgg] = await Promise.all([Payment.aggregate([
     {
       $match: {
         paymentStatus: 'completed',
+        paymentType: { $in: ['event', 'gear'] },
         createdAt: {
           $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
           $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
@@ -2535,6 +2639,72 @@ const getMonthlyEarningsOfSpecificProfessional = async (
           { serviceProviderId: providerObjectId },
           { 'serviceProviders.serviceProviderId': providerObjectId },
         ],
+      },
+    },
+    // Only delivered events / delivered marketplace orders count
+    {
+      $lookup: {
+        from: EventOrder.collection.name,
+        localField: 'eventOrderId',
+        foreignField: '_id',
+        as: 'eventOrder',
+      },
+    },
+    {
+      $lookup: {
+        from: GearOrder.collection.name,
+        localField: 'gearOrderIds',
+        foreignField: '_id',
+        as: 'gearOrders',
+      },
+    },
+    {
+      $addFields: {
+        myGearOrders: {
+          $filter: {
+            input: '$gearOrders',
+            as: 'g',
+            cond: { $eq: ['$$g.sellerId', providerObjectId] },
+          },
+        },
+      },
+    },
+    {
+      $match: {
+        $expr: {
+          $or: [
+            {
+              $and: [
+                { $eq: ['$paymentType', 'event'] },
+                { $gt: [{ $size: '$eventOrder' }, 0] },
+                {
+                  $allElementsTrue: {
+                    $map: {
+                      input: '$eventOrder',
+                      as: 'o',
+                      in: { $eq: ['$$o.status', 'delivered'] },
+                    },
+                  },
+                },
+              ],
+            },
+            {
+              $and: [
+                { $eq: ['$paymentType', 'gear'] },
+                { $gt: [{ $size: '$myGearOrders' }, 0] },
+                {
+                  $allElementsTrue: {
+                    $map: {
+                      input: '$myGearOrders',
+                      as: 'g',
+                      in: { $eq: ['$$g.orderStatus', 'delivered'] },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
       },
     },
     {
@@ -2571,12 +2741,51 @@ const getMonthlyEarningsOfSpecificProfessional = async (
       },
     },
     { $sort: { _id: 1 } },
-  ]);
+  ]),
+
+  // 🎓 Finished workshops (date passed or marked completed)
+  WorkshopParticipant.aggregate([
+    {
+      $match: {
+        instructorId: providerObjectId,
+        paymentStatus: 'completed',
+        isDeleted: false,
+        createdAt: {
+          $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
+          $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: Workshop.collection.name,
+        localField: 'workshopId',
+        foreignField: '_id',
+        as: 'workshop',
+      },
+    },
+    {
+      $match: {
+        $or: [
+          { 'workshop.isCompleted': true },
+          { 'workshop.date': { $lt: new Date() } },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: { $month: '$createdAt' },
+        totalEarnings: { $sum: '$instructorPayment.amount' },
+      },
+    },
+  ])]);
 
   // 🧮 Map to 12-month structure
   const monthlyData = Array.from({ length: 12 }, (_, i) => ({
     month: new Date(0, i).toLocaleString('default', { month: 'short' }), // Jan, Feb...
-    totalEarnings: monthlyAgg.find((m) => m._id === i + 1)?.totalEarnings || 0,
+    totalEarnings:
+      (monthlyAgg.find((m) => m._id === i + 1)?.totalEarnings || 0) +
+      (workshopMonthlyAgg.find((m) => m._id === i + 1)?.totalEarnings || 0),
   }));
 
   return {

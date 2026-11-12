@@ -9,6 +9,7 @@ export interface INotification {
       image: string; // URL or path to the user's image
       text: string; // Additional data (text or other relevant information)
       photos?: string[]; // Optional array of photo URLs or paths
+      targetId?: string; // Dynamic id for frontend redirect (e.g. community id)
     };
     type: "Join" | "SendFollow" | "AcceptFollow" | "DeclineFollow"; // Type of notification
     isRead: boolean; // Whether the notification is read

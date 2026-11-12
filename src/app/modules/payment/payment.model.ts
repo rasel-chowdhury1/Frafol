@@ -20,6 +20,9 @@ const PaymentSchema = new Schema<IPayment>(
       type: String, 
       required: true, unique: true 
     },
+    orderId: {
+      type: String,
+    },
     userId: { 
       type: Schema.Types.ObjectId, ref: "User", 
       required: true 

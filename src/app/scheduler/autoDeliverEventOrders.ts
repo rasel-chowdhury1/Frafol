@@ -59,7 +59,7 @@ const runAutoCancelUnpaidJob = async () => {
   await Promise.all(
     orders.map((order) => {
       order.status = 'cancelled';
-      order.cancelReason = 'Auto-cancelled after 7 days — payment not received';
+      order.cancelReason = 'Auto-cancelled after 3 days — payment not received';
       order.statusTimestamps.cancelledAt = now;
       order.statusHistory.push({
         status: 'cancelled',

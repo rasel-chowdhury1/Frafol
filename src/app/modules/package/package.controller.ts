@@ -100,6 +100,7 @@ const updatePackage = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateApprovalStatusByAdmin = catchAsync(async (req: Request, res: Response) => {
+  
   const { approvalStatus, reason } = req.body as { approvalStatus: ApprovalStatus; reason?: string };
 
   if (!approvalStatus) {
