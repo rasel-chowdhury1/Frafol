@@ -239,6 +239,8 @@ const EventOrderSchema = new Schema<IEventOrder>(
        enum: ["Unpaid", "Paid"],
        default: "Unpaid"
     },
+    // Set (atomically) when the 48h pre-auto-delivery reminder was sent for the current delivery request
+    autoDeliveryReminderSentAt: { type: Date, default: null },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true, versionKey: false }

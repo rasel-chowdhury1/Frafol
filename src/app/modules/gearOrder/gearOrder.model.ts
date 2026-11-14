@@ -114,6 +114,8 @@ const gearOrderSchema = new Schema<IGearOrder>(
       type: String,
       trim: true
     },
+    // Set (atomically) when the 48h pre-auto-delivery reminder was sent for the current delivery request
+    autoDeliveryReminderSentAt: { type: Date, default: null },
     isRefunded: { type: Boolean, default: false },
     refundedAmount: { type: Number },
     cancelReason: { type: String, trim: true },

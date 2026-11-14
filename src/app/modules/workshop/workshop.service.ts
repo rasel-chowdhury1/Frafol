@@ -1,3 +1,4 @@
+import { isWorkshopFinished, formatWorkshopDate } from '../../utils/workshopTime';
 import { Workshop } from "./workshop.model";
 import { IWorkshop, IUpdateWorkshop } from "./workshop.interface";
 import QueryBuilder from "../../builder/QueryBuilder";
@@ -333,43 +334,95 @@ const deleteWorkshop = async (id: string, userId: string, role: string) => {
   );
 };
 
-const processWorkshopCompletion = async (workshopId: string | mongoose.Types.ObjectId) => {
+// How long one run may "own" a workshop's completion before another run may take over
+// (covers a crashed / hung run; it is also the back-off before a failed email is retried).
+export const WORKSHOP_COMPLETION_LEASE_MS = 30 * 60 * 1000;
+
+/**
+ * Sends the post-workshop final invoices (participants + instructor) exactly once.
+ *
+ * Duplicate protection (all atomic, at database level):
+ *  1. The WORKSHOP is claimed with a lease (`completionClaimedAt`): only one run processes it.
+ *  2. Every RECIPIENT is claimed (participant.finalInvoiceSent / workshop.instructorFinalInvoiceSent)
+ *     with a conditional update BEFORE its email is sent. Only the run that wins the claim sends.
+ *  3. If sending fails, that recipient's claim is released, the workshop is NOT marked as done, and the
+ *     lease expires after 30 minutes → the next scheduler run retries ONLY the recipients that are still
+ *     missing (successful ones are never mailed again).
+ */
+const processWorkshopCompletion = async (
+  workshopId: string | mongoose.Types.ObjectId,
+  now: Date = new Date(),
+) => {
   const workshop = await Workshop.findById(workshopId);
   if (!workshop || workshop.isDeleted) {
     return null;
   }
 
-  // Idempotency: don't re-send if postWorkshopEmailsSent is already true
+  // Already fully processed
   if (workshop.postWorkshopEmailsSent) {
     return workshop;
   }
 
+  // Safety net: the "workshop done" emails must never go out before the workshop has ended
+  if (!isWorkshopFinished(workshop.date, workshop.time, now)) {
+    return null;
+  }
+
+  // 1. Claim the workshop (lease). Null = another run owns it right now, or it was just completed.
+  const claimed = await Workshop.findOneAndUpdate(
+    {
+      _id: workshop._id,
+      isDeleted: { $ne: true },
+      postWorkshopEmailsSent: { $ne: true },
+      $or: [
+        { completionClaimedAt: null }, // never claimed (matches missing too)
+        { completionClaimedAt: { $lte: new Date(now.getTime() - WORKSHOP_COMPLETION_LEASE_MS) } },
+      ],
+    },
+    { $set: { completionClaimedAt: now } },
+    { new: true },
+  );
+  if (!claimed) {
+    return null;
+  }
+
   const [instructor, participants] = await Promise.all([
-    User.findById(workshop.authorId)
+    User.findById(claimed.authorId)
       .select('name email role companyName ico dic ic_dph address town country isRegisterAsCompany')
       .lean(),
     WorkshopParticipant.find({
-      workshopId: workshop._id,
+      workshopId: claimed._id,
       isDeleted: false,
       paymentStatus: 'completed',
     }),
   ]);
 
-  const workshopDateStr = workshop.date
-    ? new Date(workshop.date).toLocaleDateString('en-GB')
-    : '';
+  // Slovak calendar day (toLocaleDateString would use the server's timezone and can be a day off)
+  const workshopDateStr = claimed.date ? formatWorkshopDate(claimed.date) : '';
   const workshopLocation =
-    workshop.locationType === 'online'
-      ? workshop.workshopLink || ''
-      : workshop.location || '';
+    claimed.locationType === 'online'
+      ? claimed.workshopLink || ''
+      : claimed.location || '';
 
-  // 1. Send final invoice emails to all enrolled clients (participants)
+  let failures = 0;
+
+  // 2. Final invoice emails to the enrolled clients (participants)
   for (const participant of participants) {
+    if (participant.finalInvoiceSent) continue; // already mailed in an earlier run
+
+    // Atomic per-recipient claim — only the run that flips the flag may send
+    const won = await WorkshopParticipant.findOneAndUpdate(
+      { _id: participant._id, finalInvoiceSent: { $ne: true } },
+      { $set: { finalInvoiceSent: true } },
+      { new: true },
+    );
+    if (!won) continue;
+
     try {
       const [clientUser, payment] = await Promise.all([
         User.findById(participant.clientId).select('name email role').lean(),
         Payment.findOne({
-          workshopId: workshop._id,
+          workshopId: claimed._id,
           userId: participant.clientId,
           paymentStatus: 'completed',
         })
@@ -387,31 +440,30 @@ const processWorkshopCompletion = async (workshopId: string | mongoose.Types.Obj
           invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/workshop`;
         }
 
-        const basePrice = workshop.price || 0;
-        const vatAmount = workshop.vatAmount || 0;
+        const basePrice = claimed.price || 0;
+        const vatAmount = claimed.vatAmount || 0;
         const totalPrice =
-          payment?.amount || workshop.mainPrice || workshop.price || 0;
+          payment?.amount || claimed.mainPrice || claimed.price || 0;
 
         await sendWorkshopInvoiceEmail({
           sentTo: clientEmail,
           customerName:
             (clientUser as any)?.name || participant.name || 'Účastník',
-          workshopTitle: workshop.title,
+          workshopTitle: claimed.title,
           workshopDate: workshopDateStr,
-          workshopTime: workshop.time || '',
+          workshopTime: claimed.time || '',
           location: workshopLocation,
-          locationType: workshop.locationType,
+          locationType: claimed.locationType,
           basePrice,
-          vatPercent: workshop.vatPercent || 0,
+          vatPercent: claimed.vatPercent || 0,
           vatAmount,
           totalPrice,
           orderId: participant.orderId,
           transactionId: payment?.transactionId || participant.orderId,
-          paymentDate: payment?.createdAt
-            ? new Date(payment.createdAt).toLocaleDateString('en-GB')
-            : participant.createdAt
-            ? new Date(participant.createdAt).toLocaleDateString('en-GB')
-            : new Date().toLocaleDateString('en-GB'),
+          // Slovak calendar day (server-local formatting can be a day off)
+          paymentDate: formatWorkshopDate(
+            payment?.createdAt || participant.createdAt || new Date(),
+          ),
           streetAddress: participant.streetAddress,
           town: participant.town,
           country: participant.country,
@@ -426,18 +478,25 @@ const processWorkshopCompletion = async (workshopId: string | mongoose.Types.Obj
         });
       }
 
-      // In-app socket notification for client
+      // In-app socket notification for client (only after the email succeeded, once per recipient)
       sentNotificationForWorkshopCompletedToClient({
         clientId: participant.clientId as any,
-        workshopTitle: workshop.title,
+        workshopTitle: claimed.title,
       }).catch((err) =>
         console.error('Failed to send workshop client socket notification:', err),
       );
 
-      participant.isCompleted = true;
-      participant.finalInvoiceSent = true;
-      await participant.save();
+      await WorkshopParticipant.updateOne(
+        { _id: participant._id },
+        { $set: { isCompleted: true } },
+      );
     } catch (clientErr) {
+      failures++;
+      // Release this recipient's claim so the next run retries it
+      await WorkshopParticipant.updateOne(
+        { _id: participant._id },
+        { $set: { finalInvoiceSent: false } },
+      ).catch((e) => console.error('Failed to release participant claim:', e));
       console.error(
         `Failed to process workshop final invoice for participant ${participant._id}:`,
         clientErr,
@@ -445,83 +504,107 @@ const processWorkshopCompletion = async (workshopId: string | mongoose.Types.Obj
     }
   }
 
-  // 2. Send final invoice email with 15-day payout notice to the professional (instructor)
-  if ((instructor as any)?.email) {
-    try {
-      const totalParticipants = participants.length;
-      let totalEarnings = participants.reduce(
-        (sum, p) => sum + (p.instructorPayment?.amount || 0),
-        0,
-      );
-      const totalRevenue = participants.reduce(
-        (sum, p) => sum + (workshop.mainPrice || workshop.price || 0),
-        0,
-      );
+  // 3. Final invoice email with 15-day payout notice to the professional (instructor)
+  if ((instructor as any)?.email && !claimed.instructorFinalInvoiceSent) {
+    const wonInstructor = await Workshop.findOneAndUpdate(
+      { _id: claimed._id, instructorFinalInvoiceSent: { $ne: true } },
+      { $set: { instructorFinalInvoiceSent: true } },
+      { new: true },
+    );
 
-      // Fallback if instructorPayment amount was not explicitly recorded
-      if (totalEarnings === 0 && totalParticipants > 0) {
-        totalEarnings = (workshop.price || workshop.mainPrice || 0) * totalParticipants;
-      }
+    if (wonInstructor) {
+      try {
+        const totalParticipants = participants.length;
+        let totalEarnings = participants.reduce(
+          (sum, p) => sum + (p.instructorPayment?.amount || 0),
+          0,
+        );
+        const totalRevenue = participants.reduce(
+          (sum, p) => sum + (claimed.mainPrice || claimed.price || 0),
+          0,
+        );
 
-      const participantItems = participants.map((p) => ({
-        name: p.name || 'Účastník',
-        orderId: p.orderId,
-        amount: p.instructorPayment?.amount || workshop.price || 0,
-      }));
+        // Fallback if instructorPayment amount was not explicitly recorded
+        if (totalEarnings === 0 && totalParticipants > 0) {
+          totalEarnings = (claimed.price || claimed.mainPrice || 0) * totalParticipants;
+        }
 
-      await sendWorkshopProfessionalFinalInvoiceEmail({
-        sentTo: (instructor as any).email,
-        professionalName: (instructor as any).name || 'Lektor',
-        workshopTitle: workshop.title,
-        workshopDate: workshopDateStr,
-        workshopTime: workshop.time || '',
-        location: workshopLocation,
-        locationType: workshop.locationType,
-        totalParticipants,
-        totalEarnings,
-        totalRevenue: totalRevenue > 0 ? totalRevenue : undefined,
-        basePrice: workshop.price,
-        currency: 'EUR',
-        participants: participantItems,
-        streetAddress: workshop.streetAddress || (instructor as any)?.address,
-        town: workshop.town || (instructor as any)?.town,
-        country: workshop.country || (instructor as any)?.country,
-        isRegisterAsCompany:
-          workshop.isRegisterAsCompany ||
-          (instructor as any)?.isRegisterAsCompany,
-        companyName:
-          workshop.companyName || (instructor as any)?.companyName,
-        ICO: workshop.ICO || (instructor as any)?.ico,
-        DIC: workshop.DIC || (instructor as any)?.dic,
-        IC_DPH: workshop.IC_DPH || (instructor as any)?.ic_dph,
-        invoiceUrl: `${config.FRONTEND_URL}/dashboard/professional/workshop`,
-      });
+        const participantItems = participants.map((p) => ({
+          name: p.name || 'Účastník',
+          orderId: p.orderId,
+          amount: p.instructorPayment?.amount || claimed.price || 0,
+        }));
 
-      // In-app socket notification for instructor
-      sentNotificationForWorkshopCompletedToInstructor({
-        instructorId: workshop.authorId as any,
-        workshopTitle: workshop.title,
-      }).catch((err) =>
+        await sendWorkshopProfessionalFinalInvoiceEmail({
+          sentTo: (instructor as any).email,
+          professionalName: (instructor as any).name || 'Lektor',
+          workshopTitle: claimed.title,
+          workshopDate: workshopDateStr,
+          workshopTime: claimed.time || '',
+          location: workshopLocation,
+          locationType: claimed.locationType,
+          totalParticipants,
+          totalEarnings,
+          totalRevenue: totalRevenue > 0 ? totalRevenue : undefined,
+          basePrice: claimed.price,
+          currency: 'EUR',
+          participants: participantItems,
+          streetAddress: claimed.streetAddress || (instructor as any)?.address,
+          town: claimed.town || (instructor as any)?.town,
+          country: claimed.country || (instructor as any)?.country,
+          isRegisterAsCompany:
+            claimed.isRegisterAsCompany ||
+            (instructor as any)?.isRegisterAsCompany,
+          companyName:
+            claimed.companyName || (instructor as any)?.companyName,
+          ICO: claimed.ICO || (instructor as any)?.ico,
+          DIC: claimed.DIC || (instructor as any)?.dic,
+          IC_DPH: claimed.IC_DPH || (instructor as any)?.ic_dph,
+          invoiceUrl: `${config.FRONTEND_URL}/dashboard/professional/workshop`,
+        });
+
+        // In-app socket notification for instructor
+        sentNotificationForWorkshopCompletedToInstructor({
+          instructorId: claimed.authorId as any,
+          workshopTitle: claimed.title,
+        }).catch((err) =>
+          console.error(
+            'Failed to send workshop instructor socket notification:',
+            err,
+          ),
+        );
+      } catch (instErr) {
+        failures++;
+        await Workshop.updateOne(
+          { _id: claimed._id },
+          { $set: { instructorFinalInvoiceSent: false } },
+        ).catch((e) => console.error('Failed to release instructor claim:', e));
         console.error(
-          'Failed to send workshop instructor socket notification:',
-          err,
-        ),
-      );
-    } catch (instErr) {
-      console.error(
-        `Failed to send workshop final invoice to instructor ${workshop.authorId}:`,
-        instErr,
-      );
+          `Failed to send workshop final invoice to instructor ${claimed.authorId}:`,
+          instErr,
+        );
+      }
     }
   }
 
-  // 3. Mark workshop as completed & post-workshop emails sent
-  workshop.isCompleted = true;
-  workshop.completedAt = new Date();
-  workshop.postWorkshopEmailsSent = true;
-  await workshop.save();
+  // 4. Everyone was mailed → mark the workshop completed. Otherwise leave it open: the lease
+  //    expires and the next run retries only the recipients that are still missing.
+  if (failures > 0) {
+    return claimed;
+  }
 
-  return workshop;
+  return Workshop.findOneAndUpdate(
+    { _id: claimed._id, postWorkshopEmailsSent: { $ne: true } },
+    {
+      $set: {
+        isCompleted: true,
+        completedAt: new Date(),
+        postWorkshopEmailsSent: true,
+        completionClaimedAt: null,
+      },
+    },
+    { new: true },
+  );
 };
 
 export const WorkshopService = {

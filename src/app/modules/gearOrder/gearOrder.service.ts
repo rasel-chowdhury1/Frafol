@@ -458,6 +458,7 @@ const requestGearMarketplaceDelivery = async (
 
   // 🔹 Update order status and timestamp
   order.orderStatus = "deliveryRequest";
+  order.autoDeliveryReminderSentAt = null; // new request → the 48h reminder may fire again
   order.statusTimestamps = {
     ...order.statusTimestamps,
     deliveryRequestAt: new Date(),

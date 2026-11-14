@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { finishedWorkshopIds } from '../../utils/workshopTime';
 import httpStatus from 'http-status';
 import AppError from '../../error/AppError';
 import {
@@ -2070,6 +2071,16 @@ const getOverviewOfSpecificUser = async (userId: string) => {
   };
 };
 
+// A workshop's earnings only count once the workshop has actually ENDED, judged in Slovak time
+// (end time from the workshop's configured time; end of day if there is no usable time).
+// A date stored at midnight must not count as "finished" the moment that day starts.
+const getFinishedWorkshopIds = async (instructorId: Types.ObjectId, now: Date = new Date()) => {
+  const workshops = await Workshop.find({ authorId: instructorId })
+    .select('_id date time')
+    .lean();
+  return finishedWorkshopIds(workshops as any[], now);
+};
+
 const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
   if (!Types.ObjectId.isValid(serviceProviderId)) {
     throw new Error('Invalid serviceProviderId');
@@ -2214,39 +2225,25 @@ const getOverviewOfSpecificProfessional = async (serviceProviderId: string) => {
       },
     ]),
 
-    // 🎓 Workshop earnings: only finished workshops (date passed) count
-    WorkshopParticipant.aggregate([
-      {
-        $match: {
-          instructorId: providerObjectId,
-          paymentStatus: 'completed',
-          isDeleted: false,
+    // 🎓 Workshop earnings: only workshops that have actually ENDED (Slovak time) count
+    getFinishedWorkshopIds(providerObjectId).then((finishedIds) =>
+      WorkshopParticipant.aggregate([
+        {
+          $match: {
+            instructorId: providerObjectId,
+            paymentStatus: 'completed',
+            isDeleted: false,
+            workshopId: { $in: finishedIds },
+          },
         },
-      },
-      {
-        $lookup: {
-          from: Workshop.collection.name,
-          localField: 'workshopId',
-          foreignField: '_id',
-          as: 'workshop',
+        {
+          $group: {
+            _id: null,
+            totalEarnings: { $sum: '$instructorPayment.amount' },
+          },
         },
-      },
-      // A workshop is finished once its date has passed (or it is marked completed)
-      {
-        $match: {
-          $or: [
-            { 'workshop.isCompleted': true },
-            { 'workshop.date': { $lt: new Date() } },
-          ],
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalEarnings: { $sum: '$instructorPayment.amount' },
-        },
-      },
-    ]),
+      ]),
+    ),
 
     // ⭐ Reviews count
     Review.countDocuments({
@@ -2637,42 +2634,29 @@ const getMonthlyEarningsOfSpecificProfessional = async (
     { $sort: { _id: 1 } },
   ]),
 
-  // 🎓 Finished workshops (date passed or marked completed)
-  WorkshopParticipant.aggregate([
-    {
-      $match: {
-        instructorId: providerObjectId,
-        paymentStatus: 'completed',
-        isDeleted: false,
-        createdAt: {
-          $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
-          $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
+  // 🎓 Workshops that have actually ENDED (Slovak time)
+  getFinishedWorkshopIds(providerObjectId).then((finishedIds) =>
+    WorkshopParticipant.aggregate([
+      {
+        $match: {
+          instructorId: providerObjectId,
+          paymentStatus: 'completed',
+          isDeleted: false,
+          workshopId: { $in: finishedIds },
+          createdAt: {
+            $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
+            $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
+          },
         },
       },
-    },
-    {
-      $lookup: {
-        from: Workshop.collection.name,
-        localField: 'workshopId',
-        foreignField: '_id',
-        as: 'workshop',
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          totalEarnings: { $sum: '$instructorPayment.amount' },
+        },
       },
-    },
-    {
-      $match: {
-        $or: [
-          { 'workshop.isCompleted': true },
-          { 'workshop.date': { $lt: new Date() } },
-        ],
-      },
-    },
-    {
-      $group: {
-        _id: { $month: '$createdAt' },
-        totalEarnings: { $sum: '$instructorPayment.amount' },
-      },
-    },
-  ])]);
+    ]),
+  )]);
 
   // 🧮 Map to 12-month structure
   const monthlyData = Array.from({ length: 12 }, (_, i) => ({

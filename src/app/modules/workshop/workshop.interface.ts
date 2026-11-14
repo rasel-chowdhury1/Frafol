@@ -32,6 +32,8 @@ export interface IWorkshop {
   isCompleted?: boolean;
   completedAt?: Date;
   postWorkshopEmailsSent?: boolean;
+  completionClaimedAt?: Date | null;
+  instructorFinalInvoiceSent?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

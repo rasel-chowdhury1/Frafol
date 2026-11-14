@@ -10,7 +10,7 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendEventOrderRefundCompletedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail, getServiceTypeLabel } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendEventOrderRefundCompletedEmail, sendOrderAutoCancelledEmail, sendOrderAutoDeliveredEmail, sendAutoDeliveryReminderEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail, getServiceTypeLabel } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
@@ -1902,6 +1902,162 @@ export const sentNotificationForGearOrderRefundCompleted = async ({
       amount,
     }).catch((err) => console.error('Email failed:', err));
   }
+};
+
+// 🤖 Automatic lifecycle notifications — both parties get an in-app notification AND an email.
+// "client" and "professional" are the two parties of the order (for gear: buyer and seller).
+const notifyBothParties = async ({
+  clientId,
+  professionalId,
+  type,
+  clientText,
+  professionalText,
+  sendClientEmail,
+  sendProfessionalEmail,
+  emit = emitNotification,
+}: {
+  emit?: typeof emitNotification;
+  clientId: mongoose.Types.ObjectId;
+  professionalId: mongoose.Types.ObjectId;
+  type: string;
+  clientText: string;
+  professionalText: string;
+  sendClientEmail: (u: { email: string; name: string }) => Promise<void>;
+  sendProfessionalEmail: (u: { email: string; name: string }) => Promise<void>;
+}) => {
+  const [client, professional] = await Promise.all([
+    User.findById(clientId).select('name email'),
+    User.findById(professionalId).select('name email'),
+  ]);
+
+  // Each party is handled independently so one failure never blocks the other
+  const parties = [
+    { user: client, other: professionalId, text: clientText, sendEmail: sendClientEmail, receiverId: clientId },
+    { user: professional, other: clientId, text: professionalText, sendEmail: sendProfessionalEmail, receiverId: professionalId },
+  ];
+
+  await Promise.all(
+    parties.map(async ({ user, other, text, sendEmail, receiverId }) => {
+      if (!user) return;
+
+      await emit({
+        userId: other,
+        receiverId,
+        userMsg: { image: '', text, photos: [] },
+        type,
+      }).catch((err) => console.error('Socket error:', err));
+
+      if (user.email) {
+        await sendEmail({ email: user.email, name: user.name || '' }).catch((err) =>
+          console.error('Email failed:', err),
+        );
+      }
+    }),
+  );
+};
+
+// Unpaid package/custom order cancelled automatically after 72 hours
+export const sentNotificationForOrderAutoCancelled = async ({
+  clientId,
+  professionalId,
+  orderId,
+  title,
+  emit,
+}: {
+  clientId: mongoose.Types.ObjectId;
+  professionalId: mongoose.Types.ObjectId;
+  orderId: string;
+  title?: string;
+  emit?: typeof emitNotification; // injectable for tests
+}) => {
+  const name = title ? ` „${title}“` : '';
+
+  await notifyBothParties({
+    emit,
+    clientId,
+    professionalId,
+    type: 'OrderCancelled',
+    clientText: `Vaša objednávka${name} (${orderId}) bola automaticky zrušená, pretože platba nebola prijatá do 72 hodín.`,
+    professionalText: `Objednávka${name} (${orderId}) bola automaticky zrušená, pretože klient neuhradil platbu do 72 hodín.`,
+    sendClientEmail: ({ email, name: receiverName }) =>
+      sendOrderAutoCancelledEmail({ sentTo: email, receiverName, recipientRole: 'client', orderId, title }),
+    sendProfessionalEmail: ({ email, name: receiverName }) =>
+      sendOrderAutoCancelledEmail({ sentTo: email, receiverName, recipientRole: 'professional', orderId, title }),
+  });
+};
+
+// Reminder to the CLIENT, 48 hours before the order is delivered automatically.
+// In-app notification (stored + emitted live over the socket) and email.
+export const sentNotificationForAutoDeliveryReminder = async ({
+  kind,
+  clientId,
+  professionalId,
+  orderId,
+  title,
+  emit = emitNotification,
+}: {
+  kind: 'event' | 'gear';
+  clientId: mongoose.Types.ObjectId;
+  professionalId: mongoose.Types.ObjectId;
+  orderId: string;
+  title?: string;
+  emit?: typeof emitNotification; // injectable for tests
+}) => {
+  const client = await User.findById(clientId).select('name email role');
+  if (!client) return;
+
+  const name = title ? ` „${title}“` : '';
+  const text = `Pripomienka: objednávka${name} (${orderId}) bude po nasledujúcich 48 hodinách automaticky doručená. Skontrolujte prosím odovzdanú prácu a pred uplynutím tejto lehoty ju potvrďte alebo podnikne potrebné kroky.`;
+
+  await emit({
+    userId: professionalId,
+    receiverId: clientId,
+    userMsg: { image: '', text, photos: [] },
+    type: kind === 'gear' ? 'GearDeliveryRequest' : 'DeliveryRequest',
+  }).catch((err) => console.error('Socket error:', err));
+
+  if (client.email) {
+    await sendAutoDeliveryReminderEmail({
+      sentTo: client.email,
+      receiverName: client.name || '',
+      orderId,
+      title,
+      kind,
+      receiverRole: (client as any).role,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+// Order (package / custom / marketplace) delivered automatically 168 hours after the delivery request
+export const sentNotificationForOrderAutoDelivered = async ({
+  kind,
+  clientId,
+  professionalId,
+  orderId,
+  title,
+  emit,
+}: {
+  kind: 'event' | 'gear';
+  clientId: mongoose.Types.ObjectId;
+  professionalId: mongoose.Types.ObjectId;
+  orderId: string;
+  title?: string;
+  emit?: typeof emitNotification; // injectable for tests
+}) => {
+  const name = title ? ` „${title}“` : '';
+
+  await notifyBothParties({
+    emit,
+    clientId,
+    professionalId,
+    type: kind === 'gear' ? 'GearDeliveryAccepted' : 'DeliveryAccepted',
+    clientText: `Objednávka${name} (${orderId}) bola automaticky označená ako doručená, pretože ste ju nepotvrdili do 7 dní.`,
+    professionalText: `Objednávka${name} (${orderId}) bola automaticky označená ako doručená, pretože klient ju nepotvrdil do 7 dní. Platba vám bude uvoľnená do 15 kalendárnych dní.`,
+    sendClientEmail: ({ email, name: receiverName }) =>
+      sendOrderAutoDeliveredEmail({ sentTo: email, receiverName, recipientRole: 'client', orderId, title, kind }),
+    sendProfessionalEmail: ({ email, name: receiverName }) =>
+      sendOrderAutoDeliveredEmail({ sentTo: email, receiverName, recipientRole: 'professional', orderId, title, kind }),
+  });
 };
 
 export const sentNotificationForGearDeliveryRequest = async ({

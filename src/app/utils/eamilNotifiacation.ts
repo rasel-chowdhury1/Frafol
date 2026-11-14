@@ -1523,7 +1523,11 @@ const sendOrderAcceptedEmail = async ({
       ? packageName ? `"${packageName}"` : 'Váš balík.'
       : `${packageName} – ${title || serviceType || 'Rezervácia'}`;
 
-  const dynamicLink = orderType === 'direct' ? `${clientUrl}/dashboard/my-account/orders?tab=accepted` : `${clientUrl}/dashboard/my-account/orders?tab=accepted`
+  // direct (package) order → "accepted" tab, custom order → "orderOffer" tab
+  const dynamicLink =
+    orderType === 'direct'
+      ? `${clientUrl}/dashboard/my-account/orders?tab=accepted`
+      : `${clientUrl}/dashboard/my-account/orders?tab=orderOffer`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -1561,7 +1565,7 @@ const sendOrderAcceptedEmail = async ({
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="${clientUrl}/dashboard/my-account/orders?tab=accepted" style="
+          <a href="${dynamicLink}" style="
             display: inline-block;
             padding: 12px 22px;
             background-color: ${primaryColor};
@@ -3149,6 +3153,168 @@ const sendEventOrderRefundCompletedEmail = async ({
   await sendEmail(sentTo, `Vrátenie platby dokončené – objednávka ${orderId}`, emailBody);
 };
 
+// ─── Automatic lifecycle emails (auto-cancel after 72h unpaid, auto-delivery after 168h) ──
+
+export type AutoOrderRecipientRole = 'client' | 'professional';
+
+const autoOrderEmailLayout = (
+  heading: string,
+  receiverName: string,
+  paragraphs: string[],
+  highlight: string,
+  buttonUrl: string,
+) => `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">${heading}</h1>
+      </div>
+      <div style="padding: 24px; color: #333333;">
+        <p>Dobrý deň, <strong>${receiverName}</strong>,</p>
+        ${paragraphs.map((t) => `<p>${t}</p>`).join('')}
+        <div style="background-color: #f4f6fb; border-left: 4px solid ${primaryColor}; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
+          ${highlight}
+        </div>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${buttonUrl}" style="display: inline-block; padding: 12px 22px; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">
+            Zobraziť objednávku
+          </a>
+        </div>
+        ${supportEmailSection()}
+        ${regardsSection()}
+      </div>
+      ${emailFooter()}
+    </div>
+  `;
+
+// Reminder sent 48 hours BEFORE the order is delivered automatically (120h after the delivery request)
+const sendAutoDeliveryReminderEmail = async ({
+  sentTo,
+  receiverName,
+  orderId,
+  title,
+  kind = 'event',
+  receiverRole,
+}: {
+  sentTo: string;
+  receiverName: string;
+  orderId: string;
+  title?: string;
+  kind?: 'event' | 'gear';
+  receiverRole?: string;
+}): Promise<void> => {
+  const label = title ? `<strong>„${title}“</strong> ` : '';
+
+  // Marketplace only: a professional can also BUY gear from another professional, and has a
+  // different page for those purchases than a regular client (user / company).
+  const isProfessionalBuyer = ['photographer', 'videographer', 'both'].includes(receiverRole || '');
+
+  const buttonUrl =
+    kind === 'gear'
+      ? isProfessionalBuyer
+        ? `${clientUrl}/dashboard/professional/gear-purchases?tab=toConfirm`
+        : `${clientUrl}/dashboard/my-account/gear-order?tab=toConfirm`
+      : `${clientUrl}/dashboard/my-account/orders?tab=toConfirm`;
+
+  const emailBody = autoOrderEmailLayout(
+    'Pripomienka: objednávku si skontrolujte',
+    receiverName,
+    [
+      `Objednávka ${label}(číslo objednávky: <strong>${orderId}</strong>) bola odovzdaná a čaká na vaše potvrdenie. Ak ju nepotvrdíte, bude po nasledujúcich 48 hodinách automaticky doručená.`,
+      'Prosím, skontrolujte odovzdanú prácu a pred uplynutím tejto lehoty ju potvrďte, alebo podnikne potrebné kroky (napríklad odmietnuť doručenie).',
+    ],
+    'Automatické doručenie nastane po nasledujúcich 48 hodinách.',
+    buttonUrl,
+  );
+
+  await sendEmail(sentTo, `Pripomienka: objednávka ${orderId} bude o 48 hodín automaticky doručená`, emailBody);
+};
+
+// Order automatically cancelled because payment was not received within 72 hours
+const sendOrderAutoCancelledEmail = async ({
+  sentTo,
+  receiverName,
+  recipientRole,
+  orderId,
+  title,
+}: {
+  sentTo: string;
+  receiverName: string;
+  recipientRole: AutoOrderRecipientRole;
+  orderId: string;
+  title?: string;
+}): Promise<void> => {
+  const label = title ? `<strong>„${title}“</strong> ` : '';
+  const isClient = recipientRole === 'client';
+
+  const emailBody = autoOrderEmailLayout(
+    'Objednávka bola automaticky zrušená',
+    receiverName,
+    [
+      isClient
+        ? `Vaša objednávka ${label}(číslo objednávky: <strong>${orderId}</strong>) bola automaticky zrušená, pretože platba nebola prijatá do 72 hodín.`
+        : `Objednávka ${label}(číslo objednávky: <strong>${orderId}</strong>) bola automaticky zrušená, pretože klient neuhradil platbu do 72 hodín.`,
+    ],
+    'Dôvod zrušenia: platba nebola prijatá do 72 hodín.',
+    isClient
+      ? `${clientUrl}/dashboard/my-account/orders`
+      : `${clientUrl}/dashboard/professional/event-orders`,
+  );
+
+  await sendEmail(sentTo, `Objednávka ${orderId} bola automaticky zrušená`, emailBody);
+};
+
+// Order automatically marked as delivered 168 hours (7 days) after the delivery request
+const sendOrderAutoDeliveredEmail = async ({
+  sentTo,
+  receiverName,
+  recipientRole,
+  orderId,
+  title,
+  kind = 'event',
+}: {
+  sentTo: string;
+  receiverName: string;
+  recipientRole: AutoOrderRecipientRole;
+  orderId: string;
+  title?: string;
+  kind?: 'event' | 'gear';
+}): Promise<void> => {
+  const label = title ? `<strong>„${title}“</strong> ` : '';
+  const isClient = recipientRole === 'client';
+
+  const buttonUrl =
+    kind === 'gear'
+      ? isClient
+        ? `${clientUrl}/dashboard/my-account/gear-order`
+        : `${clientUrl}/dashboard/professional/gear-order`
+      : isClient
+        ? `${clientUrl}/dashboard/my-account/orders?tab=delivered`
+        : `${clientUrl}/dashboard/professional/event-orders?tab=delivered`;
+
+  const emailBody = isClient
+    ? autoOrderEmailLayout(
+        'Objednávka bola automaticky označená ako doručená',
+        receiverName,
+        [
+          `Objednávka ${label}(číslo objednávky: <strong>${orderId}</strong>) bola automaticky označená ako doručená, pretože ste ju nepotvrdili do 7 dní (168 hodín) od jej odovzdania.`,
+        ],
+        'Objednávka bola automaticky doručená.',
+        buttonUrl,
+      )
+    : autoOrderEmailLayout(
+        'Objednávka bola automaticky označená ako doručená',
+        receiverName,
+        [
+          `Objednávka ${label}(číslo objednávky: <strong>${orderId}</strong>) bola automaticky označená ako doručená, pretože klient ju nepotvrdil do 7 dní (168 hodín).`,
+        ],
+        'Platba vám bude uvoľnená do 15 kalendárnych dní.',
+        buttonUrl,
+      );
+
+  await sendEmail(sentTo, `Objednávka ${orderId} bola automaticky doručená`, emailBody);
+};
+
 const sendWorkshopPayoutCompletedEmail = async ({
   sentTo,
   receiverName,
@@ -4630,6 +4796,9 @@ export {
   sendPackageApprovedEmail, 
   sendPackageDeclinedEmail, 
   sendEventOrderRefundCompletedEmail,
+  sendOrderAutoCancelledEmail,
+  sendOrderAutoDeliveredEmail,
+  sendAutoDeliveryReminderEmail,
   sendEventOrderInvoiceEmail, 
   sendWorkshopInvoiceEmail, 
   sendWorkshopProfessionalFinalInvoiceEmail,

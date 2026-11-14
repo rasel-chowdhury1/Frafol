@@ -1,3 +1,4 @@
+import { getWorkshopStart } from '../../utils/workshopTime';
 import Stripe from "stripe";
 import AppError from "../../error/AppError";
 import { IPayment } from "./payment.interface";
@@ -111,15 +112,11 @@ export const createStripePaymentSession = async (payload: {
       throw new AppError(400, "Na tento workshop ste už prihlásení");
     }
 
-    // Check if workshop expired
-    const now = new Date();
-    const workshopDateTime = new Date(workshop.date);
-    
-    if (workshop.time) {
-      const [hours, minutes] = workshop.time.split(":").map(Number);
-      workshopDateTime.setHours(hours, minutes, 0, 0);
+    // Check if workshop expired — start time is evaluated in Slovak time (not the server's timezone,
+    // which could make a workshop look "expired" a day early)
+    if (getWorkshopStart(workshop.date, workshop.time) < new Date()) {
+      throw new AppError(400, "Workshop is already expired");
     }
-    if (workshopDateTime < now) throw new AppError(400, "Workshop is already expired");
 
     // Check participant limit
     const participantsCount = await WorkshopParticipant.countDocuments({ workshopId });

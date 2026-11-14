@@ -34,6 +34,7 @@ export interface IGearOrder {
   deliveryNote?: string;
   deliveryRequestDeclinedReason?: string;
   cancelReason?: string;
+  autoDeliveryReminderSentAt?: Date | null;
   isRefunded?: boolean;
   refundedAmount?: number;
   cancelledBy?: Types.ObjectId;

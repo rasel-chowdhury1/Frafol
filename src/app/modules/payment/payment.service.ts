@@ -1,3 +1,4 @@
+import { formatWorkshopDate } from '../../utils/workshopTime';
 import AppError from '../../error/AppError';
 import { Payment } from './payment.model';
 import { createStripePaymentSession, stripe } from './payment.utils';
@@ -383,73 +384,9 @@ const confirmPayment = async (sessionId: string) => {
           { session: dbSession },
         );
 
-        // ✅ Send workshop invoice email (non-blocking)
-        process.nextTick(async () => {
-          try {
-            const [client, workshop, instructor] = await Promise.all([
-              User.findById(payment.userId).select('name email role').lean(),
-              Workshop.findById(payment.workshopId).select('title date time locationType location workshopLink price mainPrice vatAmount vatPercent').lean(),
-              User.findById(payment.serviceProviderId).select('name').lean(),
-            ]);
-            if (client?.email && workshop) {
-              const ws = workshop as any;
-              const basePrice = ws.price || 0;
-              const vatAmount = ws.vatAmount || 0;
-              const totalPrice = ws.mainPrice || payment.amount;
-
-
-                let invoiceUrl = `${config.FRONTEND_URL}`;
-
-                if (client.role === 'user' || client.role === 'company') {
-                  invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/my-workshop`;
-                } else if (
-                  ['photographer', 'videographer', 'both'].includes(client.role)
-                ) {
-                  invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/my-workshop`;
-                }
-
-              await sendWorkshopInvoiceEmail({
-                sentTo: (client as any).email,
-                customerName: (client as any).name || payment.name || 'Customer',
-                workshopTitle: ws.title,
-                workshopDate: ws.date ? new Date(ws.date).toLocaleDateString('en-GB') : '',
-                workshopTime: ws.time || '',
-                location: ws.locationType === 'online' ? (ws.workshopLink || '') : (ws.location || ''),
-                locationType: ws.locationType,
-                basePrice,
-                vatPercent: ws.vatPercent || 0,
-                vatAmount,
-                totalPrice,
-                orderId: customOrderId,
-                transactionId: payment.transactionId,
-                paymentDate: new Date().toLocaleDateString('en-GB'),
-                streetAddress: payment.streetAddress,
-                town: payment.town,
-                country: payment.country,
-                isRegisterAsCompany: payment.isRegisterAsCompany,
-                companyName: payment.companyName,
-                ICO: payment.ICO,
-                DIC: payment.DIC,
-                IC_DPH: payment.IC_DPH,
-                instructorName: (instructor as any)?.name || undefined,
-                invoiceUrl
-              });
-            }
-
-            // ✅ Notify the instructor that a new participant joined
-            if (workshop) {
-              const ws = workshop as any;
-              sentNotificationForWorkshopNewParticipant({
-                instructorId: new mongoose.Types.ObjectId(payment.serviceProviderId),
-                participantId: new mongoose.Types.ObjectId(payment.userId),
-                workshopTitle: ws.title,
-                workshopDate: ws.date ? new Date(ws.date).toLocaleDateString('en-GB') : undefined,
-                workshopTime: ws.time || undefined,
-              }).catch((err) => console.error('Workshop new participant notification failed:', err));
-            }
-          } catch (err) {
-            console.error('❌ Workshop invoice email failed:', err);
-          }
+        // ✅ Send workshop invoice email + new-participant notification (non-blocking)
+        process.nextTick(() => {
+          sendWorkshopPaymentEmails(payment, customOrderId);
         });
       }
       else if (payment.paymentType === 'subscription' && payment.subscriptionDays) {
@@ -610,6 +547,76 @@ const cancelPayment = async (transactionId: string) => {
   await payment.save();
 
   return payment;
+};
+
+// 📧 After a successful workshop payment: invoice email to the participant + notification to the
+// instructor. Every workshop date shown here is the Slovak calendar day (Europe/Bratislava) — never the
+// server's own timezone, which can be a day off.
+const sendWorkshopPaymentEmails = async (payment: any, customOrderId: string) => {
+  try {
+    const [client, workshop, instructor] = await Promise.all([
+      User.findById(payment.userId).select('name email role').lean(),
+      Workshop.findById(payment.workshopId).select('title date time locationType location workshopLink price mainPrice vatAmount vatPercent').lean(),
+      User.findById(payment.serviceProviderId).select('name').lean(),
+    ]);
+    if (client?.email && workshop) {
+      const ws = workshop as any;
+      const basePrice = ws.price || 0;
+      const vatAmount = ws.vatAmount || 0;
+      const totalPrice = ws.mainPrice || payment.amount;
+
+      let invoiceUrl = `${config.FRONTEND_URL}`;
+
+      if (client.role === 'user' || client.role === 'company') {
+        invoiceUrl = `${config.FRONTEND_URL}/dashboard/my-account/my-workshop`;
+      } else if (
+        ['photographer', 'videographer', 'both'].includes(client.role)
+      ) {
+        invoiceUrl = `${config.FRONTEND_URL}/dashboard/professional/my-workshop`;
+      }
+
+      await sendWorkshopInvoiceEmail({
+        sentTo: (client as any).email,
+        customerName: (client as any).name || payment.name || 'Customer',
+        workshopTitle: ws.title,
+        workshopDate: ws.date ? formatWorkshopDate(ws.date) : '',
+        workshopTime: ws.time || '',
+        location: ws.locationType === 'online' ? (ws.workshopLink || '') : (ws.location || ''),
+        locationType: ws.locationType,
+        basePrice,
+        vatPercent: ws.vatPercent || 0,
+        vatAmount,
+        totalPrice,
+        orderId: customOrderId,
+        transactionId: payment.transactionId,
+        paymentDate: formatWorkshopDate(new Date()),
+        streetAddress: payment.streetAddress,
+        town: payment.town,
+        country: payment.country,
+        isRegisterAsCompany: payment.isRegisterAsCompany,
+        companyName: payment.companyName,
+        ICO: payment.ICO,
+        DIC: payment.DIC,
+        IC_DPH: payment.IC_DPH,
+        instructorName: (instructor as any)?.name || undefined,
+        invoiceUrl
+      });
+    }
+
+    // ✅ Notify the instructor that a new participant joined
+    if (workshop) {
+      const ws = workshop as any;
+      sentNotificationForWorkshopNewParticipant({
+        instructorId: new mongoose.Types.ObjectId(payment.serviceProviderId),
+        participantId: new mongoose.Types.ObjectId(payment.userId),
+        workshopTitle: ws.title,
+        workshopDate: ws.date ? formatWorkshopDate(ws.date) : undefined,
+        workshopTime: ws.time || undefined,
+      }).catch((err) => console.error('Workshop new participant notification failed:', err));
+    }
+  } catch (err) {
+    console.error('❌ Workshop invoice email failed:', err);
+  }
 };
 
 // const getPayments = async (query: any) => {
@@ -955,6 +962,7 @@ const getMyPayments = async (userId: string, query: any) => {
 };
 
 export const PaymentService = {
+  sendWorkshopPaymentEmails,
   createPaymentSession,
   confirmPayment,
   cancelPayment,

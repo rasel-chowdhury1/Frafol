@@ -97,6 +97,7 @@ export interface IEventOrder extends Document {
   couponCode?: string;
   couponDiscount?: number;
   paymentStatus: PaymentStatus;
+  autoDeliveryReminderSentAt?: Date | null;
   isDeleted: boolean;
 }
 

@@ -917,6 +917,7 @@ const requestOrderDelivery = async (
 
   // 🔹 Update order status
   order.status = "deliveryRequest";
+  order.autoDeliveryReminderSentAt = null as any; // new request → the 48h reminder may fire again
   order.statusTimestamps = {
     ...order.statusTimestamps,
     deliveryRequestAt: now,

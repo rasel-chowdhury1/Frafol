@@ -55,6 +55,9 @@ const workshopSchema = new Schema<IWorkshop>(
     isCompleted: { type: Boolean, default: false },
     completedAt: { type: Date },
     postWorkshopEmailsSent: { type: Boolean, default: false },
+    // Completion-email bookkeeping (see processWorkshopCompletion)
+    completionClaimedAt: { type: Date, default: null }, // lease: set atomically by the run that processes the workshop
+    instructorFinalInvoiceSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
