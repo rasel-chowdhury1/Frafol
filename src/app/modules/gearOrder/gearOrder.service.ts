@@ -16,6 +16,7 @@ import {
   sentNotificationForGearDeliveryDeclined,
   sentNotificationForGearOrderCancelled,
   sentNotificationForRefundRequired,
+  sentNotificationForGearOrderRefundCompleted,
 } from '../../../socketIo';
 
 const createGearOrder = async (payload: IGearOrder) => {
@@ -223,6 +224,213 @@ const completePaymentGearOrderById = async (gearOrderId: string) => {
     session.endSession();
     throw error;
   }
+};
+
+// 💸 Admin marks a cancelled gear order as refunded to the customer
+const completeRefundGearOrderById = async (gearOrderId: string) => {
+  if (!gearOrderId) throw new AppError(400, "Gear order ID is required");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const order = await GearOrder.findById(gearOrderId).session(session);
+    if (!order) throw new AppError(404, "Gear order not found");
+
+    if (order.orderStatus !== "cancelled") {
+      throw new AppError(400, "Only cancelled orders can be refunded");
+    }
+
+    if (order.isRefunded) {
+      throw new AppError(400, "Refund for this order is already completed");
+    }
+
+    if (order.paymentStatus === "received") {
+      throw new AppError(400, "Seller payout was already completed for this order");
+    }
+
+    // The single payment can cover several gear orders (possibly from other sellers)
+    const payment = await Payment.findOne({
+      paymentType: "gear",
+      gearOrderIds: order._id,
+      paymentStatus: "completed",
+    }).session(session);
+
+    if (!payment) {
+      throw new AppError(400, "No completed payment found to refund for this order");
+    }
+
+    // Refund only this order's share: item price + its shipping
+    const gearItem = await GearMarketplace.findById(order.gearMarketplaceId)
+      .select("name mainPrice shippingCompany")
+      .session(session);
+
+    const refundAmount = Number(
+      ((gearItem?.mainPrice || 0) + (gearItem?.shippingCompany?.price || 0)).toFixed(2),
+    );
+
+    order.isRefunded = true;
+    order.refundedAmount = refundAmount;
+    order.statusTimestamps.refundedAt = new Date();
+    await order.save({ session });
+
+    // Once every order in the payment is refunded, mark the payment itself refunded
+    const unrefunded = await GearOrder.countDocuments({
+      _id: { $in: payment.gearOrderIds },
+      isRefunded: { $ne: true },
+    }).session(session);
+
+    if (unrefunded === 0) {
+      payment.paymentStatus = "refound";
+      await payment.save({ session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // 🔔 Notify the customer (socket + email)
+    sentNotificationForGearOrderRefundCompleted({
+      customerId: order.clientId,
+      orderId: order.orderId,
+      itemName: gearItem?.name,
+      amount: refundAmount,
+    }).catch((err) => console.error("Gear refund completed notification failed:", err));
+
+    return {
+      message: "Refund completed successfully",
+      gearOrder: order,
+      refundedAmount: refundAmount,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+// 💸 Refund management: cancelled gear orders that were paid by the customer
+// query: paymentStatus=paid|unpaid (omit for both), searchTerm, page, limit
+// paid = refund already paid to the customer, unpaid = refund still pending
+const getRefundManagementGearOrders = async (query: Record<string, any>) => {
+  const page = Math.max(Number(query.page) || 1, 1);
+  const limit = Math.max(Number(query.limit) || 10, 1);
+  const { searchTerm } = query;
+
+  const statusFilter = String(query.paymentStatus || query.refundStatus || "").toLowerCase();
+
+  const match: Record<string, any> = { orderStatus: "cancelled", isDeleted: false };
+
+  if (statusFilter === "paid" || statusFilter === "refunded" || statusFilter === "refound") {
+    match.isRefunded = true;
+  } else if (statusFilter === "unpaid" || statusFilter === "pending" || statusFilter === "completed") {
+    match.isRefunded = { $ne: true };
+  }
+
+  // 🔎 Search by order id, client/seller name, or gear item name
+  if (searchTerm) {
+    const regex = { $regex: String(searchTerm), $options: "i" };
+    const [matchingUsers, matchingItems] = await Promise.all([
+      User.find({
+        $or: [{ name: regex }, { sureName: regex }, { companyName: regex }, { email: regex }],
+      }).select("_id"),
+      GearMarketplace.find({ name: regex }).select("_id"),
+    ]);
+    const userIds = matchingUsers.map((u) => u._id);
+
+    match.$or = [
+      { orderId: regex },
+      { name: regex },
+      { clientId: { $in: userIds } },
+      { sellerId: { $in: userIds } },
+      { gearMarketplaceId: { $in: matchingItems.map((g) => g._id) } },
+    ];
+  }
+
+  const userProjection = { name: 1, sureName: 1, companyName: 1, profileImage: 1, email: 1 };
+
+  const [data] = await GearOrder.aggregate([
+    { $match: match },
+    {
+      $lookup: {
+        from: Payment.collection.name,
+        let: { orderObjId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $in: ["$$orderObjId", { $ifNull: ["$gearOrderIds", []] }] },
+              paymentType: "gear",
+              paymentStatus: { $in: ["completed", "refound"] },
+            },
+          },
+          { $limit: 1 },
+          { $project: { transactionId: 1, amount: 1, paymentMethod: 1, paymentStatus: 1, createdAt: 1 } },
+        ],
+        as: "payment",
+      },
+    },
+    // Only orders the customer actually paid for
+    { $match: { "payment.0": { $exists: true } } },
+    { $addFields: { payment: { $arrayElemAt: ["$payment", 0] } } },
+    {
+      $addFields: {
+        refundStatus: { $cond: [{ $eq: ["$isRefunded", true] }, "paid", "unpaid"] },
+        refundedAt: "$statusTimestamps.refundedAt",
+        // Refund is blocked once the seller payout was completed
+        payoutCompleted: { $eq: ["$paymentStatus", "received"] },
+      },
+    },
+    { $sort: { "statusTimestamps.cancelledAt": -1, createdAt: -1 } },
+    {
+      $facet: {
+        result: [
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+          {
+            $lookup: {
+              from: User.collection.name,
+              localField: "clientId",
+              foreignField: "_id",
+              pipeline: [{ $project: userProjection }],
+              as: "clientId",
+            },
+          },
+          {
+            $lookup: {
+              from: User.collection.name,
+              localField: "sellerId",
+              foreignField: "_id",
+              pipeline: [{ $project: userProjection }],
+              as: "sellerId",
+            },
+          },
+          {
+            $lookup: {
+              from: GearMarketplace.collection.name,
+              localField: "gearMarketplaceId",
+              foreignField: "_id",
+              pipeline: [{ $project: { name: 1, price: 1, mainPrice: 1, vatAmount: 1, shippingCompany: 1, images: 1 } }],
+              as: "gearMarketplaceId",
+            },
+          },
+          {
+            $addFields: {
+              clientId: { $arrayElemAt: ["$clientId", 0] },
+              sellerId: { $arrayElemAt: ["$sellerId", 0] },
+              gearMarketplaceId: { $arrayElemAt: ["$gearMarketplaceId", 0] },
+            },
+          },
+        ],
+        total: [{ $count: "count" }],
+      },
+    },
+  ]);
+
+  const total = data?.total?.[0]?.count || 0;
+
+  return {
+    meta: { page, limit, total, totalPage: Math.ceil(total / limit) },
+    result: data?.result || [],
+  };
 };
 
 const requestGearMarketplaceDelivery = async (
@@ -629,5 +837,7 @@ export const GearOrderService = {
   declineDeliveryRequestByClient,
   acceptDeliveryRequestByClient,
   cancelGearOrderBySeller,
-  completePaymentGearOrderById
+  completePaymentGearOrderById,
+  completeRefundGearOrderById,
+  getRefundManagementGearOrders
 };

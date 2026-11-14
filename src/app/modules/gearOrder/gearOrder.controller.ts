@@ -75,6 +75,30 @@ const completePaymentGearOrder = catchAsync(async (req, res) => {
   });
 });
 
+const getRefundManagementGearOrders = catchAsync(async (req: Request, res: Response) => {
+  const result = await GearOrderService.getRefundManagementGearOrders(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Refund management gear orders retrieved successfully",
+    data: result,
+  });
+});
+
+const completeRefundGearOrder = catchAsync(async (req, res) => {
+  const { gearOrderId } = req.params;
+
+  const result = await GearOrderService.completeRefundGearOrderById(gearOrderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Gear order refund completed successfully",
+    data: result,
+  });
+});
+
 
 
 const getAllGearOrders = catchAsync(async (req: Request, res: Response) => {
@@ -244,5 +268,7 @@ export const GearOrderController = {
   acceptGearDeliveryRequest,
   declineGearDeliveryRequest,
   cancelGearOrderBySeller,
-  completePaymentGearOrder
+  completePaymentGearOrder,
+  completeRefundGearOrder,
+  getRefundManagementGearOrders
 };

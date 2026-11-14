@@ -100,6 +100,12 @@ router
         )
 
     .patch(
+        "/complete-refund/:eventOrderId",
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+        EventOrderController.completeRefundEventOrder
+        )
+
+    .patch(
         "/:id/status", 
         auth(USER_ROLE.USER, USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH, USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.COMPANY), 
         EventOrderController.updateEventOrderStatus
@@ -124,6 +130,12 @@ router
         "/delivered-orders", 
         auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN,),  
         EventOrderController.getAllDeliveredOrders
+    )
+
+    .get(
+        "/refund-management",
+        // auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+        EventOrderController.getRefundManagementOrders
     )
 
     .get(

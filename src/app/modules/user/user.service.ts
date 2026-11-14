@@ -44,7 +44,7 @@ import { Package } from '../package/package.model';
 import { GearMarketplace } from '../gearMarketplace/gearMarketplace.model';
 import { Workshop } from '../workshop/workshop.model';
 import { WorkshopParticipant } from '../workshopParticipant/workshopParticipant.model';
-import { aggregateOrders, getUserType } from './user.utils';
+import { aggregateOrders, getUserType, ORDER_STATUS_CONFIG } from './user.utils';
 import { Town } from '../town/town.model';
 import { Category } from '../category/category.model';
 import { ICategory } from '../category/category.interface';
@@ -230,7 +230,7 @@ const otpVerifyAndCreateUser = async ({
     otp,
   );
   if (!isOtpMatch) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'OTP did not match');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Nesprávny overovací kód.');
   }
 
   // Update OTP status
@@ -1027,12 +1027,19 @@ if (minPrice || maxPrice) {
 
     // ✅ Travel towns filter (comma-separated: 'Bratislava,Cumilla')
   if (travelTowns) {
-    const townsArray = (travelTowns as string)
-      .split(',')
+    // Accept 'A,B' or repeated params (?travelTowns=A&travelTowns=B)
+    const townsArray = (Array.isArray(travelTowns) ? travelTowns : [travelTowns])
+      .flatMap((t) => String(t).split(','))
       .map((t) => t.trim())
       .filter(Boolean);
+
     if (townsArray.length > 0) {
-      matchCondition.travelTowns = { $in: townsArray };
+      // Case-insensitive exact match (stored values may differ in casing/spacing)
+      matchCondition.travelTowns = {
+        $in: townsArray.map(
+          (t) => new RegExp(`^\\s*${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'),
+        ),
+      };
     }
   }
 
@@ -1372,119 +1379,6 @@ if (minPrice || maxPrice) {
 
   return { meta, result };
 };
-
-
-
-
-
-// const getProfessionalPhotographerAndVideographer = async (query: PaginateQuery) => {
-
-//   const { role } = query;
-
-//   console.log("role==>>> ", role)
-//   console.log("query==>>> ", query)
-
-// let roles: UserRole[];
-// if (!role) {
-//   roles = [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
-// } else {
-//   roles = [role as UserRole, USER_ROLE.BOTH]; // fixed: initialize as array instead of pushing to undefined
-// }
-
-//   const page = Number(query.page) || 1;
-//   const limit = Number(query.limit) || 10;
-//   const skip = (page - 1) * limit;
-
-//   // Fetch total count
-//   const total = await User.countDocuments({
-//     role: { $in: roles },
-//     isDeleted: false,
-//     isBlocked: false,
-//   });
-
-//   // Fetch paginated results sorted by averageRating descending
-//   const result = await User.find({
-//     role: { $in: roles },
-//     isDeleted: false,
-//     isBlocked: false,
-//   })
-//     .sort({ averageRating: -1 }) // highest rating first
-//     .skip(skip)
-//     .limit(limit)
-//     .select("name sureName role profileImage town address country hourlyRate averageRating totalReview ");
-
-//   const totalPage = Math.ceil(total / limit);
-
-//   return {
-//     meta: { page, limit, total, totalPage },
-//     result,
-//   };
-// };
-
-// const getProfessionalUsersByCategory = async (
-//   query: Record<string, unknown>,
-// ) => {
-//   console.log('query data=>>. ', query);
-//   const { role, categoryType, ...rest } = query;
-
-//   // Determine roles to filter
-//   const roles = role
-//     ? [role, USER_ROLE.BOTH]
-//     : [USER_ROLE.PHOTOGRAPHER, USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
-
-//   console.log({ roles });
-
-//   // Base query
-//   let baseFilter: any = {
-//     role: { $in: roles },
-//     isDeleted: false,
-//     isBlocked: false,
-//   };
-
-//   console.log('cateogory type==>>> ', categoryType);
-//   // Apply categoryType filter depending on role
-//   if (categoryType) {
-//     const regex = new RegExp(categoryType as string, 'i');
-
-//     console.log({ regex });
-
-//     if (role === USER_ROLE.PHOTOGRAPHER) {
-//       baseFilter.photographerSpecializations = {
-//         $elemMatch: { $regex: regex },
-//       };
-//     } else if (role === USER_ROLE.VIDEOGRAPHER) {
-//       baseFilter.videographerSpecializations = {
-//         $elemMatch: { $regex: regex },
-//       };
-//     } else if (role === USER_ROLE.BOTH) {
-//       baseFilter.$or = [
-//         { photographerSpecializations: { $elemMatch: { $regex: regex } } },
-//         { videographerSpecializations: { $elemMatch: { $regex: regex } } },
-//       ];
-//     }
-//   }
-
-//   // Build initial query
-//   let baseQuery = User.find(baseFilter).select(
-//     'name sureName role profileImage town address country minHourlyRate maxHourlyRate averageRating totalReview photographerSpecializations videographerSpecializations hasActiveSubscription',
-//   );
-
-//   console.log({ baseFilter, baseQuery, query });
-
-//   // Use QueryBuilder
-//   const userQuery = new QueryBuilder(baseQuery, rest)
-//     .search(['name', 'sureName']) // searchable fields
-//     .filter() // other filters
-//     .sort()
-//     .paginate()
-//     .fields();
-
-//   // Execute query
-//   const result = await userQuery.modelQuery;
-//   const meta = await userQuery.countTotal();
-
-//   return { meta, result };
-// };
 
 const getProfessionalVideographers = async (query: PaginateQuery) => {
   const roles = [USER_ROLE.VIDEOGRAPHER, USER_ROLE.BOTH];
@@ -2794,6 +2688,13 @@ const getMonthlyEarningsOfSpecificProfessional = async (
   };
 };
 
+// 💰 What Frafol actually earns from one completed payment:
+//  - event / gear / workshop → the commission
+//  - subscription (Frafol Choice) → the whole amount (these payments store commission = 0)
+const FRAFOL_EARNING_EXPR = {
+  $cond: [{ $eq: ['$paymentType', 'subscription'] }, '$amount', '$commission'],
+};
+
 const getMonthlyCommission = async (year?: number) => {
   const targetYear = year || new Date().getFullYear();
 
@@ -2802,17 +2703,18 @@ const getMonthlyCommission = async (year?: number) => {
     {
       $match: {
         paymentStatus: 'completed',
-        commission: { $gt: 0 },
         createdAt: {
           $gte: new Date(`${targetYear}-01-01T00:00:00Z`),
           $lte: new Date(`${targetYear}-12-31T23:59:59Z`),
         },
       },
     },
+    { $addFields: { frafolEarning: FRAFOL_EARNING_EXPR } },
+    { $match: { frafolEarning: { $gt: 0 } } },
     {
       $group: {
         _id: { $month: '$createdAt' },
-        totalCommission: { $sum: '$commission' },
+        totalCommission: { $sum: '$frafolEarning' },
       },
     },
     { $sort: { _id: 1 } },
@@ -2839,7 +2741,7 @@ const getAdminDashboardStats = async (adminId: string) => {
 
   // ✅ Aggregate user stats in one query
   const userStats = await User.aggregate([
-    { $match: { isDeleted: { $ne: true } } },
+    { $match: { isDeleted: { $ne: true }, adminVerified: 'verified' } },
     {
       $group: {
         _id: null,
@@ -2900,16 +2802,32 @@ const getAdminDashboardStats = async (adminId: string) => {
   } = userStats[0] || {};
 
   // ✅ Active Event Orders count
+  // (same definition as getOrderManagementStats: non-deleted, all in-progress statuses)
   const activeEventOrders = await EventOrder.countDocuments({
-    status: { $in: ['accepted', 'inProgress', 'deliveryRequest'] },
+    isDeleted: { $ne: true },
+    status: { $in: [...ORDER_STATUS_CONFIG.event.active] },
   });
 
   // ✅ Total commission
-  const commissionAgg = await Payment.aggregate([
-    { $match: { paymentStatus: 'completed', commission: { $gt: 0 } } },
-    { $group: { _id: null, totalCommission: { $sum: '$commission' } } },
+  // Commission (event + gear + workshop) AND Frafol Choice subscriptions.
+  // Subscription payments have commission = 0, so counting only `commission`
+  // silently dropped all Frafol Choice earnings.
+  const earningsByType: { _id: string; total: number }[] = await Payment.aggregate([
+    { $match: { paymentStatus: 'completed' } },
+    { $addFields: { frafolEarning: FRAFOL_EARNING_EXPR } },
+    { $match: { frafolEarning: { $gt: 0 } } },
+    { $group: { _id: '$paymentType', total: { $sum: '$frafolEarning' } } },
   ]);
-  const totalCommission = commissionAgg[0]?.totalCommission || 0;
+  const earningOf = (type: string) =>
+    earningsByType.find((e) => e._id === type)?.total || 0;
+
+  const earningsBreakdown = {
+    event: earningOf('event'),
+    gear: earningOf('gear'),
+    workshop: earningOf('workshop'),
+    frafolChoice: earningOf('subscription'),
+  };
+  const totalCommission = Object.values(earningsBreakdown).reduce((a, b) => a + b, 0);
 
   // ✅ Quick actions
   const [
@@ -2957,6 +2875,7 @@ const getAdminDashboardStats = async (adminId: string) => {
     totalProfessionals,
     activeEventOrders,
     totalCommission,
+    earningsBreakdown, // per-source split so the total can be reconciled
     quickActions, // all quick actions in one variable
     latestNotifications,
   };
@@ -3019,8 +2938,8 @@ const getAdminOrderStats = async (
 const getOrderManagementStats = async (): Promise<IOrderStats> => {
   // ✅ Aggregate EventOrders & GearOrders in parallel
   const [eventStats, gearStats] = await Promise.all([
-    aggregateOrders(EventOrder),
-    aggregateOrders(GearOrder),
+    aggregateOrders(EventOrder, 'event'),
+    aggregateOrders(GearOrder, 'gear'),
   ]);
 
   return {
@@ -3150,6 +3069,7 @@ const getDeliveryOrders = async (
 
   const orders = await deliveryQuery.modelQuery;
   const meta = await deliveryQuery.countTotal();
+
 
   return { meta, orders };
 };

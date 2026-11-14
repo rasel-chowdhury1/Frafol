@@ -171,6 +171,20 @@ const completePaymentEventOrder = catchAsync(async (req, res) => {
 });
 
 
+const completeRefundEventOrder = catchAsync(async (req, res) => {
+  const { eventOrderId } = req.params;
+
+  const result = await EventOrderService.completeRefundEventOrder(eventOrderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Event order refund completed successfully",
+    data: result,
+  });
+});
+
+
 // 📜 Get all event orders (supports pagination, filtering, search)
 const getAllEventOrders = catchAsync(async (req: Request, res: Response) => {
   const result = await EventOrderService.getEventOrders(req.query);
@@ -259,6 +273,17 @@ const getAllDeliveredOrders = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
+
+const getRefundManagementOrders = catchAsync(async (req: Request, res: Response) => {
+  const result = await EventOrderService.getRefundManagementOrders(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Refund management orders retrieved successfully",
+    data: result,
+  });
+});
 
 // 🔄 Update order status (pending, accepted, inProgress, delivered, cancelled)
 const updateEventOrderStatus = catchAsync(async (req: Request, res: Response) => {
@@ -640,5 +665,7 @@ export const EventOrderController = {
   declineCancelRequest,
   approveCancelOrder,
   completePaymentEventOrder,
+  completeRefundEventOrder,
+  getRefundManagementOrders,
   getServiceProviderCalendar
 };

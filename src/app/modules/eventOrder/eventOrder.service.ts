@@ -8,7 +8,7 @@ import { Review } from "../review/review.model";
 import { Payment } from "../payment/payment.model";
 import { User } from "../user/user.model";
 import { sendEventOrderInvoiceEmail } from "../../utils/eamilNotifiacation";
-import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForEventOrderPayoutCompleted, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired, sentNotificationForReviewRequest } from "../../../socketIo";
+import { sentNotificationForBookingRequest, sentNotificationForCancelRequest, sentNotificationForCancelRequestDeclined, sentNotificationForDeliveryAccepted, sentNotificationForDeliveryRequest, sentNotificationForEventOrderPayoutCompleted, sentNotificationForEventOrderRefundCompleted, sentNotificationForExtensionAccepted, sentNotificationForExtensionRejected, sentNotificationForExtensionRequest, sentNotificationForOrderAccepted, sentNotificationForOrderCancelled, sentNotificationForOrderDeclined, sentNotificationForRefundRequired, sentNotificationForReviewRequest } from "../../../socketIo";
 import config from "../../config";
 
 const createEventOrder = async (payload: IEventOrder) => {
@@ -109,6 +109,84 @@ const completePaymentEventOrder = async (eventOrderId: string) => {
   }
 };
 
+
+// 💸 Admin marks a cancelled event order as refunded to the customer
+const completeRefundEventOrder = async (eventOrderId: string) => {
+  if (!eventOrderId) {
+    throw new AppError(400, "Event order ID is required");
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const eventOrder = await EventOrder.findById(eventOrderId).session(session);
+
+    if (!eventOrder) {
+      throw new AppError(404, "Event order not found");
+    }
+
+    if (eventOrder.status !== "cancelled") {
+      throw new AppError(400, "Only cancelled orders can be refunded");
+    }
+
+    if (eventOrder.paymentStatus === "Paid") {
+      throw new AppError(400, "Service provider payout was already completed for this order");
+    }
+
+    // The customer's completed payment is what gets refunded
+    const payment = await Payment.findOne({
+      eventOrderId: eventOrder._id,
+      paymentStatus: "completed",
+    }).session(session);
+
+    if (!payment) {
+      const alreadyRefunded = await Payment.exists({
+        eventOrderId: eventOrder._id,
+        paymentStatus: "refound",
+      }).session(session);
+
+      throw new AppError(
+        400,
+        alreadyRefunded
+          ? "Refund for this order is already completed"
+          : "No completed payment found to refund for this order",
+      );
+    }
+
+    payment.paymentStatus = "refound";
+    await payment.save({ session });
+
+    eventOrder.statusTimestamps.refundedAt = new Date();
+    await eventOrder.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // 🔔 Notify the customer (socket + email) that the refund is done
+    sentNotificationForEventOrderRefundCompleted({
+      customerId: eventOrder.userId,
+      orderId: eventOrder.orderId,
+      title: eventOrder.title || undefined,
+      amount: payment.amount,
+    }).catch((err) => console.error("Failed to send refund completed notification:", err));
+
+    return {
+      message: "Refund completed successfully",
+      eventOrder,
+      refundedAmount: payment.amount,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      500,
+      (error as any)?.message || "Failed to complete refund for event order",
+    );
+  }
+};
 
 const getEventOrders = async (query: Record<string, unknown>) => {
   const eventOrderQuery = new QueryBuilder(EventOrder.find({ isDeleted: false, }), query)
@@ -347,6 +425,124 @@ const getAllDeliveredOrders = async (query: Record<string, any>) => {
 };
 
 
+
+// 💸 Refund management: cancelled event orders that were paid by the customer
+// query: paymentStatus=paid|unpaid (omit for both), searchTerm, page, limit
+const getRefundManagementOrders = async (query: Record<string, any>) => {
+  const page = Math.max(Number(query.page) || 1, 1);
+  const limit = Math.max(Number(query.limit) || 10, 1);
+  const { searchTerm } = query;
+
+  // 🎯 Filter by payment status: paid = refund already paid to the customer,
+  // unpaid = refund still pending. (Old values completed/refound/pending/refunded still work.)
+  const statusFilter = String(query.paymentStatus || query.refundStatus || "").toLowerCase();
+
+  const paymentStatuses =
+    statusFilter === "unpaid" || statusFilter === "completed" || statusFilter === "pending"
+      ? ["completed"]
+      : statusFilter === "paid" || statusFilter === "refound" || statusFilter === "refunded"
+        ? ["refound"]
+        : ["completed", "refound"];
+
+  const match: Record<string, any> = { status: "cancelled", isDeleted: false };
+
+  // 🔎 Search by order id, title, or client / provider name
+  if (searchTerm) {
+    const regex = { $regex: String(searchTerm), $options: "i" };
+    const matchingUsers = await User.find({
+      $or: [{ name: regex }, { sureName: regex }, { companyName: regex }, { email: regex }],
+    }).select("_id");
+    const ids = matchingUsers.map((u) => u._id);
+
+    match.$or = [
+      { orderId: regex },
+      { title: regex },
+      { userId: { $in: ids } },
+      { serviceProviderId: { $in: ids } },
+    ];
+  }
+
+  const [data] = await EventOrder.aggregate([
+    { $match: match },
+    {
+      $lookup: {
+        from: Payment.collection.name,
+        let: { orderObjId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$eventOrderId", "$$orderObjId"] },
+              paymentStatus: { $in: paymentStatuses },
+            },
+          },
+          { $limit: 1 },
+          {
+            $project: {
+              transactionId: 1,
+              amount: 1,
+              paymentMethod: 1,
+              paymentStatus: 1,
+              createdAt: 1,
+            },
+          },
+        ],
+        as: "payment",
+      },
+    },
+    // Only orders the customer actually paid for
+    { $match: { "payment.0": { $exists: true } } },
+    { $addFields: { payment: { $arrayElemAt: ["$payment", 0] } } },
+    {
+      $addFields: {
+        refundStatus: {
+          $cond: [{ $eq: ["$payment.paymentStatus", "refound"] }, "refunded", "pending"],
+        },
+        refundedAt: "$statusTimestamps.refundedAt",
+        // Refund is blocked once the provider payout was completed
+        payoutCompleted: { $eq: ["$paymentStatus", "Paid"] },
+      },
+    },
+    { $sort: { "statusTimestamps.cancelledAt": -1, createdAt: -1 } },
+    {
+      $facet: {
+        result: [
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+          {
+            $lookup: {
+              from: User.collection.name,
+              localField: "userId",
+              foreignField: "_id",
+              pipeline: [{ $project: { name: 1, sureName: 1, companyName: 1, profileImage: 1, email: 1 } }],
+              as: "userId",
+            },
+          },
+          {
+            $lookup: {
+              from: User.collection.name,
+              localField: "serviceProviderId",
+              foreignField: "_id",
+              pipeline: [{ $project: { name: 1, sureName: 1, companyName: 1, profileImage: 1, email: 1 } }],
+              as: "serviceProviderId",
+            },
+          },
+          { $addFields: {
+              userId: { $arrayElemAt: ["$userId", 0] },
+              serviceProviderId: { $arrayElemAt: ["$serviceProviderId", 0] },
+          } },
+        ],
+        total: [{ $count: "count" }],
+      },
+    },
+  ]);
+
+  const total = data?.total?.[0]?.count || 0;
+
+  return {
+    meta: { page, limit, total, totalPage: Math.ceil(total / limit) },
+    result: data?.result || [],
+  };
+};
 
 
 const getEventOrderById = async (id: string) => {
@@ -1491,6 +1687,8 @@ export const EventOrderService = {
   cancelRequest,
   declinedCancelRequest,
   completePaymentEventOrder,
+  completeRefundEventOrder,
+  getRefundManagementOrders,
   getServiceProviderCalendar
 };
 

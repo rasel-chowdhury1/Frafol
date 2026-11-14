@@ -123,7 +123,7 @@ const resendOtpEmail = async ({ token,purpose }: { token: string, purpose: strin
   process.nextTick(async () => {
     await otpSendEmail({
       sentTo: email,
-      subject: 'Re-send your one time otp for email  verification',
+      subject: 'Znova odošlite jednorazové heslo (OTP) na overenie e-mailu.',
       name: '',
       otp,
       expiredAt: expiredAt,

@@ -4,6 +4,7 @@ import { sendEmail } from "./mailSender";
 import { EmailUnsubscribeService } from "../modules/emailUnsubscribe/emailUnsubscribe.service";
 import { generateFrafolChoiceInvoicePdf } from "./invoicePdfGenerator";
 import moment from "moment-timezone";
+import config from "../config";
 
 interface BookingNotificationEmailParams {
   sentTo: string;       // user email
@@ -175,6 +176,10 @@ const otpSendEmail = async ({
   otp,
   expiredAt,
 }: OtpSendEmailParams): Promise<void> => {
+  // Validity comes from config.otp_expire_time (minutes), default 2
+  const otpMinutes = parseInt(config.otp_expire_time as string) || 2;
+  const minuteWord = otpMinutes === 1 ? 'minútu' : otpMinutes >= 2 && otpMinutes <= 4 ? 'minúty' : 'minút';
+  const otpValidityText = `${otpMinutes} ${minuteWord}`;
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
@@ -214,8 +219,7 @@ const otpSendEmail = async ({
         </div>
 
         <p style="font-size: 14px; color: #666;">
-          Platnosť kódu vyprší:<br />
-          <strong>${expiredAt.toLocaleString()}</strong>
+          Poznámka: Tento kód je platný <strong>${otpValidityText}</strong>.
         </p>
 
 
@@ -1518,6 +1522,8 @@ const sendOrderAcceptedEmail = async ({
     orderType === 'direct'
       ? packageName ? `"${packageName}"` : 'Váš balík.'
       : `${packageName} – ${title || serviceType || 'Rezervácia'}`;
+
+  const dynamicLink = orderType === 'direct' ? `${clientUrl}/dashboard/my-account/orders?tab=accepted` : `${clientUrl}/dashboard/my-account/orders?tab=accepted`
 
   const emailBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -3095,6 +3101,54 @@ const sendEventOrderPayoutCompletedEmail = async ({
   await sendEmail(sentTo, `Platba spracovaná – objednávka ${orderId}`, emailBody);
 };
 
+const sendEventOrderRefundCompletedEmail = async ({
+  sentTo,
+  receiverName,
+  orderId,
+  title,
+  amount,
+  currency = 'EUR',
+}: {
+  sentTo: string;
+  receiverName: string;
+  orderId: string;
+  title?: string;
+  amount?: number;
+  currency?: string;
+}): Promise<void> => {
+  const emailBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+      <div style="background-color: ${primaryColor}; text-align: center; padding: 24px;">
+        <img src="${logoUrl}" alt="Frafol Logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 12px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Vrátenie platby bolo dokončené ✅</h1>
+      </div>
+      <div style="padding: 24px; color: #333333;">
+        <p>Dobrý deň,  <strong>${receiverName}</strong>,</p>
+
+        <p>
+          Vrátenie platby za zrušenú objednávku${title ? ` <strong>„${title}“</strong>` : ''} (číslo objednávky: <strong>${orderId}</strong>) bolo spracované.
+        </p>
+
+        <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 14px; color: #555;">
+          ${amount !== undefined
+            ? `<strong>Vrátená suma:</strong> ${amount.toFixed(2)} ${currency}`
+            : 'Vrátenie peňazí za túto objednávku bolo potvrdené.'}
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+          Ak máte akékoľvek otázky, kontaktujte nás na
+          <a href="mailto:${supportEmail}" style="color: ${primaryColor}; text-decoration: none;">${supportEmail}</a>.
+        </p>
+        ${policiesSection()}
+        ${regardsSection()}
+      </div>
+      ${emailFooter()}
+    </div>
+  `;
+
+  await sendEmail(sentTo, `Vrátenie platby dokončené – objednávka ${orderId}`, emailBody);
+};
+
 const sendWorkshopPayoutCompletedEmail = async ({
   sentTo,
   receiverName,
@@ -3552,6 +3606,14 @@ const sendWorkshopApprovedEmail = async ({
   await sendEmail(sentTo, `Kurz schválený: "${workshopTitle}"`, emailBody);
 };
 
+// Clean HH:mm from a time that may arrive as a full ISO datetime
+const formatEmailTime = (time?: string): string => {
+  if (!time) return '';
+  if (!time.includes('T')) return time;
+  const m = moment.tz(time, 'Europe/Bratislava');
+  return m.isValid() ? m.format('HH:mm') : time;
+};
+
 const sendWorkshopNewParticipantEmail = async ({
   sentTo,
   receiverName,
@@ -3600,7 +3662,7 @@ const sendWorkshopNewParticipantEmail = async ({
           font-size: 14px;
           color: #555;
         ">
-          ${workshopDate ? `<strong>Dátum a čas prihlásenia </strong> ${workshopDate}${workshopTime ? ` o ${workshopTime}` : ''}` : 'Payment has been received and the seat is now confirmed.'}
+          ${workshopDate ? `<strong>Dátum a čas kurzu: </strong> ${workshopDate}${formatEmailTime(workshopTime) ? ` o ${formatEmailTime(workshopTime)}` : ''}` : 'Payment has been received and the seat is now confirmed.'}
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
@@ -4567,6 +4629,7 @@ export {
   sendWorkshopNewParticipantEmail,
   sendPackageApprovedEmail, 
   sendPackageDeclinedEmail, 
+  sendEventOrderRefundCompletedEmail,
   sendEventOrderInvoiceEmail, 
   sendWorkshopInvoiceEmail, 
   sendWorkshopProfessionalFinalInvoiceEmail,

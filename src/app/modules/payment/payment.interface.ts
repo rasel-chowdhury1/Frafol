@@ -1,6 +1,6 @@
 import { Model, Types } from "mongoose";
 
-export type PaymentStatus = "pending" | "completed" | "failed";
+export type PaymentStatus = "pending" | "completed" | "failed" | "refound";
 export type PaymentMethod = "stripe" | "card" | "bank";
 export type PaymentType = "event" | "gear" | "workshop" | "subscription";
 

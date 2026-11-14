@@ -31,6 +31,7 @@ const StatusTimestampsSchema = new Schema(
     cancelRequestAt: { type: Date },
     cancelRequestDeclinedAt: { type: Date },
     paymentCompletedAt: {type: Date},
+    refundedAt: { type: Date },
   },
   { _id: false }
 );

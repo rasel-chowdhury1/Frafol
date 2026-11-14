@@ -7,6 +7,7 @@ export interface IStatusTimestamps {
   deliveryRequestDeclineAt?: Date;
   deliveredAt?: Date;
   cancelledAt?: Date;
+  refundedAt?: Date;
 }
 
 export interface IGearOrder {
@@ -33,6 +34,8 @@ export interface IGearOrder {
   deliveryNote?: string;
   deliveryRequestDeclinedReason?: string;
   cancelReason?: string;
+  isRefunded?: boolean;
+  refundedAmount?: number;
   cancelledBy?: Types.ObjectId;
   statusTimestamps: IStatusTimestamps;
   paymentMethod?: string;

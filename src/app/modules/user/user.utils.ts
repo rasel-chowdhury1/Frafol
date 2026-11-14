@@ -1,23 +1,45 @@
 import { Model } from "mongoose";
 import { USER_ROLE } from "./user.constants";
 
-export const aggregateOrders = async (model: Model<any>) => {
+// Event orders store their state in `status`, gear orders in `orderStatus`
+export const ORDER_STATUS_CONFIG = {
+  event: {
+    field: "$status",
+    // Not counted in the total (not a confirmed order yet)
+    excluded: ["pending", "declined"],
+    active: [
+      "accepted",
+      "inProgress",
+      "deliveryRequest",
+      "deliveryRequestDeclined",
+      "cancelRequest",
+      "cancelRequestDeclined",
+    ],
+  },
+  gear: {
+    field: "$orderStatus",
+    // Not counted in the total (unpaid / not confirmed yet)
+    excluded: ["pending", "declined"],
+    active: ["inProgress", "deliveryRequest", "deliveryRequestDeclined"],
+  },
+} as const;
+
+export const aggregateOrders = async (
+  model: Model<any>,
+  type: keyof typeof ORDER_STATUS_CONFIG,
+) => {
+  const { field, active, excluded } = ORDER_STATUS_CONFIG[type];
+
   const stats = await model.aggregate([
+    // Deleted orders must not be counted
+    { $match: { isDeleted: { $ne: true } } },
     {
       $group: {
         _id: null,
-        total: { $sum: 1 },
-        completed: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
-        active: {
-          $sum: {
-            $cond: [
-              { $in: ["$status", ["accepted", "inProgress", "deliveryRequest"]] },
-              1,
-              0,
-            ],
-          },
-        },
-        cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
+        total: { $sum: { $cond: [{ $in: [field, excluded] }, 0, 1] } },
+        completed: { $sum: { $cond: [{ $eq: [field, "delivered"] }, 1, 0] } },
+        active: { $sum: { $cond: [{ $in: [field, active] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: [field, "cancelled"] }, 1, 0] } },
       },
     },
   ]);

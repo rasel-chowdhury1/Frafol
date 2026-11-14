@@ -151,7 +151,7 @@ const forgotPasswordOtpMatch = async ({
   const isOtpMatch = await otpServices.otpMatch(email, 'forget-password', otp);
 
   if (!isOtpMatch) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'OTP did not match');
+    throw new AppError(httpStatus.BAD_REQUEST, 'Nesprávny overovací kód.');
   }
 
   process.nextTick(async () => {

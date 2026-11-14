@@ -12,6 +12,7 @@ const StatusTimestampsSchema = new Schema(
     deliveryRequestDeclineAt: { type: Date },
     deliveredAt: { type: Date },
     cancelledAt: { type: Date },
+    refundedAt: { type: Date },
   },
   { _id: false }
 );
@@ -113,6 +114,8 @@ const gearOrderSchema = new Schema<IGearOrder>(
       type: String,
       trim: true
     },
+    isRefunded: { type: Boolean, default: false },
+    refundedAmount: { type: Number },
     cancelReason: { type: String, trim: true },
     cancelledBy: { type: Schema.Types.ObjectId, ref: "User" },
         // ✅ Status Timestamps

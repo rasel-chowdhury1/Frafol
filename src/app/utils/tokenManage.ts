@@ -35,7 +35,7 @@ const verifyToken = ({
     return jwt.verify(token, access_secret) as JwtPayload;
   } catch (err) {
     console.error('JWT verification failed:', err);
-    throw new AppError(httpStatus.FORBIDDEN, 'You are not authorized!');
+    throw new AppError(httpStatus.FORBIDDEN, 'Nemáte potrebné oprávnenie.');
   }
 };
 

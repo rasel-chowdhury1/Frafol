@@ -10,7 +10,7 @@ import mongoose, { Types } from 'mongoose';
 import Notification from './app/modules/notifications/notifications.model';
 import colors from 'colors';
 import { callbackFn } from './app/utils/callbackFn';
-import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail, getServiceTypeLabel } from './app/utils/eamilNotifiacation';
+import { profileDeclinedEmail, sendBookingNotificationEmail, sendRefundRequiredEmail, sendCancelRequestEmail, sendCancelRequestDeclinedEmail, sendDeliveryAcceptedEmail, sendReviewRequestEmail, sendNewMessageEmail, sendPaymentSuccessEmail, sendOrderAcceptedEmail, sendBookingRequestEmail, sendCommentOrReplyEmail, sendDeliveryRequestEmail, sendExtensionRequestEmail, sendExtensionAcceptedEmail, sendExtensionRejectedEmail, sendOrderDeclinedEmail, sendOrderCancelledEmail, sendGearMarketplaceApprovedEmail, sendGearMarketplaceDeclinedEmail, sendGearOrderPayoutCompletedEmail, sendWorkshopPayoutCompletedEmail, sendEventOrderPayoutCompletedEmail, sendEventOrderRefundCompletedEmail, sendGearDeliveryRequestEmail, sendGearDeliveryAcceptedEmail, sendGearDeliveryDeclinedEmail, sendGearOrderCancelledEmail, sendGearOrderSoldEmail, sendWorkshopDeclinedEmail, sendWorkshopApprovedEmail, sendWorkshopNewParticipantEmail, sendPackageApprovedEmail, sendPackageDeclinedEmail, accountDeleteRequestAdminEmail, frafolChoiceCancelledByAdminEmail, getServiceTypeLabel } from './app/utils/eamilNotifiacation';
 import Chat from './app/modules/chat/chat.model';
 import moment from 'moment-timezone';
 import Message from './app/modules/message/message.model';
@@ -1796,7 +1796,7 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
   packageName?: string;
   netAmount?: number;
 }) => {
-  const serviceProvider = await User.findById(userId).select('name email');
+  const serviceProvider = await User.findById(serviceProviderId).select('name email');
 
   if (!serviceProvider) return;
 
@@ -1807,7 +1807,7 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
   const text = `Platba za ${orderLabel} (číslo objednávky: ${orderId}) bola spracovaná a označená ako dokončená.`;
 
   const payload = {
-    userId: serviceProviderId,
+    userId: userId,
     receiverId: serviceProviderId,
     userMsg: { image: '', text, photos: [] },
     type: 'EventOrderPayoutCompleted',
@@ -1826,6 +1826,80 @@ export const sentNotificationForEventOrderPayoutCompleted = async ({
       serviceType,
       packageName,
       netAmount,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForEventOrderRefundCompleted = async ({
+  customerId,
+  orderId,
+  title,
+  amount,
+}: {
+  customerId: mongoose.Types.ObjectId;
+  orderId: string;
+  title?: string;
+  amount?: number;
+}) => {
+  const customer = await User.findById(customerId).select('name email');
+
+  if (!customer) return;
+
+  const text = `Vrátenie platby za zrušenú objednávku${title ? ` „${title}“` : ''} (číslo objednávky: ${orderId}) bolo dokončené${amount !== undefined ? `. Vrátená suma: ${amount.toFixed(2)} EUR` : ''}.`;
+
+  const payload = {
+    userId: customerId,
+    receiverId: customerId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'EventOrderRefundCompleted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (customer.email) {
+    sendEventOrderRefundCompletedEmail({
+      sentTo: customer.email,
+      receiverName: customer.name || '',
+      orderId,
+      title,
+      amount,
+    }).catch((err) => console.error('Email failed:', err));
+  }
+};
+
+export const sentNotificationForGearOrderRefundCompleted = async ({
+  customerId,
+  orderId,
+  itemName,
+  amount,
+}: {
+  customerId: mongoose.Types.ObjectId;
+  orderId: string;
+  itemName?: string;
+  amount?: number;
+}) => {
+  const customer = await User.findById(customerId).select('name email');
+
+  if (!customer) return;
+
+  const text = `Vrátenie platby za zrušenú objednávku${itemName ? ` „${itemName}“` : ''} (číslo objednávky: ${orderId}) bolo dokončené${amount !== undefined ? `. Vrátená suma: ${amount.toFixed(2)} EUR` : ''}.`;
+
+  const payload = {
+    userId: customerId,
+    receiverId: customerId,
+    userMsg: { image: '', text, photos: [] },
+    type: 'GearOrderRefundCompleted',
+  };
+
+  await emitNotification(payload).catch((err) => console.error('Socket error:', err));
+
+  if (customer.email) {
+    sendEventOrderRefundCompletedEmail({
+      sentTo: customer.email,
+      receiverName: customer.name || '',
+      orderId,
+      title: itemName,
+      amount,
     }).catch((err) => console.error('Email failed:', err));
   }
 };

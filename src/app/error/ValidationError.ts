@@ -17,7 +17,7 @@ const handleValidationError = (
 
   return {
     statusCode,
-    message: 'Validation Error',
+    message: 'Zadajte overovací kód.',
     errorSources,
   };
 };

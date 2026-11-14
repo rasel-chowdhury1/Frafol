@@ -1,13 +1,19 @@
+// Unicode-aware word boundaries: JS `\b` only knows ASCII letters, so words
+// ending in Slovak diacritics (zaplatiť, hotovosť…) never matched before.
+const START = String.raw`(?<![\p{L}\p{N}_])`; // not preceded by a letter/digit
+const END = String.raw`(?![\p{L}\p{N}_])`; // not followed by a letter/digit
 
+const word = (...alternatives: string[]) =>
+  new RegExp(`${START}(?:${alternatives.join("|")})${END}`, "iu");
 
 const forbiddenPatterns = [
   // Payment related (Slovak + English)
-  /\bplatba\b|\bplatby\b|\bplatbu\b/i,
-  /\bzaplatiť\b|\bvyplatiť\b|\bdoplatiť\b/i,
-  /\bPayPal\b|\bRevolut\b|\bSkrill\b|\bVenmo\b|\bStripe\b/i,
-  /\bbank[a-zA-Z]*\b|\bIBAN\b/i,
-  /\bcrypto\b|\bBitcoin\b|\bkryptomena\b/i,
-  /\bhotovosť\b|\bcash\b|\bpeniaze\b/i,
+  word("platba", "platby", "platbu"),
+  word("zaplatiť", "vyplatiť", "doplatiť"),
+  word("PayPal", "Revolut", "Skrill", "Venmo", "Stripe"),
+  word(String.raw`bank\p{L}*`, "IBAN"),
+  word("crypto", "Bitcoin", "kryptomena"),
+  word("hotovosť", "cash", "peniaze"),
 
   // Contact information (links allowed — only phone & email blocked)
   /[\w\.-]+@[\w\.-]+\.\w+/i, // emails
@@ -15,5 +21,6 @@ const forbiddenPatterns = [
 ];
 
 export const hasForbiddenContent = (text: string): boolean => {
+  if (!text) return false;
   return forbiddenPatterns.some((pattern) => pattern.test(text));
 };

@@ -19,6 +19,12 @@ router
         GearOrderController.completePaymentGearOrder
         )
 
+    .patch(
+        "/complete-refund/:gearOrderId",
+        auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+        GearOrderController.completeRefundGearOrder
+        )
+
         // Seller requests delivery
         .patch(
         "/request-delivery/:orderId",
@@ -48,6 +54,12 @@ router
         )
     
         .get('/', GearOrderController.getAllGearOrders)
+
+        .get(
+            "/refund-management",
+            // auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN),
+            GearOrderController.getRefundManagementGearOrders
+        )
         
         .get(
             "/my-orders", 
